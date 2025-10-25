@@ -39,7 +39,7 @@ async function runMigrations() {
     console.error('Error during migrations:', error);
     process.exit(1); // Exit with an error code
   } finally {
-    await sql.end(); // Close the database connection
+    // Removed await sql.end(); to keep the database connection open for the application.
   }
 }
 
