@@ -16,14 +16,15 @@ The primary goal of this application is to provide a platform where users can:
 * **Styling:** Tailwind CSS, DaisyUI
 * **Database:** PostgreSQL
 * **Backend:** SvelteKit (with potential for serverless functions for AI integration)
-* **AI:** Generative AI (specific model to be determined, e.g., OpenAI GPT, Google Gemini, etc.)
+* **AI:** Generative AI (specific model to be determined, e.g., OpenAI GPT, Google Gemini, etc.) via n8n
+* **Workflow Automation:** n8n
 
 ## Features (Planned)
 
 * User authentication and authorization.
 * Dream submission interface (text input and voice-to-text).
 * Secure storage of dreams and analyses in a PostgreSQL database.
-* Integration with a Generative AI service for dream interpretation.
+* Integration with a Generative AI service for dream interpretation via n8n.
 * Display of dream analysis to the user.
 * User dashboard to view past dreams and analyses.
 
