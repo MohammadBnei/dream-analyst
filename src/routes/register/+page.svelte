@@ -1,6 +1,7 @@
 <script>
   import { enhance } from '$app/forms';
   import { page } from '$app/stores';
+  import { goto } from '$app/navigation'; // Add this import
 
   let username = '';
   let email = '';
@@ -16,7 +17,7 @@
   $: if ($page.form) {
     isSubmitting = false;
     if ($page.form.success) {
-      // Redirect handled by server action
+      goto('/'); // Redirect on success
     }
   }
 </script>

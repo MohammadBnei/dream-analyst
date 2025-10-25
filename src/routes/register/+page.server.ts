@@ -1,10 +1,10 @@
 // src/routes/register/+page.server.ts
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit'; // Remove redirect import
 import { hashPassword, generateToken } from '$lib/server/auth';
 import { sql } from '$lib/server/db';
 
 export const actions = {
-  register: async ({ request, cookies }) => {  // Renamed from 'default'
+  register: async ({ request, cookies }) => {
     const data = await request.formData();
     const username = data.get('username') as string;
     const email = data.get('email') as string;
@@ -49,7 +49,8 @@ export const actions = {
         maxAge: 60 * 60 * 24 * 7 // 1 week
       });
 
-      throw redirect(303, '/'); // Redirect to home page after successful registration
+      // Return success instead of throwing redirect
+      return { success: true };
     } catch (error) {
       console.error('Registration error:', error);
       if (error instanceof Error && 'message' in error) {

@@ -1,10 +1,10 @@
 // src/routes/login/+page.server.ts
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit'; // Remove redirect import
 import { comparePassword, generateToken } from '$lib/server/auth';
 import { sql } from '$lib/server/db';
 
 export const actions = {
-  login: async ({ request, cookies }) => {  // Renamed from 'default'
+  login: async ({ request, cookies }) => {
     const data = await request.formData();
     const email = data.get('email') as string;
     const password = data.get('password') as string;
@@ -37,7 +37,8 @@ export const actions = {
         maxAge: 60 * 60 * 24 * 7 // 1 week
       });
 
-      throw redirect(303, '/'); // Redirect to home page after successful login
+      // Return success instead of throwing redirect
+      return { success: true };
     } catch (error) {
       console.error('Login error:', error);
       if (error instanceof Error && 'message' in error) {
