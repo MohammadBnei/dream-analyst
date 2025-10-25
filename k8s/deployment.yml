@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dream-analyst
+  annotations:
+    secrets.infisical.com/auto-reload: 'true'
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: dream-analyst
+  template:
+    metadata:
+      labels:
+        app: dream-analyst
+    spec:
+      containers:
+        - image: mohammaddocker/dream-analyst
+          name: dream-analyst
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: managed-dream-analyst-secret
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
