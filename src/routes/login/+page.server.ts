@@ -4,7 +4,7 @@ import { comparePassword, generateToken } from '$lib/server/auth';
 import { sql } from '$lib/server/db';
 
 export const actions = {
-  default: async ({ request, cookies }) => {
+  login: async ({ request, cookies }) => {  // Renamed from 'default'
     const data = await request.formData();
     const email = data.get('email') as string;
     const password = data.get('password') as string;

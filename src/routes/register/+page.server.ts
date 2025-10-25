@@ -4,7 +4,7 @@ import { hashPassword, generateToken } from '$lib/server/auth';
 import { sql } from '$lib/server/db';
 
 export const actions = {
-  default: async ({ request, cookies }) => {
+  register: async ({ request, cookies }) => {  // Renamed from 'default'
     const data = await request.formData();
     const username = data.get('username') as string;
     const email = data.get('email') as string;

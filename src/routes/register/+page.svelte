@@ -30,7 +30,7 @@
       </p>
     </div>
     <div class="card flex-shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
-      <form method="POST" action="?/default" use:enhance={handleSubmit} class="card-body">
+      <form method="POST" action="?/register" use:enhance={handleSubmit} class="card-body">
         <div class="form-control">
           <label class="label">
             <span class="label-text">Username</span>
