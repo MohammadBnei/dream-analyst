@@ -1,9 +1,6 @@
-import postgres from 'postgres';
 import { up as migrate001Up } from './migrations/001_create_dreams_table';
 import { up as migrate002Up } from './migrations/002_create_users_table';
-import { POSTGRES_URL } from '$env/static/private'; // Import POSTGRES_URL from environment
-
-const sql = postgres(POSTGRES_URL, { ssl: 'require' }); // Use POSTGRES_URL and SSL
+import { sql } from './db';
 
 async function runMigrations() {
   console.log('Starting database migrations...');
