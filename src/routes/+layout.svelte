@@ -22,6 +22,6 @@
   {/if}
 
   <main class="container mx-auto p-4">
-    {@render children?.()}
+    {@render children()}
   </main>
 </div>
