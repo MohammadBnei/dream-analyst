@@ -1,10 +1,22 @@
 import postgres from 'postgres'
 import { POSTGRES_URL } from '$env/static/private'
+import { runMigrations } from '$lib/server/migrate'; // Import the migration runner
 
 const sql = postgres(POSTGRES_URL, { ssl: 'require' })
 
 // The seeding logic for 'profiles' table is removed as it's not relevant to the 'dreams' table
 // and should ideally be handled by a dedicated migration or seeding script if needed.
+
+// Run migrations once when the server starts or when this module is first loaded
+// This ensures the database schema is up-to-date before any data operations.
+// In a production environment, you might want to run migrations as a separate
+// deployment step rather than on every app startup, but for development, this is convenient.
+runMigrations().catch(error => {
+  console.error("Failed to run migrations on startup:", error);
+  // Depending on your application's robustness, you might want to
+  // exit the process here if migrations are critical for startup.
+});
+
 
 export async function load() {
   const startTime = Date.now()
