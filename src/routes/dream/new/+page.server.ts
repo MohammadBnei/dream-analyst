@@ -1,6 +1,7 @@
-import { Actions, fail, redirect } from '@sveltejs/kit';
+import { type Actions, fail, redirect } from '@sveltejs/kit';
 import { sql } from '$lib/server/db';
 import { env } from '$env/dynamic/private';
+import type { PageServerLoad } from './$types';
 
 // Placeholder for n8n webhook URL
 const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/dream-analysis';
