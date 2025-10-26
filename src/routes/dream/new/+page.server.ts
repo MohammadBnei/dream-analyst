@@ -42,7 +42,7 @@ export const actions: Actions = {
       return fail(500, { error: 'Failed to save dream to database.' });
     }
 
-    // Trigger n8n workflow for analysis
+    // Trigger n8n workflow for analysis and wait for the response
     try {
       const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
         method: 'POST',
@@ -61,17 +61,32 @@ export const actions: Actions = {
           SET status = 'analysis_failed'
           WHERE id = ${dreamId};
         `;
-        return fail(500, { error: 'Failed to trigger dream analysis. Please try again later.' });
+        return fail(500, { error: 'Failed to analyze dream. Please try again later.' });
       }
 
-      // n8n will call back to /api/dreams/[id]/result with the actual analysis.
-      // For now, we can return a success message and let the client poll or wait for updates.
-      // Or, if n8n returns the analysis directly (less ideal for async processing),
-      // we could process it here. Assuming async callback for now.
+      // Parse the n8n response (assuming it returns { tags: string[], interpretation: string })
+      const analysisData = await n8nResponse.json();
+      const { tags, interpretation } = analysisData;
 
-      // For immediate feedback, we might simulate a quick analysis or return a "pending" state.
-      // The client-side Svelte component will handle showing "Analyzing..."
-      return { success: true, message: 'Dream saved and analysis triggered.' };
+      if (!Array.isArray(tags) || typeof interpretation !== 'string') {
+        console.error('Invalid analysis data from n8n:', analysisData);
+        await sql`
+          UPDATE dreams
+          SET status = 'analysis_failed'
+          WHERE id = ${dreamId};
+        `;
+        return fail(500, { error: 'Invalid analysis response. Please try again.' });
+      }
+
+      // Update the dream with analysis results and set status to completed
+      await sql`
+        UPDATE dreams
+        SET tags = ${JSON.stringify(tags)}, interpretation = ${interpretation}, status = 'completed'
+        WHERE id = ${dreamId};
+      `;
+
+      // Return success with the analysis result for immediate display
+      return { success: true, analysisResult: { tags, interpretation } };
 
     } catch (n8nError) {
       console.error('Error calling n8n webhook:', n8nError);
@@ -81,7 +96,7 @@ export const actions: Actions = {
         SET status = 'analysis_failed'
         WHERE id = ${dreamId};
       `;
-      return fail(500, { error: 'Failed to trigger dream analysis due to network error.' });
+      return fail(500, { error: 'Failed to analyze dream due to network error.' });
     }
   },
 };
