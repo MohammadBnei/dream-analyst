@@ -14,12 +14,12 @@ spec:
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
-  name: blog-certificate
+  name: dream-analyst-certificate
 spec:
-  commonName: blog.bnei.dev
-  secretName: blog-certificate-secret
+  commonName: dream-analyst.bnei.dev
+  secretName: dream-analyst-certificate-secret
   dnsNames:
-    - 'blog.bnei.dev'
+    - 'dream-analyst.bnei.dev'
   issuerRef:
     kind: ClusterIssuer
     name: letsencrypt-prod
@@ -35,7 +35,7 @@ spec:
     - web
   routes:
     - kind: Rule
-      match: Host(`blog.bnei.dev`)
+      match: Host(`dream-analyst.bnei.dev`)
       middlewares:
         - name: compress
       services:
@@ -44,7 +44,7 @@ spec:
           namespace: dream-analyst
           port: 80
   tls:
-    secretName: blog-certificate-secret
+    secretName: dream-analyst-certificate-secret
 
 ---
 apiVersion: traefik.io/v1alpha1
