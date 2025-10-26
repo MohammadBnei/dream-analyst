@@ -114,11 +114,10 @@
                 Regenerate
               </button>
             </form>
-            <form method="POST" action="?/delete" use:enhance data-dream-id={dream.id}>
+            <form method="POST" action={`/dreams/${dream.id}?/delete`} use:enhance data-dream-id={dream.id}>
               <input type="hidden" name="dreamId" value={dream.id} />
               <button
-                type="button"
-                on:click={() => handleDelete(dream.id)}
+                type="submit"
                 class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
                 aria-label="Delete dream"
               >
