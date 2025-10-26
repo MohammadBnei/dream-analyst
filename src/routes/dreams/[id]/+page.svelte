@@ -2,7 +2,7 @@
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
-  import { page } from '$app/stores'; // Import page store
+  import { page } from '$app/state'; // Import page store
   import { Streamdown } from 'svelte-streamdown'; // Import Streamdown for markdown rendering
 
   export let data: PageData;
@@ -25,10 +25,10 @@
   }
 
   // Handle form submission success/failure
-  $: if ($page.form) {
+  $: if (page.form) {
     isDeleting = false;
-    if ($page.form.error) {
-      alert($page.form.error.error); // Access the error message from the form object
+    if (page.form.error) {
+      alert(page.form.error.error); // Access the error message from the form object
     }
   }
 </script>
