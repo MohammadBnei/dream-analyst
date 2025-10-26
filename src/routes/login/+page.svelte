@@ -36,6 +36,7 @@
             <span class="label-text">Email</span>
           </label>
           <input
+            name="email"
             type="email"
             bind:value={email}
             placeholder="email@example.com"
@@ -48,6 +49,7 @@
             <span class="label-text">Password</span>
           </label>
           <input
+            name="password"
             type="password"
             bind:value={password}
             placeholder="password"

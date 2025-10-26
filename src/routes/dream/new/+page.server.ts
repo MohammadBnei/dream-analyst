@@ -2,7 +2,6 @@ import type { Actions, PageServerLoad } from './$types';
 import { fail, redirect } from '@sveltejs/kit';
 import { sql } from '$lib/server/db';
 import { env } from '$env/dynamic/private';
-import { v4 as uuidv4 } from 'uuid';
 
 // Placeholder for n8n webhook URL
 const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/dream-analysis';
@@ -19,7 +18,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 export const actions: Actions = {
   saveDream: async ({ request, locals }) => {
     // In a real app, get userId from locals.user.id after authentication
-    const userId = 'user-id-placeholder'; // Replace with actual user ID
+    const userId = locals.user?.id; // Replace with actual user ID
 
     const data = await request.formData();
     const dreamText = data.get('dreamText')?.toString();
@@ -32,8 +31,8 @@ export const actions: Actions = {
     try {
       // Insert dream into the database with pending_analysis status
       const [newDream] = await sql`
-        INSERT INTO dreams (id, user_id, raw_text, status)
-        VALUES (${uuidv4()}, ${userId}, ${dreamText}, 'pending_analysis')
+        INSERT INTO dreams (user_id, raw_text, status)
+        VALUES (${userId}, ${dreamText}, 'pending_analysis')
         RETURNING id;
       `;
       dreamId = newDream.id;

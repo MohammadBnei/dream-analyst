@@ -4,7 +4,7 @@ import { error } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals }) => {
   // In a real app, get userId from locals.user.id after authentication
-  const userId = 'user-id-placeholder'; // Replace with actual user ID
+  const userId = locals.user.id; // Replace with actual user ID
 
   try {
     const dreams = await sql`

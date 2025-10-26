@@ -7,7 +7,7 @@ export async function up(sql: Sql) {
     CREATE TABLE IF NOT EXISTS dreams (
       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
       user_id UUID, -- Assuming user authentication will be added later, can be NOT NULL once users are implemented
-      dream_text TEXT NOT NULL,
+      raw_text TEXT NOT NULL,
       analysis_text TEXT,
       created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

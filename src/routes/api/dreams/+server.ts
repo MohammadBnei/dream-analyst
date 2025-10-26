@@ -9,7 +9,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 export const GET: RequestHandler = async ({ url, locals }) => {
   // In a real app, get userId from locals.user.id after authentication
-  const userId = 'user-id-placeholder'; // Replace with actual user ID
+  const userId = locals.user?.id; // Replace with actual user ID
 
   try {
     const dreams = await sql`
@@ -31,7 +31,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 // this would be the place.
 export const POST: RequestHandler = async ({ request, locals }) => {
   // In a real app, get userId from locals.user.id after authentication
-  const userId = 'user-id-placeholder'; // Replace with actual user ID
+  const userId = locals.user?.id; // Replace with actual user ID
 
   const { rawText } = await request.json();
 
