@@ -5,6 +5,8 @@ import { sql } from '$lib/server/db';
 // if not using a form action. The FDD implies form action for new dream.
 // We'll implement a GET for listing dreams here.
 
+
+
 export const GET: RequestHandler = async ({ url, locals }) => {
   // In a real app, get userId from locals.user.id after authentication
   const userId = locals.user?.id; // Replace with actual user ID
