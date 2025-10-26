@@ -1,42 +1,17 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { page } from '$app/stores';
-  import { SpeechRecognition } from 'svelte-speech-recognition';
-  import { onMount } from 'svelte';
 
   let dreamText: string = '';
-  let isRecording: boolean = false;
   let isSaving: boolean = false;
   let analysisResult: { tags: string[]; interpretation: string } | null = null;
   let errorMessage: string | null = null;
-
-  let speechRecognitionSupported: boolean = false;
-
-  onMount(() => {
-    speechRecognitionSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-  });
-
-  function handleRecognitionResult(event: CustomEvent<string>) {
-    dreamText += event.detail + ' ';
-  }
-
-  function handleRecognitionError(event: CustomEvent<string>) {
-    console.error('Speech recognition error:', event.detail);
-    errorMessage = `Speech recognition error: ${event.detail}`;
-    isRecording = false;
-  }
-
-  function handleRecognitionEnd() {
-    isRecording = false;
-  }
 
   async function handleSubmit() {
     isSaving = true;
     errorMessage = null;
     analysisResult = null;
-
     // The form action will handle the actual saving and analysis trigger
-    // We just need to update the UI state here.
   }
 
   // Handle form submission success/failure
@@ -59,58 +34,16 @@
   <h1 class="text-3xl font-bold mb-6 text-center">New Dream</h1>
 
   <form method="POST" action="?/saveDream" use:enhance={handleSubmit} class="space-y-6">
-    <div class="relative">
+    <div>
       <textarea
         name="dreamText"
         bind:value={dreamText}
-        placeholder="Type or speak your dream here..."
+        placeholder="Type your dream here..."
         rows="10"
         class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 resize-y"
         aria-label="Dream text input"
+        required
       ></textarea>
-
-      {#if speechRecognitionSupported}
-        <div class="absolute bottom-4 right-4">
-          <SpeechRecognition
-            lang="en-US"
-            continuous={true}
-            interimResults={true}
-            on:result={handleRecognitionResult}
-            on:error={handleRecognitionError}
-            on:end={handleRecognitionEnd}
-            bind:isRecording={isRecording}
-          >
-            <button
-              type="button"
-              class="p-3 rounded-full shadow-lg transition-colors duration-200"
-              class:bg-red-500={isRecording}
-              class:hover:bg-red-600={isRecording}
-              class:bg-blue-500={!isRecording}
-              class:hover:bg-blue-600={!isRecording}
-              aria-label={isRecording ? 'Stop recording dream' : 'Start recording dream'}
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="h-6 w-6 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a4 4 0 11-8 0 4 4 0 018 0z"
-                />
-              </svg>
-            </button>
-          </SpeechRecognition>
-        </div>
-      {:else}
-        <p class="text-sm text-gray-500 mt-2">
-          Voice input not supported in your browser. Please type your dream.
-        </p>
-      {/if}
     </div>
 
     <button
