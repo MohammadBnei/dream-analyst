@@ -7,18 +7,19 @@ import { env } from '$env/dynamic/private';
 const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/dream-analysis';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  // In a real app, you'd check if the user is authenticated
-  // For now, we assume a user is "logged in" via the layout.server.ts placeholder
-  // if (!locals.user) {
-  //   throw redirect(302, '/login');
-  // }
+  if (!locals.user) {
+    throw redirect(302, '/login');
+  }
   return {};
 };
 
 export const actions: Actions = {
   saveDream: async ({ request, locals }) => {
-    // In a real app, get userId from locals.user.id after authentication
-    const userId = locals.user?.id; // Replace with actual user ID
+    if (!locals.user) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    const userId = locals.user.id;
 
     const data = await request.formData();
     const dreamText = data.get('dreamText')?.toString();

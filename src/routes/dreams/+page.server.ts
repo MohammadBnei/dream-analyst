@@ -1,10 +1,13 @@
 import type { PageServerLoad } from './$types';
 import { sql } from '$lib/server/db';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals }) => {
-  // In a real app, get userId from locals.user.id after authentication
-  const userId = locals.user.id; // Replace with actual user ID
+  if (!locals.user) {
+    throw redirect(302, '/login');
+  }
+
+  const userId = locals.user.id;
 
   try {
     const dreams = await sql`
