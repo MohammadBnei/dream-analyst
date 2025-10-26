@@ -93,7 +93,7 @@
             >
               Edit
             </button>
-            <form method="POST" action={`/dreams/${dream.id}?/regenerate`} use:enhance={regenerateDream}>
+            <form method="POST" action={`/dreams/${dream.id}?/regenerate`} use:enhance>
               <button
                 type="submit"
                 class="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600 transition-colors duration-200"
@@ -102,13 +102,12 @@
                 Regenerate
               </button>
             </form>
-            <form method="POST" action="?/delete" use:enhance>
+            <form method="POST" action={`/dreams/${dream.id}?/delete`} use:enhance>
               <input type="hidden" name="dreamId" value={dream.id} />
               <button
                 type="submit"
                 class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
                 aria-label="Delete dream"
-                onclick="return confirm('Are you sure you want to delete this dream?')"
               >
                 Delete
               </button>
