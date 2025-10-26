@@ -2,17 +2,16 @@
   import { enhance } from '$app/forms';
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
-  import { page } from '$app/state'; // Import page store
+  import { page } from '$app/stores'; // Import page store
   import { Streamdown } from 'svelte-streamdown'; // Import Streamdown for markdown rendering
 
   export let data: PageData;
 
   let isDeleting = false;
+  let isRegenerating = false;
 
   function handleEdit() {
     // Basic edit: redirect to new dream entry (as per FDD)
-    // For a true edit, you'd navigate to a dedicated edit page, possibly pre-filling the form.
-    // For now, we'll navigate to the new dream page, which is a placeholder.
     goto('/dream/new');
   }
 
@@ -24,11 +23,23 @@
     // The form action will handle the deletion
   }
 
+  async function handleRegenerate() {
+    if (!confirm('Are you sure you want to regenerate the analysis for this dream?')) {
+      return;
+    }
+    isRegenerating = true;
+    // The form action will handle the regeneration
+  }
+
   // Handle form submission success/failure
-  $: if (page.form) {
+  $: if ($page.form) {
     isDeleting = false;
-    if (page.form.error) {
-      alert(page.form.error.error); // Access the error message from the form object
+    isRegenerating = false;
+    if ($page.form.error) {
+      alert($page.form.error.error); // Access the error message from the form object
+    } else if ($page.form.success) {
+      // Refresh the page to show updated status
+      window.location.reload();
     }
   }
 </script>
@@ -37,6 +48,22 @@
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-3xl font-bold">Dream Details</h1>
     <div class="flex gap-2">
+      {#if data.dream.status === 'completed' || data.dream.status === 'analysis_failed'}
+        <form method="POST" action="?/regenerate" use:enhance={handleRegenerate}>
+          <button
+            type="submit"
+            class="btn btn-success btn-sm"
+            disabled={isRegenerating}
+            aria-label="Regenerate analysis"
+          >
+            {#if isRegenerating}
+              Regenerating...
+            {:else}
+              Regenerate Analysis
+            {/if}
+          </button>
+        </form>
+      {/if}
       <button
         on:click={handleEdit}
         class="btn btn-outline btn-sm"
