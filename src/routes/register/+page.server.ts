@@ -1,9 +1,9 @@
 // src/routes/register/+page.server.ts
-import { fail } from '@sveltejs/kit'; // Remove redirect import
+import { Actions, fail } from '@sveltejs/kit'; // Remove redirect import
 import { hashPassword, generateToken } from '$lib/server/auth';
 import { sql } from '$lib/server/db';
 
-export const actions = {
+export const actions: Actions = {
   register: async ({ request, cookies }) => {
     const data = await request.formData();
     const username = data.get('username') as string;

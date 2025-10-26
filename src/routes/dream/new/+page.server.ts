@@ -1,5 +1,4 @@
-import type { Actions, PageServerLoad } from './$types';
-import { fail, redirect } from '@sveltejs/kit';
+import { Actions, fail, redirect } from '@sveltejs/kit';
 import { sql } from '$lib/server/db';
 import { env } from '$env/dynamic/private';
 
