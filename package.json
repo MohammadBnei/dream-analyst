@@ -24,6 +24,7 @@
     "svelte": "^5.41.4",
     "svelte-check": "^4.3.3",
     "svelte-speech-recognition": "^0.0.7",
+    "svelte-streamdown": "^2.6.1",
     "tailwindcss": "^4.1.16",
     "turbo": "^2.5.8",
     "typescript": "^5.9.3",

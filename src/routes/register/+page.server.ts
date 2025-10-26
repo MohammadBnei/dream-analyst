@@ -1,5 +1,5 @@
 // src/routes/register/+page.server.ts
-import { Actions, fail } from '@sveltejs/kit'; // Remove redirect import
+import { type Actions, fail } from '@sveltejs/kit'; // Remove redirect import
 import { hashPassword, generateToken } from '$lib/server/auth';
 import { sql } from '$lib/server/db';
 
@@ -32,7 +32,7 @@ export const actions: Actions = {
 
       const [newUser] = await sql`
         INSERT INTO users (username, email, password_hash)
-        VALUES (${username}, ${email}, ${hashedPassword})
+        VALUES (${username.toLocaleLowerCase()}, ${email.toLocaleLowerCase()}, ${hashedPassword})
         RETURNING id;
       `;
 

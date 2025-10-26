@@ -1,7 +1,5 @@
-import type { RequestHandler } from './$types';
-import { json } from '@sveltejs/kit';
+import { json, type RequestHandler } from '@sveltejs/kit';
 import { sql } from '$lib/server/db';
-import { v4 as uuidv4 } from 'uuid';
 
 // This endpoint is primarily for listing dreams, or potentially for a direct save
 // if not using a form action. The FDD implies form action for new dream.
@@ -41,8 +39,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
   try {
     const [newDream] = await sql`
-      INSERT INTO dreams (id, user_id, raw_text, status)
-      VALUES (${uuidv4()}, ${userId}, ${rawText}, 'pending_analysis')
+      INSERT INTO dreams (user_id, raw_text, status)
+      VALUES (${userId}, ${rawText}, 'pending_analysis')
       RETURNING id, created_at, raw_text, status;
     `;
 
