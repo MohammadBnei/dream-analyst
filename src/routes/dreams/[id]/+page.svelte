@@ -3,6 +3,7 @@
   import { goto } from '$app/navigation';
   import type { PageData } from './$types';
   import { page } from '$app/stores'; // Import page store
+  import { Streamdown } from 'svelte-streamdown'; // Import Streamdown for markdown rendering
 
   export let data: PageData;
 
@@ -107,7 +108,8 @@
         <div class="mb-6">
           <h2 class="text-xl font-semibold mb-2">Jungian Interpretation</h2>
           <div class="p-4 bg-base-200 rounded-lg">
-            <p class="text-gray-700 leading-relaxed whitespace-pre-wrap">{data.dream.interpretation}</p>
+            <!-- Render the interpretation as markdown using Streamdown -->
+            <Streamdown content={data.dream.interpretation} />
           </div>
         </div>
       {:else if data.dream.status === 'pending_analysis'}
