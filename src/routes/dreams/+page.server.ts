@@ -1,6 +1,6 @@
-import type { PageServerLoad } from './$types';
+import type { PageServerLoad, Actions } from './$types';
 import { sql } from '$lib/server/db';
-import { error, redirect } from '@sveltejs/kit';
+import { error, redirect, fail } from '@sveltejs/kit';
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) {
@@ -30,4 +30,37 @@ export const load: PageServerLoad = async ({ locals }) => {
     console.error('Error loading dreams:', e);
     throw error(500, 'Could not load dreams.');
   }
+};
+
+export const actions: Actions = {
+  delete: async ({ request, locals }) => {
+    if (!locals.user) {
+      return fail(401, { error: 'Unauthorized' });
+    }
+
+    const userId = locals.user.id;
+    const data = await request.formData();
+    const dreamId = data.get('dreamId') as string;
+
+    if (!dreamId) {
+      return fail(400, { error: 'Dream ID is required.' });
+    }
+
+    try {
+      const [deletedDream] = await sql`
+        DELETE FROM dreams
+        WHERE id = ${dreamId} AND user_id = ${userId}
+        RETURNING id;
+      `;
+
+      if (!deletedDream) {
+        return fail(404, { error: 'Dream not found or access denied.' });
+      }
+
+      return { success: true };
+    } catch (e) {
+      console.error('Error deleting dream:', e);
+      return fail(500, { error: 'Failed to delete dream.' });
+    }
+  },
 };

@@ -17,15 +17,6 @@
     // Implement navigation to an edit page or open a modal
   }
 
-  // Function to handle deleting a dream (placeholder)
-  async function deleteDream(dreamId: string) {
-    if (!confirm('Are you sure you want to delete this dream?')) {
-      return;
-    }
-    console('Delete dream:', dreamId);
-    // Implement API call to delete dream
-  }
-
   // Function to handle regenerating analysis
   async function regenerateDream(dreamId: string) {
     if (!confirm('Are you sure you want to regenerate the analysis for this dream?')) {
@@ -111,13 +102,17 @@
                 Regenerate
               </button>
             </form>
-            <button
-              on:click={() => deleteDream(dream.id)}
-              class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
-              aria-label="Delete dream"
-            >
-              Delete
-            </button>
+            <form method="POST" action="?/delete" use:enhance>
+              <input type="hidden" name="dreamId" value={dream.id} />
+              <button
+                type="submit"
+                class="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors duration-200"
+                aria-label="Delete dream"
+                onclick="return confirm('Are you sure you want to delete this dream?')"
+              >
+                Delete
+              </button>
+            </form>
           </div>
         </li>
       {/each}
