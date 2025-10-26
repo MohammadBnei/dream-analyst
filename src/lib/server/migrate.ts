@@ -1,5 +1,6 @@
 import { up as migrate001Up } from './migrations/001_create_dreams_table';
 import { up as migrate002Up } from './migrations/002_create_users_table';
+import { up as migrate003Up } from './migrations/003_add_status_to_dreams_table'; // Add this import
 import { sql } from './db';
 
 async function runMigrations() {
@@ -21,6 +22,7 @@ async function runMigrations() {
     const migrationsToRun = [
       { name: '001_create_dreams_table', up: migrate001Up },
       { name: '002_create_users_table', up: migrate002Up },
+      { name: '003_add_status_to_dreams_table', up: migrate003Up }, // Add this migration
     ];
 
     for (const migration of migrationsToRun) {
