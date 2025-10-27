@@ -8,7 +8,7 @@ declare global {
 			user?: {
 				id: string;
 				username: string;
-				email: string;
+				// Removed 'email' as it's not in the current user schema or JWT payload
 			};
 			// The 'session' object is removed as we are no longer using Lucia's session management
 		}
