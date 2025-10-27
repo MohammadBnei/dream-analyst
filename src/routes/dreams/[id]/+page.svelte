@@ -149,11 +149,27 @@
 			showDeleteModal = false; // Close modal regardless of success/failure
 		}
 	}
+
+	function handleBackClick() {
+		goto('/dreams');
+	}
+
+	function handleShowDeleteModal() {
+		showDeleteModal = true;
+	}
+
+	function handleCancelDelete() {
+		showDeleteModal = false;
+	}
+
+	function handleModalSelfClick() {
+		showDeleteModal = false;
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
 	<div class="mb-6 flex items-center justify-between">
-		<button onclick={() => goto('/dreams')} class="btn btn-ghost">
+		<button onclick={handleBackClick} class="btn btn-ghost">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				class="h-5 w-5"
@@ -167,7 +183,7 @@
 		</button>
 		<h1 class="grow text-center text-3xl font-bold">Dream Details</h1>
 		<div class="w-24 text-right">
-			<button onclick={() => (showDeleteModal = true)} class="btn btn-error btn-sm">
+			<button onclick={handleShowDeleteModal} class="btn btn-error btn-sm">
 				Delete Dream
 			</button>
 		</div>
@@ -314,7 +330,7 @@
 
 <!-- Delete Confirmation Modal -->
 {#if showDeleteModal}
-	<dialog open class="modal modal-bottom sm:modal-middle" on:click|self={() => (showDeleteModal = false)}>
+	<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick}>
 		<div class="modal-box">
 			<h3 class="font-bold text-lg">Confirm Deletion</h3>
 			<p class="py-4">Are you sure you want to delete this dream? This action cannot be undone.</p>
@@ -338,7 +354,7 @@
 				</div>
 			{/if}
 			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={() => (showDeleteModal = false)} disabled={isDeleting}>Cancel</button>
+				<button class="btn btn-ghost" onclick={handleCancelDelete} disabled={isDeleting}>Cancel</button>
 				<button class="btn btn-error" onclick={deleteDream} disabled={isDeleting}>
 					{#if isDeleting}
 						<span class="loading loading-spinner"></span>
