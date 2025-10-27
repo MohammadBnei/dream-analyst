@@ -8,7 +8,7 @@ declare global {
 			user?: {
 				id: string;
 				username: string;
-				email?: string; // Added email field
+				email: string; // Added email field
 			};
 			// The 'session' object is removed as we are no longer using Lucia's session management
 		}

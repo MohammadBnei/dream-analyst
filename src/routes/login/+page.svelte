@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ActionData } from './$types';
-  import * as m from '../../paraglide/messages';
+  import * as m from '$lib/paraglide/messages';
 
   export let form: ActionData;
 </script>

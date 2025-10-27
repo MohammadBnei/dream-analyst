@@ -33,7 +33,7 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 			event.locals.user = {
 				id: user.id,
 				username: user.username,
-				email: user.email // Use email from the fetched user
+				email: user.email
 			};
 		} else {
 			// User not found in DB, token might be valid but user deleted
