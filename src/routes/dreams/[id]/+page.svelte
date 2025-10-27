@@ -1,176 +1,227 @@
 <script lang="ts">
-    import type { PageData } from './$types';
-    import { goto } from '$app/navigation';
-    import { onMount, onDestroy } from 'svelte';
-    import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
+	import type { PageData } from './$types';
+	import { goto } from '$app/navigation';
+	import { onMount, onDestroy } from 'svelte';
+	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
 
-    export let data: PageData;
+	export let data: PageData;
 
-    let dream = data.dream; // Initial dream data from server load function
+	let dream = data.dream; // Initial dream data from server load function
 
-    let streamedInterpretation = dream.interpretation || '';
-    let currentDreamStatus = dream.status;
+	let streamedInterpretation = dream.interpretation || '';
+	let currentDreamStatus = dream.status;
 
-    let isLoadingStream = false;
-    let streamError: string | null = null;
-    let eventSource: EventSource | null = null;
+	let isLoadingStream = false;
+	let streamError: string | null = null;
+	let eventSource: EventSource | null = null;
 
-    // Function to determine badge color based on dream status
-    function getStatusBadgeClass(status: App.Dream['status']) {
-        switch (status) {
-            case 'completed':
-                return 'badge-success';
-            case 'pending_analysis':
-                return 'badge-info';
-            case 'analysis_failed':
-                return 'badge-error';
-            default:
-                return 'badge-neutral';
-        }
-    }
+	// Function to determine badge color based on dream status
+	function getStatusBadgeClass(status: App.Dream['status']) {
+		switch (status) {
+			case 'completed':
+				return 'badge-success';
+			case 'pending_analysis':
+				return 'badge-info';
+			case 'analysis_failed':
+				return 'badge-error';
+			default:
+				return 'badge-neutral';
+		}
+	}
 
-    onMount(() => {
-        if (currentDreamStatus === 'pending_analysis') {
-            startStream();
-        }
-    });
+	onMount(() => {
+		if (currentDreamStatus === 'pending_analysis') {
+			startStream();
+		}
+	});
 
-    onDestroy(() => {
-        if (eventSource) {
-            eventSource.close();
-            console.log('EventSource closed.');
-        }
-    });
+	onDestroy(() => {
+		if (eventSource) {
+			eventSource.close();
+			console.log('EventSource closed.');
+		}
+	});
 
-    function startStream() {
-        isLoadingStream = true;
-        streamError = null;
-        // Clear interpretation only if we are starting a fresh analysis stream
-        streamedInterpretation = '';
-        currentDreamStatus = 'pending_analysis';
+	function startStream() {
+		isLoadingStream = true;
+		streamError = null;
+		// Clear interpretation only if we are starting a fresh analysis stream
+		streamedInterpretation = '';
+		currentDreamStatus = 'pending_analysis';
 
-        eventSource = new EventSource(`/api/dreams/${dream.id}/stream-analysis`);
+		eventSource = new EventSource(`/api/dreams/${dream.id}/stream-analysis`);
 
-        eventSource.onopen = () => {
-            console.log('EventSource opened.');
-        };
+		eventSource.onopen = () => {
+			console.log('EventSource opened.');
+		};
 
-        eventSource.onmessage = (event) => {
-            isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
-            try {
-                const data = JSON.parse(event.data);
-                if (data.interpretation) {
-                    streamedInterpretation += data.interpretation;
-                }
-            } catch (e) {
-                console.error('Error parsing SSE message:', e, event.data);
-            }
-        };
+		eventSource.onmessage = (event) => {
+			isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
+			try {
+				const data = JSON.parse(event.data);
+				if (data.interpretation) {
+					streamedInterpretation += data.interpretation;
+				}
+			} catch (e) {
+				console.error('Error parsing SSE message:', e, event.data);
+			}
+		};
 
-        eventSource.addEventListener('end', (event) => {
-            console.log('Stream ended:', event.data);
-            isLoadingStream = false;
-            currentDreamStatus = 'completed'; // Assume completed on 'end' event
-            if (eventSource) {
-                eventSource.close();
-            }
-        });
+		eventSource.addEventListener('end', (event) => {
+			console.log('Stream ended:', event.data);
+			isLoadingStream = false;
+			currentDreamStatus = 'completed'; // Assume completed on 'end' event
+			if (eventSource) {
+				eventSource.close();
+			}
+		});
 
-        eventSource.addEventListener('error', (event) => {
-            console.error('EventSource error:', event);
-            isLoadingStream = false;
-            currentDreamStatus = 'analysis_failed';
-            streamError = 'Failed to load dream analysis. Please try again.';
-            if (eventSource) {
-                eventSource.close();
-            }
-        });
-    }
+		eventSource.addEventListener('error', (event) => {
+			console.error('EventSource error:', event);
+			isLoadingStream = false;
+			currentDreamStatus = 'analysis_failed';
+			streamError = 'Failed to load dream analysis. Please try again.';
+			if (eventSource) {
+				eventSource.close();
+			}
+		});
+	}
 </script>
 
-<div class="container mx-auto max-w-4xl p-4">
-    <div class="flex items-center justify-between mb-6">
-        <button on:click={() => goto('/dreams')} class="btn btn-ghost">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Dreams
-        </button>
-        <h1 class="text-3xl font-bold text-center flex-grow">Dream Details</h1>
-        <div class="w-24"></div> <!-- Spacer to balance the back button -->
-    </div>
+<div class="max-w-4xl p-4 container mx-auto">
+	<div class="mb-6 flex items-center justify-between">
+		<button on:click={() => goto('/dreams')} class="btn btn-ghost">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-5 w-5"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+			</svg>
+			Back to Dreams
+		</button>
+		<h1 class="text-3xl font-bold flex-grow text-center">Dream Details</h1>
+		<div class="w-24"></div>
+		<!-- Spacer to balance the back button -->
+	</div>
 
-    <div class="card bg-base-100 shadow-xl p-6">
-        <div class="card-body p-0">
-            <div class="flex items-center justify-between mb-4">
-                <h2 class="card-title text-2xl">
-                    Dream on {new Date(dream.createdAt).toLocaleDateString()}
-                </h2>
-                <span class="badge {getStatusBadgeClass(currentDreamStatus)}"
-                    >{currentDreamStatus.replace('_', ' ')}</span
-                >
-            </div>
+	<div class="card bg-base-100 shadow-xl p-6">
+		<div class="card-body p-0">
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="card-title text-2xl">
+					Dream on {new Date(dream.createdAt).toLocaleDateString()}
+				</h2>
+				<span class="badge {getStatusBadgeClass(currentDreamStatus)}"
+					>{currentDreamStatus.replace('_', ' ')}</span
+				>
+			</div>
 
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-2">Raw Dream Text:</h3>
-                <p class="text-base-content/80 leading-relaxed whitespace-pre-wrap">
-                    {dream.rawText}
-                </p>
-            </div>
+			<div class="mb-6">
+				<h3 class="text-lg font-semibold mb-2">Raw Dream Text:</h3>
+				<p class="text-base-content/80 leading-relaxed whitespace-pre-wrap">
+					{dream.rawText}
+				</p>
+			</div>
 
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-2">Interpretation:</h3>
-                {#if isLoadingStream}
-                    <div class="alert alert-info shadow-lg">
-                        <div>
-                            <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Analyzing your dream...</span>
-                        </div>
-                    </div>
-                {:else if streamError}
-                    <div class="alert alert-error shadow-lg">
-                        <div>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>{streamError}</span>
-                        </div>
-                    </div>
-                    <button on:click={startStream} class="btn btn-primary mt-4">Retry Analysis</button>
-                {:else if streamedInterpretation}
-                    <div class="prose max-w-none">
-                        <Streamdown content={streamedInterpretation} />
-                    </div>
-                {:else if currentDreamStatus === 'pending_analysis'}
-                    <div class="alert alert-info shadow-lg">
-                        <div>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>Analysis pending... Please check back later or refresh.</span>
-                        </div>
-                    </div>
-                {:else if currentDreamStatus === 'analysis_failed'}
-                    <div class="alert alert-error shadow-lg">
-                        <div>
-                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            <span>Analysis failed. We could not process your dream.</span>
-                        </div>
-                    </div>
-                {:else}
-                    <p>No interpretation available.</p>
-                {/if}
-            </div>
+			<div class="mb-6">
+				<h3 class="text-lg font-semibold mb-2">Interpretation:</h3>
+				{#if isLoadingStream}
+					<div class="alert alert-info shadow-lg">
+						<div>
+							<svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
+							</svg>
+							<span>Analyzing your dream...</span>
+						</div>
+					</div>
+				{:else if streamError}
+					<div class="alert alert-error shadow-lg">
+						<div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6 flex-shrink-0 stroke-current"
+								fill="none"
+								viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+								></path></svg
+							>
+							<span>{streamError}</span>
+						</div>
+					</div>
+					<button on:click={startStream} class="btn btn-primary mt-4">Retry Analysis</button>
+				{:else if streamedInterpretation}
+					<div class="prose max-w-none">
+						<Streamdown content={streamedInterpretation} />
+					</div>
+				{:else if currentDreamStatus === 'pending_analysis'}
+					<div class="alert alert-info shadow-lg">
+						<div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								class="w-6 h-6 flex-shrink-0 stroke-current"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								></path></svg
+							>
+							<span>Analysis pending... Please check back later or refresh.</span>
+						</div>
+					</div>
+				{:else if currentDreamStatus === 'analysis_failed'}
+					<div class="alert alert-error shadow-lg">
+						<div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6 flex-shrink-0 stroke-current"
+								fill="none"
+								viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+								></path></svg
+							>
+							<span>Analysis failed. We could not process your dream.</span>
+						</div>
+					</div>
+				{:else}
+					<p>No interpretation available.</p>
+				{/if}
+			</div>
 
-            <div class="mt-6 text-sm text-base-content/60">
-                <p>Created: {new Date(dream.createdAt).toLocaleString()}</p>
-                <p>Last Updated: {new Date(dream.updatedAt).toLocaleString()}</p>
-            </div>
-        </div>
-    </div>
+			<div class="mt-6 text-sm text-base-content/60">
+				<p>Created: {new Date(dream.createdAt).toLocaleString()}</p>
+				<p>Last Updated: {new Date(dream.updatedAt).toLocaleString()}</p>
+			</div>
+		</div>
+	</div>
 </div>
 
 <style lang="postcss">
-    /* The prose class from @tailwindcss/typography will handle most markdown styling. */
-    /* You can add custom styles here if needed, but generally, Streamdown handles its own styling */
-    /* or relies on the prose class. */
+	/* The prose class from @tailwindcss/typography will handle most markdown styling. */
+	/* You can add custom styles here if needed, but generally, Streamdown handles its own styling */
+	/* or relies on the prose class. */
 </style>

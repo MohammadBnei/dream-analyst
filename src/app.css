@@ -1,5 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@plugin 'daisyui';
 
-/* Any global styles not handled by Tailwind or DaisyUI can go here */
+/* Add Streamdown styles to your Tailwind build */
+@source "../node_modules/svelte-streamdown/**/*";
