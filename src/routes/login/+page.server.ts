@@ -5,23 +5,28 @@ import prisma from '$lib/server/db';
 export const actions = {
 	default: async ({ request, cookies }) => {
 		const data = await request.formData();
-		const username = data.get('username') as string;
+		const identity = data.get('identity') as string; // Can be username or email
 		const password = data.get('password') as string;
 
-		if (!username || !password) {
+		if (!identity || !password) {
 			return fail(400, {
-				username,
-				message: 'Missing username or password'
+				identity,
+				message: 'Missing identity or password'
 			});
 		}
 
-		const existingUser = await prisma.user.findUnique({
-			where: { username }
+		const existingUser = await prisma.user.findFirst({
+			where: {
+				OR: [
+					{ username: { equals: identity, mode: 'insensitive' } },
+					{ email: { equals: identity, mode: 'insensitive' } }
+				]
+			}
 		});
 
 		if (!existingUser) {
 			return fail(400, {
-				username,
+				identity,
 				message: 'Invalid credentials'
 			});
 		}
@@ -30,7 +35,7 @@ export const actions = {
 
 		if (!passwordMatch) {
 			return fail(400, {
-				username,
+				identity,
 				message: 'Invalid credentials'
 			});
 		}
