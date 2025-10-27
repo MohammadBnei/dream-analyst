@@ -16,16 +16,16 @@
     <div class="card shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
       <form method="POST" class="card-body">
         <div class="form-control">
-          <label class="label" for="username">
-            <span class="label-text">{m.username_label()}</span>
+          <label class="label" for="identity">
+            <span class="label-text">{m.username_or_email_label()}</span>
           </label>
           <input
             type="text"
-            placeholder={m.username_label().toLowerCase()}
+            placeholder={m.username_or_email_label().toLowerCase()}
             class="input input-bordered"
-            name="username"
-            id="username"
-            value={form?.username ?? ''}
+            name="identity"
+            id="identity"
+            value={form?.identity ?? ''}
             required
           />
         </div>
