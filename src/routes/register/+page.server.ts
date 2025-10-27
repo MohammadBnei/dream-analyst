@@ -1,8 +1,8 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, type Actions } from '@sveltejs/kit';
 import { createUser } from '$lib/server/userService';
 import { generateToken, setAuthTokenCookie } from '$lib/server/auth';
 
-export const actions = {
+export const actions: Actions = {
   default: async ({ request, cookies }) => {
     const data = await request.formData();
     const username = data.get('username')?.toString();

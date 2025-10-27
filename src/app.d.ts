@@ -6,7 +6,9 @@ declare global {
 			// The user object will now be derived from the JWT payload
 			// It will contain at least the userId, and potentially other user data
 			user?: {
-				userId: string;
+				id: string;
+				username: string;
+				email: string;
 			};
 			// The 'session' object is removed as we are no longer using Lucia's session management
 		}

@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { env } from '$env/dynamic/private';
-import type { RequestEvent } from '@sveltejs/kit';
+import type { Cookies, RequestEvent } from '@sveltejs/kit';
 
 const JWT_SECRET = env.JWT_SECRET || 'your_jwt_secret_here'; // Use a strong secret from environment variables
 const JWT_EXPIRES_IN = '30d'; // Token expiration time
@@ -31,8 +31,8 @@ export const verifyToken = (token: string): { userId: string } | null => {
 
 export const authTokenCookieName = 'auth_token';
 
-export function setAuthTokenCookie(event: RequestEvent, token: string, maxAge: number = 60 * 60 * 24 * 30) { // 30 days
-	event.cookies.set(authTokenCookieName, token, {
+export function setAuthTokenCookie(cookies: Cookies, token: string, maxAge: number = 60 * 60 * 24 * 30) { // 30 days
+	cookies.set(authTokenCookieName, token, {
 		httpOnly: true,
 		path: '/',
 		secure: process.env.NODE_ENV === 'production',
@@ -41,8 +41,8 @@ export function setAuthTokenCookie(event: RequestEvent, token: string, maxAge: n
 	});
 }
 
-export function deleteAuthTokenCookie(event: RequestEvent) {
-	event.cookies.delete(authTokenCookieName, {
+export function deleteAuthTokenCookie(cookies: Cookies) {
+	cookies.delete(authTokenCookieName, {
 		path: '/'
 	});
 }
