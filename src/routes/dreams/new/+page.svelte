@@ -3,6 +3,7 @@
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
     import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
+	import * as m from '$lib/paraglide/messages';
 
 	const dispatch = createEventDispatcher();
 
@@ -37,8 +38,8 @@
 		eventSource.onmessage = (event) => {
 			try {
 				const data = JSON.parse(event.data);
-				if (data.interpretation) {
-					streamedInterpretation += data.interpretation;
+				if (data.content) {
+					streamedInterpretation += data.content;
 				}
 				if (data.tags) {
 					streamedTags = data.tags; // Tags might come as a complete array at the end
@@ -50,7 +51,7 @@
 
 		eventSource.onerror = (event) => {
 			console.error('EventSource failed:', event);
-			errorMessage = 'Analysis stream failed. Please try again.';
+			errorMessage = m.analysis_stream_failed_error();
 			isAnalyzing = false;
 			eventSource.close();
 		};
@@ -69,7 +70,7 @@
 
 		eventSource.addEventListener('error', (event) => {
 			console.error('Analysis stream error:', event);
-			errorMessage = 'Analysis stream encountered an error.';
+			errorMessage = m.analysis_stream_error();
 			isAnalyzing = false;
 			eventSource.close();
 		});
@@ -88,14 +89,14 @@
 				if (currentDreamId) {
 					await startStreamingAnalysis(currentDreamId);
 				} else {
-					errorMessage = 'Dream saved, but no ID received to start analysis.';
+					errorMessage = m.dream_saved_no_id_error();
 					isSaving = false;
 				}
 			} else if (result.type === 'error') {
-				errorMessage = result.error?.message || 'An unknown error occurred.';
+				errorMessage = result.error?.message || m.unknown_error_occurred();
 				isSaving = false;
 			} else if (result.type === 'failure') {
-				errorMessage = result.data?.message || 'Failed to save dream.';
+				errorMessage = result.data?.message || m.failed_to_save_dream();
 				isSaving = false;
 			}
 			isSaving = false; // Saving is done, now analysis starts
@@ -105,24 +106,24 @@
 </script>
 
 <div class="container mx-auto p-4 max-w-2xl">
-	<h1 class="text-3xl font-bold mb-6 text-center">New Dream</h1>
+	<h1 class="text-3xl font-bold mb-6 text-center">{m.new_dream_title()}</h1>
 
 	<form method="POST" use:enhance={submitForm} class="space-y-6">
 		<div class="form-control">
 			<label for="dreamText" class="label">
-				<span class="label-text">What did you dream?</span>
+				<span class="label-text">{m.what_did_you_dream_label()}</span>
 			</label>
 			<textarea
 				id="dreamText"
 				name="dreamText"
 				class="textarea textarea-bordered h-48 w-full"
-				placeholder="Describe your dream here..."
+				placeholder={m.describe_dream_placeholder()}
 				bind:value={dreamText}
 				required
 				minlength="10"
 			></textarea>
 			<label class="label">
-				<span class="label-text-alt">Minimum 10 characters</span>
+				<span class="label-text-alt">{m.minimum_characters_label({ count: 10 })}</span>
 			</label>
 		</div>
 
@@ -130,19 +131,19 @@
 			<button type="submit" class="btn btn-primary btn-lg" disabled={isSaveDisabled}>
 				{#if isSaving}
 					<span class="loading loading-spinner"></span>
-					Saving...
-				{:else if isAnalyzing}
+					{m.saving_button()}
+				{#else if isAnalyzing}
 					<span class="loading loading-spinner"></span>
-					Analyzing...
+					{m.analyzing_button()}
 				{:else}
-					Save Dream
+					{m.save_dream_button()}
 				{/if}
 			</button>
 		</div>
 
 		{#if !isSaving && !isAnalyzing && !streamedInterpretation && !errorMessage}
 			<p class="text-center text-sm text-base-content/70 mt-4">
-				Your dream will be analyzed instantly – please wait a few seconds.
+				{m.dream_analysis_instant_message()}
 			</p>
 		{/if}
 	</form>
@@ -161,18 +162,18 @@
 					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
 				></path></svg
 			>
-			<span>Error: {errorMessage}</span>
-			<button class="btn btn-sm btn-ghost" on:click={resetForm}>Retry</button>
+			<span>{m.error_prefix()}: {errorMessage}</span>
+			<button class="btn btn-sm btn-ghost" on:click={resetForm}>{m.retry_button()}</button>
 		</div>
 	{/if}
 
 	{#if streamedInterpretation || streamedTags.length > 0}
 		<div class="mt-8 p-6 bg-base-200 rounded-box shadow-lg" transition:fade>
-			<h2 class="text-2xl font-semibold mb-4">Dream Analysis</h2>
+			<h2 class="text-2xl font-semibold mb-4">{m.dream_analysis_heading()}</h2>
 
 			{#if streamedTags.length > 0}
 				<div class="mb-4">
-					<h3 class="text-lg font-medium mb-2">Tags:</h3>
+					<h3 class="text-lg font-medium mb-2">{m.tags_heading()}:</h3>
 					<div class="flex flex-wrap gap-2">
 						{#each streamedTags as tag}
 							<span class="badge badge-primary badge-lg">{tag}</span>
@@ -183,7 +184,7 @@
 
 			{#if streamedInterpretation}
 				<div class="mb-4">
-					<h3 class="text-lg font-medium mb-2">Interpretation:</h3>
+					<h3 class="text-lg font-medium mb-2">{m.interpretation_heading()}:</h3>
 					<div class="prose max-w-none">
 						<Streamdown content={streamedInterpretation} />
 					</div>
@@ -191,7 +192,7 @@
 			{/if}
 
 			<div class="flex justify-end mt-6">
-				<button class="btn btn-secondary" on:click={resetForm}>Add Another Dream</button>
+				<button class="btn btn-secondary" on:click={resetForm}>{m.add_another_dream_button()}</button>
 			</div>
 		</div>
 	{/if}
