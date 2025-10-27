@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.2.0](https://github.com/vercel/examples/compare/0.1.3...0.2.0) (2025-10-27)
+
+
+### Features
+
+* Integrate dream and user schemas with Drizzle ORM and update auth logic ([eae05a7](https://github.com/vercel/examples/commit/eae05a76663e1a26cfa3c12a0aa4d449cb4e5545))
+
 ## [0.1.3](https://github.com/vercel/examples/compare/0.1.2...0.1.3) (2025-10-27)
 
 ## [0.1.2](https://github.com/vercel/examples/compare/0.1.1...0.1.2) (2025-10-26)
