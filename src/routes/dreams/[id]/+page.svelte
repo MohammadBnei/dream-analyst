@@ -1,13 +1,12 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import type { PageProps } from './$types';
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
-	import { $state } from 'svelte'; // Import $state rune
 
-	export let data: PageData;
+	let { data }: PageProps = $props();
 
-	let dream = $state(data.dream); // Initial dream data from server load function, now reactive
+	let dream = $derived(data.dream);
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let currentDreamStatus = $state(dream.status);
