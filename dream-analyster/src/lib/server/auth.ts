@@ -17,10 +17,10 @@ export function generateSessionToken() {
 
 export async function createSession(token: string, userId: string) { // userId type is string (UUID)
 	const sessionId = encodeHexLowerCase(sha256(new TextEncoder().encode(token)));
-	const session: table.NewSession = { // Use NewSession for insertion
+	const session: table.Session = { // Use NewSession for insertion
 		id: sessionId,
 		userId,
-		expiresAt: new Date(Date.now() + DAY_IN_IN_MS * 30)
+		expiresAt: new Date(Date.now() + DAY_IN_MS * 30)
 	};
 	await db.insert(table.session).values(session);
 	return session;

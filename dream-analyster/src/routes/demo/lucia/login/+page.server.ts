@@ -63,7 +63,6 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid password' });
 		}
 
-		const userId = crypto.randomUUID(); // Use crypto.randomUUID() for UUID generation
 		const passwordHash = await hash(password, {
 			// recommended minimum parameters
 			memoryCost: 19456,
@@ -73,7 +72,13 @@ export const actions: Actions = {
 		});
 
 		try {
-			await db.insert(table.user).values({ id: userId, username, passwordHash }); // Insert into the new user schema
+			await db.insert(table.user).values({ username, passwordHash }); // Insert into the new user schema
+			const results = await db.select().from(table.user).where(eq(table.user.username, username));
+			const userId = results.at(0)?.id;
+
+			if (!userId) {
+				throw new Error('User ID not found');
+			}
 
 			const sessionToken = auth.generateSessionToken();
 			const session = await auth.createSession(sessionToken, userId);
