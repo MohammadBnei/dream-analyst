@@ -2,6 +2,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
+import { getUserById } from '$lib/server/userService';
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -13,24 +14,38 @@ const handleParaglide: Handle = ({ event, resolve }) =>
 	});
 
 const handleAuth: Handle = async ({ event, resolve }) => {
-	const sessionToken = event.cookies.get(auth.sessionCookieName);
+	const authToken = event.cookies.get(auth.authTokenCookieName);
 
-	if (!sessionToken) {
-		event.locals.user = null;
-		event.locals.session = null;
+	if (!authToken) {
+		event.locals.user = undefined; // Set to undefined as per app.d.ts
 		return resolve(event);
 	}
 
-	const { session, user } = await auth.validateSessionToken(sessionToken);
+	const decodedToken = auth.verifyToken(authToken);
 
-	if (session) {
-		auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
+	if (decodedToken && decodedToken.userId) {
+		// We can directly use the username and email from the decoded token
+		// if we trust the token to contain up-to-date user information.
+		// If not, we would fetch the user from the DB using decodedToken.userId
+		// For now, let's fetch from DB to ensure data consistency.
+		const user = await getUserById(decodedToken.userId);
+		if (user) {
+			event.locals.user = {
+				id: user.id,
+				username: user.username,
+				email: user.email // Use email from the fetched user
+			};
+		} else {
+			// User not found in DB, token might be valid but user deleted
+			auth.deleteAuthTokenCookie(event.cookies);
+			event.locals.user = undefined;
+		}
 	} else {
-		auth.deleteSessionTokenCookie(event);
+		// Token is invalid or expired
+		auth.deleteAuthTokenCookie(event.cookies);
+		event.locals.user = undefined;
 	}
 
-	event.locals.user = user;
-	event.locals.session = session;
 	return resolve(event);
 };
 

@@ -4,6 +4,7 @@
 	"login_title": "Connectez-vous maintenant !",
 	"login_subtitle": "Accédez à votre journal de rêves et explorez votre subconscient.",
 	"username_label": "Nom d'utilisateur",
+	"email_label": "E-mail",
 	"password_label": "Mot de passe",
 	"no_account_link": "Vous n'avez pas de compte ? Inscrivez-vous ici.",
 	"login_button": "Se connecter",

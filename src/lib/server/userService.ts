@@ -3,9 +3,9 @@ import { user } from '$lib/server/db/schema';
 import { hashPassword, comparePassword } from '$lib/server/auth';
 import { eq } from 'drizzle-orm';
 
-export async function createUser(username: string, passwordPlain: string): Promise<string> {
+export async function createUser(username: string, email: string | undefined, passwordPlain: string): Promise<string> {
   const passwordHash = await hashPassword(passwordPlain);
-  const [newUser] = await db.insert(user).values({ username, passwordHash }).returning({ id: user.id });
+  const [newUser] = await db.insert(user).values({ username, email, passwordHash }).returning({ id: user.id });
   return newUser.id;
 }
 

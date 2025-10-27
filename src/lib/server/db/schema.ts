@@ -3,6 +3,7 @@ import { pgTable, uuid, text, timestamp, varchar, jsonb } from 'drizzle-orm/pg-c
 export const user = pgTable('user', {
 	id: uuid('id').primaryKey().defaultRandom(), // Keeping defaultRandom for UUID primary key generation
 	username: text('username').notNull().unique(),
+	email: text('email').unique(), // Added email field
 	passwordHash: text('password_hash').notNull()
 });
 

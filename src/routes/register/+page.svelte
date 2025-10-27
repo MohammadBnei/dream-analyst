@@ -30,6 +30,19 @@
           />
         </div>
         <div class="form-control">
+          <label class="label" for="email">
+            <span class="label-text">{m.email_label()}</span>
+          </label>
+          <input
+            type="email"
+            placeholder={m.email_label().toLowerCase()}
+            class="input input-bordered"
+            name="email"
+            id="email"
+            value={form?.email ?? ''}
+          />
+        </div>
+        <div class="form-control">
           <label class="label" for="password">
             <span class="label-text">{m.password_label()}</span>
           </label>
