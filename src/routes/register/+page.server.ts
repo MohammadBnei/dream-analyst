@@ -1,35 +1,77 @@
-import { fail, redirect, type Actions } from '@sveltejs/kit';
-import { createUser } from '$lib/server/userService';
-import { generateToken, setAuthTokenCookie } from '$lib/server/auth';
+import { fail, redirect } from '@sveltejs/kit';
+import { hashPassword, generateToken, setAuthTokenCookie } from '$lib/server/auth';
+import { prisma } from '$lib/server/db'; // Import prisma client
 
-export const actions: Actions = {
-  default: async ({ request, cookies }) => {
-    const data = await request.formData();
-    const username = data.get('username')?.toString();
-    const email = data.get('email')?.toString(); // Get email from form data
-    const password = data.get('password')?.toString();
+export const actions = {
+	default: async ({ request, cookies }) => {
+		const data = await request.formData();
+		const username = data.get('username') as string;
+		const email = data.get('email') as string | null; // Email is optional
+		const password = data.get('password') as string;
+		const passwordConfirm = data.get('passwordConfirm') as string;
 
-    if (!username || !password) {
-      return fail(400, {
-        message: 'Missing username or password',
-        username,
-        email, // Pass email back to the form if available
-      });
-    }
+		if (!username || !password || !passwordConfirm) {
+			return fail(400, {
+				username,
+				email,
+				message: 'Missing username, password, or password confirmation'
+			});
+		}
 
-    try {
-      const userId = await createUser(username, email, password); // Pass email to createUser
-      const token = generateToken(userId, username, email); // Include email in token generation
-      setAuthTokenCookie(cookies, token);
-    } catch (error) {
-      console.error('Registration error:', error);
-      return fail(500, {
-        message: 'Could not register user. Please try again.',
-        username,
-        email, // Pass email back to the form if available
-      });
-    }
+		if (password !== passwordConfirm) {
+			return fail(400, {
+				username,
+				email,
+				message: 'Passwords do not match'
+			});
+		}
 
-    throw redirect(303, '/'); // Redirect to home page after successful registration
-  },
+		if (password.length < 6) {
+			return fail(400, {
+				username,
+				email,
+				message: 'Password must be at least 6 characters long'
+			});
+		}
+
+		const existingUser = await prisma.user.findUnique({
+			where: { username }
+		});
+
+		if (existingUser) {
+			return fail(400, {
+				username,
+				email,
+				message: 'Username already taken'
+			});
+		}
+
+		if (email) {
+			const existingEmail = await prisma.user.findUnique({
+				where: { email }
+			});
+			if (existingEmail) {
+				return fail(400, {
+					username,
+					email,
+					message: 'Email already registered'
+				});
+			}
+		}
+
+		const passwordHash = await hashPassword(password);
+
+		const newUser = await prisma.user.create({
+			data: {
+				username,
+				email,
+				passwordHash
+			}
+		});
+
+		const token = generateToken(newUser.id, newUser.username, newUser.email || undefined);
+		setAuthTokenCookie(cookies, token);
+
+		throw redirect(302, '/');
+	}
 };
