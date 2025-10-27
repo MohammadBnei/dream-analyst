@@ -6,11 +6,11 @@ export const actions = {
 	default: async ({ request, cookies }) => {
 		const data = await request.formData();
 		const username = data.get('username') as string;
-		const email = data.get('email') as string | null; // Email is optional
+		const email = data.get('email') as string;
 		const password = data.get('password') as string;
 		const passwordConfirm = data.get('passwordConfirm') as string;
 
-		if (!username || !password || !passwordConfirm) {
+		if (!username || !email || !password || !passwordConfirm) {
 			return fail(400, {
 				username,
 				email,

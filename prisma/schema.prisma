@@ -13,7 +13,7 @@ datasource db {
 model User {
   id           String    @id @default(uuid()) @map("id")
   username     String    @unique
-  email        String?   @unique
+  email        String    @unique
   passwordHash String    @map("password_hash")
   dreams       Dream[]
 
@@ -22,7 +22,7 @@ model User {
 
 model Dream {
   id            String    @id @default(uuid())
-  userId        String?   @map("user_id")
+  userId        String    @map("user_id")
   user          User?     @relation(fields: [userId], references: [id])
   rawText       String    @map("raw_text")
   analysisText  String?   @map("analysis_text")
