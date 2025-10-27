@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
+	import * as m from '$lib/paraglide/messages';
 
 	let { data }: PageProps = $props();
 
@@ -77,7 +78,7 @@
 			console.error('EventSource error:', event);
 			isLoadingStream = false;
 			currentDreamStatus = 'analysis_failed';
-			streamError = 'Failed to load dream analysis. Please try again.';
+			streamError = m.dream_analysis_failed_error();
 			if (eventSource) {
 				eventSource.close();
 			}
@@ -103,7 +104,7 @@
 
 			if (!response.ok) {
 				const errData = await response.json();
-				throw new Error(errData.message || 'Failed to reset dream status.');
+				throw new Error(errData.message || m.reset_dream_status_failed_error());
 			}
 
 			// If status reset is successful, then start the stream
@@ -111,7 +112,7 @@
 		} catch (e) {
 			console.error('Error regenerating analysis:', e);
 			streamError =
-				e instanceof Error ? e.message : 'An unknown error occurred during regeneration.';
+				e instanceof Error ? e.message : m.unknown_error_regenerating_analysis();
 			currentDreamStatus = 'analysis_failed'; // Set status back to failed if reset fails
 			isLoadingStream = false;
 		}
@@ -127,13 +128,13 @@
 
 			if (!response.ok) {
 				const errData = await response.json();
-				throw new Error(errData.message || 'Failed to delete dream.');
+				throw new Error(errData.message || m.delete_dream_failed_error());
 			}
 
 			await goto('/dreams'); // Redirect to the dreams list page after successful deletion
 		} catch (e) {
 			console.error('Error deleting dream:', e);
-			deleteError = e instanceof Error ? e.message : 'An unknown error occurred during deletion.';
+			deleteError = e instanceof Error ? e.message : m.unknown_error_deleting_dream();
 		} finally {
 			isDeleting = false;
 			showDeleteModal = false; // Close modal regardless of success/failure
@@ -169,12 +170,12 @@
 			>
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 			</svg>
-			Back to Dreams
+			{m.back_to_dreams_button()}
 		</button>
-		<h1 class="grow text-center text-3xl font-bold">Dream Details</h1>
+		<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
 		<div class="w-24 text-right">
 			<button onclick={handleShowDeleteModal} class="btn btn-error btn-sm">
-				Delete Dream
+				{m.delete_dream_button()}
 			</button>
 		</div>
 	</div>
@@ -183,7 +184,7 @@
 		<div class="card-body p-0">
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="card-title text-2xl">
-					Dream on {new Date(dream.createdAt).toLocaleDateString()}
+					{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
 				</h2>
 				<span class="badge {getStatusBadgeClass(currentDreamStatus)}"
 					>{currentDreamStatus.replace('_', ' ')}</span
@@ -191,7 +192,7 @@
 			</div>
 
 			<div class="mb-6">
-				<h3 class="mb-2 text-lg font-semibold">Raw Dream Text:</h3>
+				<h3 class="mb-2 text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
 				<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
 					{dream.rawText}
 				</p>
@@ -199,7 +200,7 @@
 
 			<div class="mb-6">
 				<div class="mb-2 flex items-center justify-between">
-					<h3 class="text-lg font-semibold">Interpretation:</h3>
+					<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
 					{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
 						<button
 							onclick={regenerateAnalysis}
@@ -220,7 +221,7 @@
 									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
 								/>
 							</svg>
-							Regenerate Analysis
+							{m.regenerate_analysis_button()}
 						</button>
 					{/if}
 				</div>
@@ -243,7 +244,7 @@
 									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 								></path>
 							</svg>
-							<span>Analyzing your dream...</span>
+							<span>{m.analyzing_dream_message()}</span>
 						</div>
 					</div>
 				{:else if streamError}
@@ -264,7 +265,7 @@
 							<span>{streamError}</span>
 						</div>
 					</div>
-					<button onclick={startStream} class="btn mt-4 btn-primary">Retry Analysis</button>
+					<button onclick={startStream} class="btn mt-4 btn-primary">{m.retry_analysis_button()}</button>
 				{:else if streamedInterpretation}
 					<div class="prose max-w-none">
 						<Streamdown content={streamedInterpretation} />
@@ -284,7 +285,7 @@
 									d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 								></path></svg
 							>
-							<span>Analysis pending... Please check back later or refresh.</span>
+							<span>{m.analysis_pending_message()}</span>
 						</div>
 					</div>
 				{:else if currentDreamStatus === 'analysis_failed'}
@@ -302,17 +303,17 @@
 									d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
 								></path></svg
 							>
-							<span>Analysis failed. We could not process your dream.</span>
+							<span>{m.analysis_failed_message()}</span>
 						</div>
 					</div>
 				{:else}
-					<p>No interpretation available.</p>
+					<p>{m.no_interpretation_available_message()}</p>
 				{/if}
 			</div>
 
 			<div class="mt-6 text-sm text-base-content/60">
-				<p>Created: {new Date(dream.createdAt).toLocaleString()}</p>
-				<p>Last Updated: {new Date(dream.updatedAt).toLocaleString()}</p>
+				<p>{m.created_at_label({ date: new Date(dream.createdAt).toLocaleString() })}</p>
+				<p>{m.last_updated_at_label({ date: new Date(dream.updatedAt).toLocaleString() })}</p>
 			</div>
 		</div>
 	</div>
@@ -322,8 +323,8 @@
 {#if showDeleteModal}
 	<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick}>
 		<div class="modal-box">
-			<h3 class="font-bold text-lg">Confirm Deletion</h3>
-			<p class="py-4">Are you sure you want to delete this dream? This action cannot be undone.</p>
+			<h3 class="font-bold text-lg">{m.confirm_deletion_title()}</h3>
+			<p class="py-4">{m.confirm_deletion_message()}</p>
 			{#if deleteError}
 				<div class="alert alert-error shadow-lg mb-4">
 					<div>
@@ -344,13 +345,13 @@
 				</div>
 			{/if}
 			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={handleCancelDelete} disabled={isDeleting}>Cancel</button>
+				<button class="btn btn-ghost" onclick={handleCancelDelete} disabled={isDeleting}>{m.cancel_button()}</button>
 				<button class="btn btn-error" onclick={deleteDream} disabled={isDeleting}>
 					{#if isDeleting}
 						<span class="loading loading-spinner"></span>
-						Deleting...
+						{m.deleting_button()}
 					{:else}
-						Delete
+						{m.delete_button()}
 					{/if}
 				</button>
 			</div>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { fade } from 'svelte/transition';
+	import * as m from '$lib/paraglide/messages';
 
 	export let data: PageData;
 
@@ -20,15 +21,15 @@
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
-	<h1 class="mb-6 text-center text-3xl font-bold">Your Dreams</h1>
+	<h1 class="mb-6 text-center text-3xl font-bold">{m.your_dreams_title()}</h1>
 
 	{#if data.dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
 			<div class="hero-content text-center">
 				<div class="max-w-md">
-					<h2 class="mb-4 text-2xl font-bold">No dreams recorded yet!</h2>
-					<p class="mb-5">Start your dream journaling journey by adding your first dream.</p>
-					<a href="/dreams/new" class="btn btn-lg btn-primary">Add New Dream</a>
+					<h2 class="mb-4 text-2xl font-bold">{m.no_dreams_recorded_title()}</h2>
+					<p class="mb-5">{m.no_dreams_recorded_message()}</p>
+					<a href="/dreams/new" class="btn btn-lg btn-primary">{m.add_new_dream_button()}</a>
 				</div>
 			</div>
 		</div>
@@ -39,7 +40,7 @@
 					<div class="card-body">
 						<div class="mb-2 flex items-start justify-between">
 							<h2 class="card-title text-lg">
-								Dream on {dream.createdAt.toLocaleDateString()}
+								{m.dream_on_date({ date: dream.createdAt.toLocaleDateString() })}
 							</h2>
 							<span class="badge {getStatusBadgeClass(dream.status as App.Dream['status'])}"
 								>{dream.status.replace('_', ' ')}</span
@@ -63,13 +64,13 @@
 								{dream.interpretation}
 							</p>
 						{:else if dream.status === 'pending_analysis'}
-							<p class="text-sm text-info italic">Analysis pending...</p>
+							<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
 						{:else if dream.status === 'analysis_failed'}
-							<p class="text-sm text-error italic">Analysis failed. Please try again later.</p>
+							<p class="text-sm text-error italic">{m.analysis_failed_try_again_message()}</p>
 						{/if}
 
 						<div class="mt-4 card-actions justify-end">
-							<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary">View Details</a>
+							<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary">{m.view_details_button()}</a>
 						</div>
 					</div>
 				</div>
