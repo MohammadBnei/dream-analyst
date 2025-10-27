@@ -62,7 +62,6 @@
 			isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
 			try {
 				const data = JSON.parse(event.data);
-				console.log('Received SSE data:', data); // Log received data
 				if (data.content) {
 					streamedInterpretation += data.content;
 				}

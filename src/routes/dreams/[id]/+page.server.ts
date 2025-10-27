@@ -26,8 +26,6 @@ export async function load({ params, locals }) {
         tags: dream.tags ? (dream.tags as string[]) : null // Assuming tags are stored as JSON array of strings
     };
 
-    console.log({ dreamWithParsedTags })
-
     return {
         dream: dreamWithParsedTags
     };
