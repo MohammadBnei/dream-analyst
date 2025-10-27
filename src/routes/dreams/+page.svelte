@@ -21,7 +21,10 @@
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
-	<h1 class="mb-6 text-center text-3xl font-bold">{m.your_dreams_title()}</h1>
+	<div class="mb-6 flex items-center justify-between">
+		<h1 class="text-3xl font-bold">{m.your_dreams_title()}</h1>
+		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
+	</div>
 
 	{#if data.dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
