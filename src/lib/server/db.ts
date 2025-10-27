@@ -1,4 +1,3 @@
-// src/lib/server/db.ts
 import postgres, { type Sql } from 'postgres';
 import { env } from '$env/dynamic/private';
 
@@ -14,11 +13,8 @@ export const sql: Sql = postgres(DATABASE_URL, {
 
 console.log('Database connection initialized.');
 
-// You might want to add a way to close the connection gracefully on server shutdown,
-// though for typical serverless or short-lived environments, this might not be strictly necessary.
-// For long-running servers, consider:
-// process.on('SIGINT', async () => {
-//   console.log('Closing database connection...');
-//   await sql.end();
-//   process.exit(0);
-// });
+process.on('SIGINT', async () => {
+  console.log('Closing database connection...');
+  await sql.end();
+  process.exit(0);
+});

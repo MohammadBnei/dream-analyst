@@ -11,6 +11,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
   // In a real app, get userId from locals.user.id after authentication
   const userId = locals.user?.id; // Replace with actual user ID
 
+  if (!userId) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const dreams = await sql`
       SELECT id, created_at, raw_text, tags, interpretation, status
@@ -32,6 +36,10 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 export const POST: RequestHandler = async ({ request, locals }) => {
   // In a real app, get userId from locals.user.id after authentication
   const userId = locals.user?.id; // Replace with actual user ID
+
+  if (!userId) {
+    return json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   const { rawText } = await request.json();
 
