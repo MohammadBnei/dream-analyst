@@ -1,4 +1,4 @@
-import { prisma } from '$lib/server/db'; // Import the prisma client
+import prisma from '$lib/server/db'; // Import the prisma client
 import { hashPassword, comparePassword } from '$lib/server/auth';
 
 export async function createUser(username: string, email: string | undefined, passwordPlain: string): Promise<string> {
