@@ -33,16 +33,6 @@
 		}
 	}
 
-	onMount(() => {
-		// If the dream is pending analysis, start the stream immediately
-		if (currentDreamStatus === 'pending_analysis') {
-			startStream();
-		} else if (currentDreamStatus === 'completed' && dream.interpretation) {
-			// If already completed, display the stored interpretation
-			streamedInterpretation = dream.interpretation;
-		}
-	});
-
 	onDestroy(() => {
 		if (eventSource) {
 			eventSource.close();
