@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import { env } from '$env/dynamic/private';
 
 const JWT_SECRET = env.JWT_SECRET || 'your_jwt_secret_here'; // Use a strong secret from environment variables
-const JWT_EXPIRES_IN = '1h'; // Token expiration time
+const JWT_EXPIRES_IN = '30d'; // Token expiration time
 
 export const hashPassword = async (password: string): Promise<string> => {
   const saltRounds = 10;

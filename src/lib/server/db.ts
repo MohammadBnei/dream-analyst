@@ -13,8 +13,10 @@ export const sql: Sql = postgres(DATABASE_URL, {
 
 console.log('Database connection initialized.');
 
+let closed = false;
 process.on('SIGINT', async () => {
-  console.log('Closing database connection...');
+  if (closed) return;
+  closed = true;
   await sql.end();
-  process.exit(0);
 });
+
