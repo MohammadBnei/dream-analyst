@@ -54,7 +54,7 @@
 		</div>
 		<!-- Page content here -->
 		<main class="flex-grow">
-			{@render children?.()}
+			{@render children()}
 		</main>
 	</div>
 	<div class="drawer-side">
@@ -63,7 +63,7 @@
 			<!-- Sidebar content here -->
 			<li><a href="/">{m.home_link()}</a></li>
 			{#if isLoggedIn}
-				<li><a href="/dreams">{m.dreams_link()}</li>
+				<li><a href="/dreams">{m.dreams_link()}</a></li>
 				<li><a href="/logout">{m.logout_link()}</a></li>
 			{:else}
 				<li><a href="/login">{m.login_link()}</a></li>
