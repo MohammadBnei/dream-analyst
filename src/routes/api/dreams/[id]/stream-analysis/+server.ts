@@ -41,7 +41,7 @@ export async function GET({ params, locals }) {
             where: { id: dreamId },
             data: { status: 'analysis_failed' }
         }).catch(updateError => console.error(`Failed to update dream status to analysis_failed for ${dreamId}:`, updateError));
-        throw error(500, `Failed to start dream analysis: ${(e as Error).message}`);
+        throw error(500, `Failed to start dream analysis: ${(e instanceof Error ? e.message : String(e))}`);
     }
 
     // Create a TransformStream to process n8n's stream and forward as SSE
@@ -73,7 +73,9 @@ export async function GET({ params, locals }) {
                         // Forward the chunk as an SSE message
                         await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
                     } catch (e) {
-                        console.warn('Could not parse stream chunk as JSON:', line, e);
+                        // Ensure error is always a string for logging
+                        const parseError = e instanceof Error ? e.message : String(e);
+                        console.warn('Could not parse stream chunk as JSON:', line, parseError);
                         // If it's not JSON, just forward it as a raw message or ignore
                         // For robust SSE, each message should be `data: {json_payload}\n\n`
                         // We'll still forward it as data, but it might not be JSON on the client side
@@ -95,7 +97,8 @@ export async function GET({ params, locals }) {
                     }
                     await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
                 } catch (e) {
-                    console.warn('Could not parse final buffer chunk as JSON:', jsonBuffer.trim(), e);
+                    const parseError = e instanceof Error ? e.message : String(e);
+                    console.warn('Could not parse final buffer chunk as JSON:', jsonBuffer.trim(), parseError);
                     await writer.write(encoder.encode(`data: ${jsonBuffer.trim()}\n\n`));
                 }
             }
@@ -111,7 +114,6 @@ export async function GET({ params, locals }) {
                         where: { id: dreamId },
                         data: {
                             interpretation: fullInterpretation,
-                            // tags: finalTags, // Tags are no longer streamed from n8n
                             status: 'completed'
                         }
                     });
@@ -126,9 +128,9 @@ export async function GET({ params, locals }) {
             }
         },
         async abort(reason) {
-            console.error(`n8n stream for dream ${dreamId} aborted:`, reason);
+            const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown reason');
+            console.error(`n8n stream for dream ${dreamId} aborted:`, errorMessage);
             n8nStreamErrored = true;
-            const errorMessage = reason instanceof Error ? reason.message : String(reason);
             await writer.write(encoder.encode(`event: error\ndata: {"message": "Analysis stream aborted: ${errorMessage}"}\n\n`));
             await writer.close();
             // Update dream status to analysis_failed
@@ -138,7 +140,7 @@ export async function GET({ params, locals }) {
             }).catch(e => console.error(`Failed to set dream ${dreamId} status to analysis_failed after abort:`, e));
         }
     })).catch(async (e) => {
-        const errorMessage = e instanceof Error ? e.message : String(e);
+        const errorMessage = e instanceof Error ? e.message : String(e || 'Unknown error during pipeTo');
         console.error(`Error piping n8n response body for dream ${dreamId}:`, errorMessage);
         n8nStreamErrored = true;
         await writer.write(encoder.encode(`event: error\ndata: {"message": "Internal server error during stream processing: ${errorMessage}"}\n\n`));
