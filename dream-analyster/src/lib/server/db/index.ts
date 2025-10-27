@@ -7,4 +7,6 @@ if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
 
 const client = postgres(env.DATABASE_URL);
 
+// The schema object passed to drizzle should only contain the tables that are part of the current schema.
+// Since 'session' table is removed, it should not be referenced here.
 export const db = drizzle(client, { schema });

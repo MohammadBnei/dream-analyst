@@ -1,21 +1,13 @@
 import { pgTable, uuid, text, timestamp, varchar, jsonb } from 'drizzle-orm/pg-core';
 
 export const user = pgTable('user', {
-	id: uuid('id').primaryKey().defaultRandom(), // Changed to uuid and defaultRandom
+	id: uuid('id').primaryKey().defaultRandom(), // Keeping defaultRandom for UUID primary key generation
 	username: text('username').notNull().unique(),
 	passwordHash: text('password_hash').notNull()
 });
 
-export const session = pgTable('session', {
-	id: text('id').primaryKey(),
-	userId: uuid('user_id') // Changed to uuid
-		.notNull()
-		.references(() => user.id),
-	expiresAt: timestamp('expires_at', {
-		withTimezone: true,
-		mode: 'date'
-	}).notNull()
-});
+// The 'session' table is removed as it's specific to Lucia authentication.
+// With JWT, session state is stored client-side in the token.
 
 export const dream = pgTable('dreams', {
 	id: uuid('id').primaryKey().defaultRandom(),
@@ -32,5 +24,7 @@ export const dream = pgTable('dreams', {
 
 // Export types for convenience
 export type User = typeof user.$inferSelect;
-export type Session = typeof session.$inferSelect;
+export type NewUser = typeof user.$inferInsert;
+// Session types are removed as the session table is removed
 export type Dream = typeof dream.$inferSelect;
+export type NewDream = typeof dream.$inferInsert;
