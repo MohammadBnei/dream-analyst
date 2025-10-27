@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { ActionData } from './$types';
+  import * as m from '../../paraglide/messages';
 
   export let form: ActionData;
 </script>
@@ -7,20 +8,20 @@
 <div class="hero min-h-screen bg-base-200">
   <div class="hero-content flex-col lg:flex-row-reverse">
     <div class="text-center lg:text-left">
-      <h1 class="text-5xl font-bold">Register now!</h1>
+      <h1 class="text-5xl font-bold">{m.register_title()}</h1>
       <p class="py-6">
-        Join us to start journaling and analyzing your dreams.
+        {m.register_subtitle()}
       </p>
     </div>
     <div class="card shrink-0 w-full max-w-sm shadow-2xl bg-base-100">
       <form method="POST" class="card-body">
         <div class="form-control">
           <label class="label" for="username">
-            <span class="label-text">Username</span>
+            <span class="label-text">{m.username_label()}</span>
           </label>
           <input
             type="text"
-            placeholder="username"
+            placeholder={m.username_label().toLowerCase()}
             class="input input-bordered"
             name="username"
             id="username"
@@ -30,18 +31,18 @@
         </div>
         <div class="form-control">
           <label class="label" for="password">
-            <span class="label-text">Password</span>
+            <span class="label-text">{m.password_label()}</span>
           </label>
           <input
             type="password"
-            placeholder="password"
+            placeholder={m.password_label().toLowerCase()}
             class="input input-bordered"
             name="password"
             id="password"
             required
           />
           <label class="label">
-            <a href="/login" class="label-text-alt link link-hover">Already have an account? Login here.</a>
+            <a href="/login" class="label-text-alt link link-hover">{m.have_account_link()}</a>
           </label>
         </div>
         {#if form?.message}
@@ -62,7 +63,7 @@
           </div>
         {/if}
         <div class="form-control mt-6">
-          <button type="submit" class="btn btn-primary">Register</button>
+          <button type="submit" class="btn btn-primary">{m.register_button()}</button>
         </div>
       </form>
     </div>

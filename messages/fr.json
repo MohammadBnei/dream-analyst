@@ -1,4 +1,18 @@
 {
 	"$schema": "https://inlang.com/schema/inlang-message-format",
-	"hello_world": "Hello, {name} from fr!"
+	"hello_world": "Bonjour, {name} de fr!",
+	"login_title": "Connectez-vous maintenant !",
+	"login_subtitle": "Accédez à votre journal de rêves et explorez votre subconscient.",
+	"username_label": "Nom d'utilisateur",
+	"password_label": "Mot de passe",
+	"no_account_link": "Vous n'avez pas de compte ? Inscrivez-vous ici.",
+	"login_button": "Se connecter",
+	"missing_credentials_error": "Nom d'utilisateur ou mot de passe manquant",
+	"invalid_credentials_error": "Identifiants invalides",
+	"login_error": "Impossible de se connecter. Veuillez réessayer.",
+	"register_title": "Inscrivez-vous maintenant !",
+	"register_subtitle": "Rejoignez-nous pour commencer à journaliser et analyser vos rêves.",
+	"have_account_link": "Vous avez déjà un compte ? Connectez-vous ici.",
+	"register_button": "S'inscrire",
+	"registration_error": "Impossible d'enregistrer l'utilisateur. Veuillez réessayer."
 }
