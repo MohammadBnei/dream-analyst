@@ -59,6 +59,7 @@
 			isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
 			try {
 				const data = JSON.parse(event.data);
+				console.log({ data });
 				if (data.interpretation) {
 					streamedInterpretation += data.interpretation;
 				}
@@ -113,14 +114,15 @@
 			startStream();
 		} catch (e) {
 			console.error('Error regenerating analysis:', e);
-			streamError = (e instanceof Error) ? e.message : 'An unknown error occurred during regeneration.';
+			streamError =
+				e instanceof Error ? e.message : 'An unknown error occurred during regeneration.';
 			currentDreamStatus = 'analysis_failed'; // Set status back to failed if reset fails
 			isLoadingStream = false;
 		}
 	}
 </script>
 
-<div class="max-w-4xl p-4 container mx-auto">
+<div class="container mx-auto max-w-4xl p-4">
 	<div class="mb-6 flex items-center justify-between">
 		<button on:click={() => goto('/dreams')} class="btn btn-ghost">
 			<svg
@@ -134,12 +136,12 @@
 			</svg>
 			Back to Dreams
 		</button>
-		<h1 class="text-3xl font-bold grow text-center">Dream Details</h1>
+		<h1 class="grow text-center text-3xl font-bold">Dream Details</h1>
 		<div class="w-24"></div>
 		<!-- Spacer to balance the back button -->
 	</div>
 
-	<div class="card bg-base-100 shadow-xl p-6">
+	<div class="card bg-base-100 p-6 shadow-xl">
 		<div class="card-body p-0">
 			<div class="mb-4 flex items-center justify-between">
 				<h2 class="card-title text-2xl">
@@ -151,19 +153,34 @@
 			</div>
 
 			<div class="mb-6">
-				<h3 class="text-lg font-semibold mb-2">Raw Dream Text:</h3>
-				<p class="text-base-content/80 leading-relaxed whitespace-pre-wrap">
+				<h3 class="mb-2 text-lg font-semibold">Raw Dream Text:</h3>
+				<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
 					{dream.rawText}
 				</p>
 			</div>
 
 			<div class="mb-6">
-				<div class="flex items-center justify-between mb-2">
+				<div class="mb-2 flex items-center justify-between">
 					<h3 class="text-lg font-semibold">Interpretation:</h3>
 					{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
-						<button on:click={regenerateAnalysis} class="btn btn-sm btn-primary" disabled={isLoadingStream}>
-							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z" />
+						<button
+							on:click={regenerateAnalysis}
+							class="btn btn-sm btn-primary"
+							disabled={isLoadingStream}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="mr-1 h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
+								/>
 							</svg>
 							Regenerate Analysis
 						</button>
@@ -173,7 +190,7 @@
 				{#if isLoadingStream}
 					<div class="alert alert-info shadow-lg">
 						<div>
-							<svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+							<svg class="mr-3 h-5 w-5 animate-spin" viewBox="0 0 24 24">
 								<circle
 									class="opacity-25"
 									cx="12"
@@ -209,7 +226,7 @@
 							<span>{streamError}</span>
 						</div>
 					</div>
-					<button on:click={startStream} class="btn btn-primary mt-4">Retry Analysis</button>
+					<button on:click={startStream} class="btn mt-4 btn-primary">Retry Analysis</button>
 				{:else if streamedInterpretation}
 					<div class="prose max-w-none">
 						<Streamdown content={streamedInterpretation} />
@@ -221,7 +238,7 @@
 								xmlns="http://www.w3.org/2000/svg"
 								fill="none"
 								viewBox="0 0 24 24"
-								class="w-6 h-6 flex-shrink-0 stroke-current"
+								class="h-6 w-6 flex-shrink-0 stroke-current"
 								><path
 									stroke-linecap="round"
 									stroke-linejoin="round"
