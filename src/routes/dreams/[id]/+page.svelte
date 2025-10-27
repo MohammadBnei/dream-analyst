@@ -42,7 +42,7 @@
 		}
 	});
 
-	function startStream() {
+	async function startStream() {
 		isLoadingStream = true;
 		streamError = null;
 		// Clear interpretation only if we are starting a fresh analysis stream
@@ -87,14 +87,36 @@
 		});
 	}
 
-	function regenerateAnalysis() {
+	async function regenerateAnalysis() {
 		if (eventSource) {
 			eventSource.close(); // Close any existing stream
 		}
 		streamedInterpretation = ''; // Clear current interpretation
 		streamError = null; // Clear any previous error
-		currentDreamStatus = 'pending_analysis'; // Reset status
-		startStream(); // Start a new stream
+		currentDreamStatus = 'pending_analysis'; // Reset status immediately for UI feedback
+
+		try {
+			// First, call an API to reset the dream status to 'pending_analysis'
+			const response = await fetch(`/api/dreams/${dream.id}/reset-status`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (!response.ok) {
+				const errData = await response.json();
+				throw new Error(errData.message || 'Failed to reset dream status.');
+			}
+
+			// If status reset is successful, then start the stream
+			startStream();
+		} catch (e) {
+			console.error('Error regenerating analysis:', e);
+			streamError = (e instanceof Error) ? e.message : 'An unknown error occurred during regeneration.';
+			currentDreamStatus = 'analysis_failed'; // Set status back to failed if reset fails
+			isLoadingStream = false;
+		}
 	}
 </script>
 
