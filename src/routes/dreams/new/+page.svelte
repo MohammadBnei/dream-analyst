@@ -132,7 +132,7 @@
 				{#if isSaving}
 					<span class="loading loading-spinner"></span>
 					{m.saving_button()}
-				{#else if isAnalyzing}
+				{:else if isAnalyzing}
 					<span class="loading loading-spinner"></span>
 					{m.analyzing_button()}
 				{:else}
