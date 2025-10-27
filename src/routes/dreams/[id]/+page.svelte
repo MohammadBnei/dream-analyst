@@ -3,17 +3,18 @@
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
+	import { $state } from 'svelte'; // Import $state rune
 
 	export let data: PageData;
 
-	let dream = data.dream; // Initial dream data from server load function
+	let dream = $state(data.dream); // Initial dream data from server load function, now reactive
 
-	let streamedInterpretation = dream.interpretation || '';
-	let currentDreamStatus = dream.status;
+	let streamedInterpretation = $state(dream.interpretation || '');
+	let currentDreamStatus = $state(dream.status);
 
-	let isLoadingStream = false;
-	let streamError: string | null = null;
-	let eventSource: EventSource | null = null;
+	let isLoadingStream = $state(false);
+	let streamError = $state<string | null>(null);
+	let eventSource = $state<EventSource | null>(null);
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
@@ -124,7 +125,7 @@
 
 <div class="container mx-auto max-w-4xl p-4">
 	<div class="mb-6 flex items-center justify-between">
-		<button on:click={() => goto('/dreams')} class="btn btn-ghost">
+		<button onclick={() => goto('/dreams')} class="btn btn-ghost">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				class="h-5 w-5"
@@ -164,7 +165,7 @@
 					<h3 class="text-lg font-semibold">Interpretation:</h3>
 					{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
 						<button
-							on:click={regenerateAnalysis}
+							onclick={regenerateAnalysis}
 							class="btn btn-sm btn-primary"
 							disabled={isLoadingStream}
 						>
@@ -226,7 +227,7 @@
 							<span>{streamError}</span>
 						</div>
 					</div>
-					<button on:click={startStream} class="btn mt-4 btn-primary">Retry Analysis</button>
+					<button onclick={startStream} class="btn mt-4 btn-primary">Retry Analysis</button>
 				{:else if streamedInterpretation}
 					<div class="prose max-w-none">
 						<Streamdown content={streamedInterpretation} />
