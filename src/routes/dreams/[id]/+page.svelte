@@ -2,23 +2,26 @@
 	import type { PageProps } from './$types';
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
-	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
 	import * as m from '$lib/paraglide/messages';
+	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
+	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 
 	let { data }: PageProps = $props();
 
 	let dream = $derived(data.dream);
 
 	let streamedInterpretation = $state(dream.interpretation || '');
+	let streamedTags = $state(dream.tags || []);
 	let currentDreamStatus = $state(dream.status);
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
-	let eventSource = $state<EventSource | null>(null);
 
 	let showDeleteModal = $state(false);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
+
+	let analysisService: DreamAnalysisService | null = null;
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
@@ -35,63 +38,54 @@
 	}
 
 	onDestroy(() => {
-		if (eventSource) {
-			eventSource.close();
-			console.log('EventSource closed.');
-		}
+		analysisService?.closeStream();
 	});
 
-	async function startStream() {
+	function startStream() {
 		isLoadingStream = true;
 		streamError = null;
 		streamedInterpretation = ''; // Clear previous interpretation for a new stream
+		streamedTags = [];
 		currentDreamStatus = 'pending_analysis';
 
-		eventSource = new EventSource(`/api/dreams/${dream.id}/stream-analysis`);
-
-		eventSource.onopen = () => {
-			console.log('EventSource opened.');
-		};
-
-		eventSource.onmessage = (event) => {
-			isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
-			try {
-				const data = JSON.parse(event.data);
+		analysisService = new DreamAnalysisService(dream.id, {
+			onMessage: (data) => {
+				isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
 				if (data.content) {
 					streamedInterpretation += data.content;
 				}
-			} catch (e) {
-				console.error('Error parsing SSE message:', e, event.data);
-			}
-		};
-
-		eventSource.addEventListener('end', (event) => {
-			console.log('Stream ended:', event.data);
-			isLoadingStream = false;
-			currentDreamStatus = 'completed'; // Assume completed on 'end' event
-			if (eventSource) {
-				eventSource.close();
+				if (data.tags) {
+					streamedTags = data.tags;
+				}
+				if (data.status) {
+					currentDreamStatus = data.status as App.Dream['status'];
+				}
+			},
+			onEnd: (data) => {
+				console.log('Stream ended:', data);
+				isLoadingStream = false;
+				currentDreamStatus = (data.status as App.Dream['status']) || 'completed'; // Assume completed on 'end' event
+			},
+			onError: (errorMsg) => {
+				console.error('EventSource error:', errorMsg);
+				isLoadingStream = false;
+				currentDreamStatus = 'analysis_failed';
+				streamError = errorMsg;
+			},
+			onClose: () => {
+				console.log('Analysis service stream closed.');
 			}
 		});
-
-		eventSource.addEventListener('error', (event) => {
-			console.error('EventSource error:', event);
-			isLoadingStream = false;
-			currentDreamStatus = 'analysis_failed';
-			streamError = m.dream_analysis_failed_error();
-			if (eventSource) {
-				eventSource.close();
-			}
-		});
+		analysisService.startStream();
 	}
 
 	async function regenerateAnalysis() {
-		if (eventSource) {
-			eventSource.close(); // Close any existing stream
-		}
+		analysisService?.closeStream(); // Close any existing stream
 		streamedInterpretation = ''; // Clear current interpretation
+		streamedTags = [];
 		streamError = null; // Clear any previous error
 		currentDreamStatus = 'pending_analysis'; // Reset status immediately for UI feedback
+		isLoadingStream = true;
 
 		try {
 			// First, call an API to reset the dream status to 'pending_analysis'
@@ -226,51 +220,7 @@
 					{/if}
 				</div>
 
-				{#if isLoadingStream}
-					<div class="alert alert-info shadow-lg">
-						<div>
-							<svg class="mr-3 h-5 w-5 animate-spin" viewBox="0 0 24 24">
-								<circle
-									class="opacity-25"
-									cx="12"
-									cy="12"
-									r="10"
-									stroke="currentColor"
-									stroke-width="4"
-								></circle>
-								<path
-									class="opacity-75"
-									fill="currentColor"
-									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-								></path>
-							</svg>
-							<span>{m.analyzing_dream_message()}</span>
-						</div>
-					</div>
-				{:else if streamError}
-					<div class="alert alert-error shadow-lg">
-						<div>
-							<svg
-								xmlns="http://www.w3.org/2000/svg"
-								class="h-6 w-6 flex-shrink-0 stroke-current"
-								fill="none"
-								viewBox="0 0 24 24"
-								><path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-								></path></svg
-							>
-							<span>{streamError}</span>
-						</div>
-					</div>
-					<button onclick={startStream} class="btn mt-4 btn-primary">{m.retry_analysis_button()}</button>
-				{:else if streamedInterpretation}
-					<div class="prose max-w-none">
-						<Streamdown content={streamedInterpretation} />
-					</div>
-				{:else if currentDreamStatus === 'pending_analysis'}
+				{#if currentDreamStatus === 'pending_analysis' && !isLoadingStream && !streamError}
 					<div class="alert alert-info shadow-lg">
 						<div>
 							<svg
@@ -288,7 +238,7 @@
 							<span>{m.analysis_pending_message()}</span>
 						</div>
 					</div>
-				{:else if currentDreamStatus === 'analysis_failed'}
+				{:else if currentDreamStatus === 'analysis_failed' && !isLoadingStream && !streamError}
 					<div class="alert alert-error shadow-lg">
 						<div>
 							<svg
@@ -306,8 +256,19 @@
 							<span>{m.analysis_failed_message()}</span>
 						</div>
 					</div>
-				{:else}
+					<button onclick={startStream} class="btn mt-4 btn-primary">{m.retry_analysis_button()}</button>
+				{:else if !streamedInterpretation && !streamedTags.length && !isLoadingStream && !streamError}
 					<p>{m.no_interpretation_available_message()}</p>
+				{/if}
+
+				{#if streamedInterpretation || streamedTags.length > 0 || isLoadingStream || streamError}
+					<StreamedAnalysisDisplay
+						interpretation={streamedInterpretation}
+						tags={streamedTags}
+						isLoading={isLoadingStream}
+						errorMessage={streamError}
+						status={currentDreamStatus}
+					/>
 				{/if}
 			</div>
 

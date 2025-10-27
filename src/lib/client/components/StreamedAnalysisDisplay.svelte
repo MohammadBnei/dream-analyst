@@ -1,0 +1,98 @@
+<!-- src/lib/client/components/StreamedAnalysisDisplay.svelte -->
+<script lang="ts">
+	import { Streamdown } from 'svelte-streamdown';
+	import * as m from '$lib/paraglide/messages';
+
+	let { interpretation, tags, isLoading, errorMessage, status } = $props<{
+		interpretation: string;
+		tags: string[];
+		isLoading: boolean;
+		errorMessage: string | null;
+		status: 'pending_analysis' | 'completed' | 'analysis_failed' | 'idle';
+	}>();
+
+	function getStatusBadgeClass(currentStatus: 'pending_analysis' | 'completed' | 'analysis_failed' | 'idle') {
+		switch (currentStatus) {
+			case 'completed':
+				return 'badge-success';
+			case 'pending_analysis':
+				return 'badge-info';
+			case 'analysis_failed':
+				return 'badge-error';
+			case 'idle':
+			default:
+				return 'badge-neutral';
+		}
+	}
+</script>
+
+<div class="mt-8 p-6 bg-base-200 rounded-box shadow-lg">
+	<h2 class="text-2xl font-semibold mb-4">{m.dream_analysis_heading()}</h2>
+
+	{#if isLoading}
+		<div class="alert alert-info shadow-lg mb-4">
+			<div>
+				<svg class="mr-3 h-5 w-5 animate-spin" viewBox="0 0 24 24">
+					<circle
+						class="opacity-25"
+						cx="12"
+						cy="12"
+						r="10"
+						stroke="currentColor"
+						stroke-width="4"
+					></circle>
+					<path
+						class="opacity-75"
+						fill="currentColor"
+						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+					></path>
+				</svg>
+				<span>{m.analyzing_dream_message()}</span>
+			</div>
+		</div>
+	{/if}
+
+	{#if errorMessage}
+		<div role="alert" class="alert alert-error mb-4">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="stroke-current shrink-0 h-6 w-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+				></path></svg
+			>
+			<span>{m.error_prefix()}: {errorMessage}</span>
+		</div>
+	{/if}
+
+	{#if tags.length > 0}
+		<div class="mb-4">
+			<h3 class="text-lg font-medium mb-2">{m.tags_heading()}:</h3>
+			<div class="flex flex-wrap gap-2">
+				{#each tags as tag}
+					<span class="badge {getStatusBadgeClass(status)} badge-lg">{tag}</span>
+				{/each}
+			</div>
+		</div>
+	{/if}
+
+	{#if interpretation}
+		<div class="mb-4">
+			<h3 class="text-lg font-medium mb-2">{m.interpretation_heading()}:</h3>
+			<div class="prose max-w-none">
+				<Streamdown content={interpretation} />
+			</div>
+		</div>
+	{/if}
+
+	{#if !isLoading && !errorMessage && !interpretation && !tags.length && status === 'idle'}
+		<p class="text-center text-sm text-base-content/70 mt-4">
+			{m.dream_analysis_instant_message()}
+		</p>
+	{/if}
+</div>

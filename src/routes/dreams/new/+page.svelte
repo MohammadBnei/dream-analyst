@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher } from 'svelte';
-    import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
+	import { createEventDispatcher, onDestroy } from 'svelte';
 	import * as m from '$lib/paraglide/messages';
+	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
+	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 
 	const dispatch = createEventDispatcher();
 
@@ -14,6 +15,9 @@
 	let streamedInterpretation: string = '';
 	let streamedTags: string[] = [];
 	let errorMessage: string | null = null;
+	let analysisStatus: 'pending_analysis' | 'completed' | 'analysis_failed' | 'idle' = 'idle';
+
+	let analysisService: DreamAnalysisService | null = null;
 
 	$: isSaveDisabled = dreamText.length < 10 || isSaving || isAnalyzing;
 
@@ -25,55 +29,47 @@
 		streamedInterpretation = '';
 		streamedTags = [];
 		errorMessage = null;
+		analysisStatus = 'idle';
+		analysisService?.closeStream();
+		analysisService = null;
 	}
 
-	async function startStreamingAnalysis(dreamId: string) {
+	function startStreamingAnalysis(dreamId: string) {
 		isAnalyzing = true;
+		analysisStatus = 'pending_analysis';
 		streamedInterpretation = '';
 		streamedTags = [];
 		errorMessage = null;
 
-		const eventSource = new EventSource(`/api/dreams/${dreamId}/stream-analysis`);
-
-		eventSource.onmessage = (event) => {
-			try {
-				const data = JSON.parse(event.data);
+		analysisService = new DreamAnalysisService(dreamId, {
+			onMessage: (data) => {
 				if (data.content) {
 					streamedInterpretation += data.content;
 				}
 				if (data.tags) {
-					streamedTags = data.tags; // Tags might come as a complete array at the end
+					streamedTags = data.tags;
 				}
-			} catch (e) {
-				console.error('Error parsing SSE data:', e, event.data);
+				if (data.status) {
+					analysisStatus = data.status as typeof analysisStatus;
+				}
+			},
+			onEnd: (data) => {
+				console.log('Analysis stream ended.');
+				isAnalyzing = false;
+				analysisStatus = (data.status as typeof analysisStatus) || 'completed';
+				dispatch('dreamAnalysisCompleted', { dreamId, interpretation: streamedInterpretation, tags: streamedTags });
+			},
+			onError: (errorMsg) => {
+				console.error('Analysis stream error:', errorMsg);
+				errorMessage = errorMsg;
+				isAnalyzing = false;
+				analysisStatus = 'analysis_failed';
+			},
+			onClose: () => {
+				console.log('Analysis service stream closed.');
 			}
-		};
-
-		eventSource.onerror = (event) => {
-			console.error('EventSource failed:', event);
-			errorMessage = m.analysis_stream_failed_error();
-			isAnalyzing = false;
-			eventSource.close();
-		};
-
-		eventSource.onopen = () => {
-			console.log('EventSource connected.');
-		};
-
-		eventSource.addEventListener('end', (event) => {
-			console.log('Analysis stream ended.');
-			isAnalyzing = false;
-			eventSource.close();
-			// Optionally, dispatch an event or show a toast for completion
-			dispatch('dreamAnalysisCompleted', { dreamId, interpretation: streamedInterpretation, tags: streamedTags });
 		});
-
-		eventSource.addEventListener('error', (event) => {
-			console.error('Analysis stream error:', event);
-			errorMessage = m.analysis_stream_error();
-			isAnalyzing = false;
-			eventSource.close();
-		});
+		analysisService.startStream();
 	}
 
 	const submitForm = async ({ form, data, action, cancel }) => {
@@ -82,6 +78,8 @@
 		currentDreamId = null;
 		streamedInterpretation = '';
 		streamedTags = [];
+		analysisStatus = 'idle';
+		analysisService?.closeStream(); // Close any previous service if it exists
 
 		return async ({ result, update }) => {
 			if (result.type === 'success') {
@@ -91,18 +89,25 @@
 				} else {
 					errorMessage = m.dream_saved_no_id_error();
 					isSaving = false;
+					analysisStatus = 'analysis_failed';
 				}
 			} else if (result.type === 'error') {
 				errorMessage = result.error?.message || m.unknown_error_occurred();
 				isSaving = false;
+				analysisStatus = 'analysis_failed';
 			} else if (result.type === 'failure') {
 				errorMessage = result.data?.message || m.failed_to_save_dream();
 				isSaving = false;
+				analysisStatus = 'analysis_failed';
 			}
-			isSaving = false; // Saving is done, now analysis starts
+			isSaving = false; // Saving is done, now analysis starts (or failed)
 			update(); // Update the page with the new data
 		};
 	};
+
+	onDestroy(() => {
+		analysisService?.closeStream();
+	});
 </script>
 
 <div class="container mx-auto p-4 max-w-2xl">
@@ -141,14 +146,14 @@
 			</button>
 		</div>
 
-		{#if !isSaving && !isAnalyzing && !streamedInterpretation && !errorMessage}
+		{#if !isSaving && !isAnalyzing && !streamedInterpretation && !errorMessage && analysisStatus === 'idle'}
 			<p class="text-center text-sm text-base-content/70 mt-4">
 				{m.dream_analysis_instant_message()}
 			</p>
 		{/if}
 	</form>
 
-	{#if errorMessage}
+	{#if errorMessage && !isAnalyzing}
 		<div role="alert" class="alert alert-error mt-8" transition:fade>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -167,33 +172,20 @@
 		</div>
 	{/if}
 
-	{#if streamedInterpretation || streamedTags.length > 0}
-		<div class="mt-8 p-6 bg-base-200 rounded-box shadow-lg" transition:fade>
-			<h2 class="text-2xl font-semibold mb-4">{m.dream_analysis_heading()}</h2>
-
-			{#if streamedTags.length > 0}
-				<div class="mb-4">
-					<h3 class="text-lg font-medium mb-2">{m.tags_heading()}:</h3>
-					<div class="flex flex-wrap gap-2">
-						{#each streamedTags as tag}
-							<span class="badge badge-primary badge-lg">{tag}</span>
-						{/each}
-					</div>
+	{#if streamedInterpretation || streamedTags.length > 0 || isAnalyzing || errorMessage}
+		<div transition:fade>
+			<StreamedAnalysisDisplay
+				interpretation={streamedInterpretation}
+				tags={streamedTags}
+				isLoading={isAnalyzing}
+				errorMessage={errorMessage}
+				status={analysisStatus}
+			/>
+			{#if !isAnalyzing && (streamedInterpretation || streamedTags.length > 0)}
+				<div class="flex justify-end mt-6">
+					<button class="btn btn-secondary" on:click={resetForm}>{m.add_another_dream_button()}</button>
 				</div>
 			{/if}
-
-			{#if streamedInterpretation}
-				<div class="mb-4">
-					<h3 class="text-lg font-medium mb-2">{m.interpretation_heading()}:</h3>
-					<div class="prose max-w-none">
-						<Streamdown content={streamedInterpretation} />
-					</div>
-				</div>
-			{/if}
-
-			<div class="flex justify-end mt-6">
-				<button class="btn btn-secondary" on:click={resetForm}>{m.add_another_dream_button()}</button>
-			</div>
 		</div>
 	{/if}
 </div>
