@@ -23,6 +23,7 @@
 		"@inlang/paraglide-js": "2.4.0",
 		"@oslojs/crypto": "^1.0.1",
 		"@oslojs/encoding": "^1.1.0",
+		"@release-it/conventional-changelog": "^10.0.1",
 		"@sveltejs/adapter-auto": "^6.1.0",
 		"@sveltejs/kit": "^2.43.2",
 		"@sveltejs/vite-plugin-svelte": "^6.2.0",
@@ -64,23 +65,23 @@
 		"postgres": "^3.4.7"
 	},
 	"release-it": {
-    "$schema": "https://unpkg.com/release-it@17/schema/release-it.json",
-    "git": {
-      "commitMessage": "chore: release v${version}"
-    },
-    "github": {
-      "release": false
-    },
-    "npm": {
-      "publish": false
-    },
-    "plugins": {
-      "@release-it/conventional-changelog": {
-        "preset": {
-          "name": "angular"
-        },
-        "infile": "CHANGELOG.md"
-      }
-    }
-  }
+		"$schema": "https://unpkg.com/release-it@17/schema/release-it.json",
+		"git": {
+			"commitMessage": "chore: release v${version}"
+		},
+		"github": {
+			"release": false
+		},
+		"npm": {
+			"publish": false
+		},
+		"plugins": {
+			"@release-it/conventional-changelog": {
+				"preset": {
+					"name": "angular"
+				},
+				"infile": "CHANGELOG.md"
+			}
+		}
+	}
 }
