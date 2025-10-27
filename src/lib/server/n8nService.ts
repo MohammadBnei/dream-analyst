@@ -1,6 +1,4 @@
-import { env } from '$env/dynamic/private';
-
-const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/dream-analysis';
+import { N8N_WEBHOOK_URL } from '$env/static/private';
 
 interface AnalysisResult {
   tags: string[];
@@ -18,31 +16,29 @@ export async function triggerDreamAnalysis(dreamId: string, rawText: string): Pr
   }
 
   try {
-    const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
+    const response = await fetch(N8N_WEBHOOK_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ dreamId, rawText }),
+      body: JSON.stringify({ dreamId, rawText })
     });
 
-    if (!n8nResponse.ok) {
-      const errorBody = await n8nResponse.text();
-      console.error(`n8n webhook failed for dream ${dreamId}: ${n8nResponse.status} - ${errorBody}`);
-      throw new Error(`Failed to get analysis from n8n: ${n8nResponse.status} - ${errorBody}`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`n8n webhook call failed for dream ${dreamId}: ${response.status} - ${errorText}`);
+      throw new Error(`Failed to trigger n8n analysis: ${response.statusText}`);
     }
 
-    const analysisData = await n8nResponse.json();
-
-    if (!Array.isArray(analysisData.tags) || typeof analysisData.interpretation !== 'string') {
-      console.error('Invalid analysis data from n8n:', analysisData);
-      throw new Error('Invalid analysis response format from n8n.');
-    }
-
-    return analysisData as AnalysisResult;
+    // The FDD implies an async callback for the actual results, so this return is a placeholder.
+    // The actual results will be handled by the /api/dreams/:id/result endpoint.
+    return {
+      tags: [], // Empty tags as they will be updated via callback
+      interpretation: 'Analysis initiated. Please refresh to see results.' // Placeholder
+    };
 
   } catch (error) {
-    console.error('Error calling n8n webhook:', error);
-    throw new Error(`Failed to trigger dream analysis: ${(error as Error).message}`);
+    console.error('Error triggering n8n dream analysis:', error);
+    throw new Error(`Failed to trigger dream analysis service: ${(error as Error).message}`);
   }
 }
