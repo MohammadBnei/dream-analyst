@@ -10,7 +10,7 @@
     let dream = data.dream; // Initial dream data from server load function
 
     let streamedInterpretation = dream.interpretation || '';
-    let streamedTags = dream.tags || [];
+    // let streamedTags = dream.tags || []; // Tags are no longer streamed
     let currentDreamStatus = dream.status;
 
     let isLoadingStream = false;
@@ -50,11 +50,9 @@
     function startStream() {
         isLoadingStream = true;
         streamError = null;
-        // Clear interpretation and tags only if we are starting a fresh analysis stream
-        // If the dream already has partial data, we might want to keep it.
-        // For now, let's clear it to show the stream building up.
+        // Clear interpretation only if we are starting a fresh analysis stream
         streamedInterpretation = '';
-        streamedTags = [];
+        // streamedTags = []; // Tags are no longer streamed
         currentDreamStatus = 'pending_analysis';
 
         eventSource = new EventSource(`/api/dreams/${dream.id}/stream-analysis`);
@@ -71,9 +69,9 @@
                 if (data.interpretation) {
                     streamedInterpretation += data.interpretation;
                 }
-                if (data.tags) {
-                    streamedTags = data.tags;
-                }
+                // if (data.tags) { // Tags are no longer streamed
+                //     streamedTags = data.tags;
+                // }
                 // If the backend sends status updates, we can update currentDreamStatus here
             } catch (e) {
                 console.error('Error parsing SSE message:', e, event.data);
@@ -136,7 +134,8 @@
                 </p>
             </div>
 
-            {#if streamedTags && streamedTags.length > 0}
+            <!-- Removed tags display as they are no longer streamed -->
+            <!-- {#if streamedTags && streamedTags.length > 0}
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold mb-2">Tags:</h3>
                     <div class="flex flex-wrap gap-2">
@@ -145,7 +144,7 @@
                         {/each}
                     </div>
                 </div>
-            {/if}
+            {/if} -->
 
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-2">Interpretation:</h3>

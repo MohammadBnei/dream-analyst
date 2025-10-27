@@ -51,7 +51,6 @@ export async function GET({ params, locals }) {
     const decoder = new TextDecoder();
 
     let fullInterpretation = '';
-    let finalTags: string[] = [];
     let n8nStreamErrored = false;
     let jsonBuffer = ''; // Buffer to accumulate potentially fragmented JSON
 
@@ -70,9 +69,6 @@ export async function GET({ params, locals }) {
                         const data = JSON.parse(line);
                         if (data.interpretation) {
                             fullInterpretation += data.interpretation;
-                        }
-                        if (data.tags) {
-                            finalTags = data.tags;
                         }
                         // Forward the chunk as an SSE message
                         await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
@@ -97,9 +93,6 @@ export async function GET({ params, locals }) {
                     if (data.interpretation) {
                         fullInterpretation += data.interpretation;
                     }
-                    if (data.tags) {
-                        finalTags = data.tags;
-                    }
                     await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
                 } catch (e) {
                     console.warn('Could not parse final buffer chunk as JSON:', jsonBuffer.trim(), e);
@@ -118,7 +111,7 @@ export async function GET({ params, locals }) {
                         where: { id: dreamId },
                         data: {
                             interpretation: fullInterpretation,
-                            tags: finalTags,
+                            // tags: finalTags, // Tags are no longer streamed from n8n
                             status: 'completed'
                         }
                     });
