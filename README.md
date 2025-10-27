@@ -1,41 +1,38 @@
-# Dream Analyst
+# sv
 
-A SvelteKit application designed to help users record and analyze their dreams using Generative AI.
+Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
 
-## Project Goal
+## Creating a project
 
-The primary goal of this application is to provide a platform where users can:
+If you're seeing this, you've probably already done this step. Congrats!
 
-1. **Record Dreams:** Users can input their dreams, either by typing or speaking, and have them securely stored.
-2. **AI Analysis:** Leverage Generative AI to provide insightful analysis of the recorded dreams.
-3. **Save Analysis:** Store the AI-generated analysis alongside the original dream for future reference.
+```sh
+# create a new project in the current directory
+npx sv create
 
-## Technologies Used
+# create a new project in my-app
+npx sv create my-app
+```
 
-* **Frontend:** SvelteKit
-* **Styling:** Tailwind CSS, DaisyUI
-* **Database:** PostgreSQL
-* **Backend:** SvelteKit (with potential for serverless functions for AI integration)
-* **AI:** Generative AI (specific model to be determined, e.g., OpenAI GPT, Google Gemini, etc.) via n8n
-* **Workflow Automation:** n8n
+## Developing
 
-## Features (Planned)
+Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
-* User authentication and authorization.
-* Dream submission interface (text input and voice-to-text).
-* Secure storage of dreams and analyses in a PostgreSQL database.
-* Integration with a Generative AI service for dream interpretation via n8n.
-* Display of dream analysis to the user.
-* User dashboard to view past dreams and analyses.
+```sh
+npm run dev
 
-## Setup and Development
+# or start the server and open the app in a new browser tab
+npm run dev -- --open
+```
 
-(This section will be populated with detailed setup instructions once the core features are implemented.)
+## Building
 
-## Contributing
+To create a production version of your app:
 
-(This section will be populated with contribution guidelines.)
+```sh
+npm run build
+```
 
-## License
+You can preview the production build with `npm run preview`.
 
-(This section will be populated with licensing information.)
+> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.

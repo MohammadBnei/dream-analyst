@@ -1,29 +1,37 @@
-// src/hooks.server.ts
-import { runMigrations } from '$lib/server/migrate';
-import { verifyToken } from '$lib/server/auth';
+import { sequence } from '@sveltejs/kit/hooks';
+import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
+import { paraglideMiddleware } from '$lib/paraglide/server';
 
-// Flag to ensure migrations run only once on server startup
-let migrationsRun = false;
+const handleParaglide: Handle = ({ event, resolve }) =>
+	paraglideMiddleware(event.request, ({ request, locale }) => {
+		event.request = request;
 
-export const handle: Handle = async ({ event, resolve }) => {
-  // Run migrations once on server startup
-  if (!migrationsRun) {
-    console.log('Attempting to run migrations...');
-    await runMigrations();
-    migrationsRun = true;
-  }
+		return resolve(event, {
+			transformPageChunk: ({ html }) => html.replace('%paraglide.lang%', locale)
+		});
+	});
 
-  // Authentication logic: Verify JWT and set locals.user
-  const token = event.cookies.get('jwt');
-  if (token) {
-    const decoded = verifyToken(token);
-    if (decoded) {
-      // Set user data in locals (minimal for now; expand if needed)
-      event.locals.user = { id: decoded.userId };
-    }
-  }
+const handleAuth: Handle = async ({ event, resolve }) => {
+	const sessionToken = event.cookies.get(auth.sessionCookieName);
 
-  const response = await resolve(event);
-  return response;
+	if (!sessionToken) {
+		event.locals.user = null;
+		event.locals.session = null;
+		return resolve(event);
+	}
+
+	const { session, user } = await auth.validateSessionToken(sessionToken);
+
+	if (session) {
+		auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
+	} else {
+		auth.deleteSessionTokenCookie(event);
+	}
+
+	event.locals.user = user;
+	event.locals.session = session;
+	return resolve(event);
 };
+
+export const handle: Handle = sequence(handleParaglide, handleAuth);
