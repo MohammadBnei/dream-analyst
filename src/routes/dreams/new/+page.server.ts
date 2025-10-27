@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import prisma from '$lib/server/db';
-import { triggerDreamAnalysis } from '$lib/server/n8nService';
+// Removed import for triggerDreamAnalysis as it's no longer called directly here
 
 export const actions = {
 	default: async ({ request, locals }) => {
@@ -26,35 +26,12 @@ export const actions = {
 				}
 			});
 
-			// 2. Trigger n8n analysis (asynchronously)
-			// The n8n service will return a placeholder, and the actual results
-			// will be updated via a separate callback to /api/dreams/:id/result
-			triggerDreamAnalysis(newDream.id, rawText)
-				.catch((error) => {
-					console.error(`Failed to trigger n8n for dream ${newDream.id}:`, error);
-					// Update dream status to analysis_failed if n8n trigger fails
-					prisma.dream.update({
-						where: { id: newDream.id },
-						data: { status: 'analysis_failed' }
-					}).catch(e => console.error(`Failed to update dream status to analysis_failed for ${newDream.id}:`, e));
-				});
-
-			// Return the newly created dream (with pending status) to the client
-			// The client will then show a loading state until the analysis is complete
+			// Return the newly created dream ID to the client.
+			// The client will then initiate the streaming analysis.
 			return {
 				status: 201,
-				dream: {
-					id: newDream.id,
-					userId: newDream.userId,
-					rawText: newDream.rawText,
-					analysisText: newDream.analysisText,
-					interpretation: newDream.interpretation,
-					status: newDream.status,
-					tags: newDream.tags ? (newDream.tags as string[]) : [], // Ensure tags are an array
-					createdAt: newDream.createdAt,
-					updatedAt: newDream.updatedAt
-				},
-				message: 'Dream saved and analysis initiated.'
+				dreamId: newDream.id, // Only return the ID
+				message: 'Dream saved. Initiating analysis stream...'
 			};
 		} catch (error) {
 			console.error('Error saving dream:', error);

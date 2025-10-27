@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { page } from '$app/stores';
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
 
@@ -8,35 +7,97 @@
 
 	let dreamText: string = '';
 	let isSaving: boolean = false;
-	let analysisResult: App.Dream | null = null;
+	let isAnalyzing: boolean = false;
+	let currentDreamId: string | null = null;
+	let streamedInterpretation: string = '';
+	let streamedTags: string[] = [];
 	let errorMessage: string | null = null;
 
-	$: isSaveDisabled = dreamText.length < 10 || isSaving;
+	$: isSaveDisabled = dreamText.length < 10 || isSaving || isAnalyzing;
 
 	function resetForm() {
 		dreamText = '';
-		analysisResult = null;
-		errorMessage = null;
 		isSaving = false;
+		isAnalyzing = false;
+		currentDreamId = null;
+		streamedInterpretation = '';
+		streamedTags = [];
+		errorMessage = null;
 	}
 
-	// Function to handle the form submission and update UI based on response
+	async function startStreamingAnalysis(dreamId: string) {
+		isAnalyzing = true;
+		streamedInterpretation = '';
+		streamedTags = [];
+		errorMessage = null;
+
+		const eventSource = new EventSource(`/api/dreams/${dreamId}/stream-analysis`);
+
+		eventSource.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+				if (data.interpretation) {
+					streamedInterpretation += data.interpretation;
+				}
+				if (data.tags) {
+					streamedTags = data.tags; // Tags might come as a complete array at the end
+				}
+			} catch (e) {
+				console.error('Error parsing SSE data:', e, event.data);
+			}
+		};
+
+		eventSource.onerror = (event) => {
+			console.error('EventSource failed:', event);
+			errorMessage = 'Analysis stream failed. Please try again.';
+			isAnalyzing = false;
+			eventSource.close();
+		};
+
+		eventSource.onopen = () => {
+			console.log('EventSource connected.');
+		};
+
+		eventSource.addEventListener('end', (event) => {
+			console.log('Analysis stream ended.');
+			isAnalyzing = false;
+			eventSource.close();
+			// Optionally, dispatch an event or show a toast for completion
+			dispatch('dreamAnalysisCompleted', { dreamId, interpretation: streamedInterpretation, tags: streamedTags });
+		});
+
+		eventSource.addEventListener('error', (event) => {
+			console.error('Analysis stream error:', event);
+			errorMessage = 'Analysis stream encountered an error.';
+			isAnalyzing = false;
+			eventSource.close();
+		});
+	}
+
 	const submitForm = async ({ form, data, action, cancel }) => {
 		isSaving = true;
 		errorMessage = null;
-		analysisResult = null;
+		currentDreamId = null;
+		streamedInterpretation = '';
+		streamedTags = [];
 
 		return async ({ result, update }) => {
 			if (result.type === 'success') {
-				analysisResult = result.data?.dream;
-				// Optionally, dispatch an event or show a toast for success
-				dispatch('dreamSaved', analysisResult);
+				currentDreamId = result.data?.dreamId;
+				if (currentDreamId) {
+					await startStreamingAnalysis(currentDreamId);
+				} else {
+					errorMessage = 'Dream saved, but no ID received to start analysis.';
+					isSaving = false;
+				}
 			} else if (result.type === 'error') {
 				errorMessage = result.error?.message || 'An unknown error occurred.';
+				isSaving = false;
 			} else if (result.type === 'failure') {
 				errorMessage = result.data?.message || 'Failed to save dream.';
+				isSaving = false;
 			}
-			isSaving = false;
+			isSaving = false; // Saving is done, now analysis starts
 			update(); // Update the page with the new data
 		};
 	};
@@ -69,25 +130,21 @@
 				{#if isSaving}
 					<span class="loading loading-spinner"></span>
 					Saving...
+				{:else if isAnalyzing}
+					<span class="loading loading-spinner"></span>
+					Analyzing...
 				{:else}
 					Save Dream
 				{/if}
 			</button>
 		</div>
 
-		{#if !isSaving && !analysisResult && !errorMessage}
+		{#if !isSaving && !isAnalyzing && !streamedInterpretation && !errorMessage}
 			<p class="text-center text-sm text-base-content/70 mt-4">
 				Your dream will be analyzed instantly – please wait a few seconds.
 			</p>
 		{/if}
 	</form>
-
-	{#if isSaving}
-		<div class="flex flex-col items-center mt-8" transition:fade>
-			<span class="loading loading-dots loading-lg text-primary"></span>
-			<p class="mt-4 text-lg">Analyzing your dream...</p>
-		</div>
-	{/if}
 
 	{#if errorMessage}
 		<div role="alert" class="alert alert-error mt-8" transition:fade>
@@ -108,26 +165,26 @@
 		</div>
 	{/if}
 
-	{#if analysisResult}
+	{#if streamedInterpretation || streamedTags.length > 0}
 		<div class="mt-8 p-6 bg-base-200 rounded-box shadow-lg" transition:fade>
 			<h2 class="text-2xl font-semibold mb-4">Dream Analysis</h2>
 
-			{#if analysisResult.tags && analysisResult.tags.length > 0}
+			{#if streamedTags.length > 0}
 				<div class="mb-4">
 					<h3 class="text-lg font-medium mb-2">Tags:</h3>
 					<div class="flex flex-wrap gap-2">
-						{#each analysisResult.tags as tag}
+						{#each streamedTags as tag}
 							<span class="badge badge-primary badge-lg">{tag}</span>
 						{/each}
 					</div>
 				</div>
 			{/if}
 
-			{#if analysisResult.interpretation}
+			{#if streamedInterpretation}
 				<div class="mb-4">
 					<h3 class="text-lg font-medium mb-2">Interpretation:</h3>
 					<div class="prose max-w-none">
-						<p>{analysisResult.interpretation}</p>
+						<p>{streamedInterpretation}</p>
 					</div>
 				</div>
 			{/if}
