@@ -2,23 +2,18 @@
     import type { PageData } from './$types';
     import { goto } from '$app/navigation';
     import { onMount, onDestroy } from 'svelte';
-    import { marked } from 'marked'; // You'll need to install 'marked'
-    import DOMPurify from 'dompurify'; // You'll need to install 'dompurify'
+    import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
 
     export let data: PageData;
 
     let dream = data.dream; // Initial dream data from server load function
 
     let streamedInterpretation = dream.interpretation || '';
-    // let streamedTags = dream.tags || []; // Tags are no longer streamed
     let currentDreamStatus = dream.status;
 
     let isLoadingStream = false;
     let streamError: string | null = null;
     let eventSource: EventSource | null = null;
-
-    // Reactive variable for rendering markdown
-    $: renderedInterpretation = DOMPurify.sanitize(marked.parse(streamedInterpretation));
 
     // Function to determine badge color based on dream status
     function getStatusBadgeClass(status: App.Dream['status']) {
@@ -52,14 +47,12 @@
         streamError = null;
         // Clear interpretation only if we are starting a fresh analysis stream
         streamedInterpretation = '';
-        // streamedTags = []; // Tags are no longer streamed
         currentDreamStatus = 'pending_analysis';
 
         eventSource = new EventSource(`/api/dreams/${dream.id}/stream-analysis`);
 
         eventSource.onopen = () => {
             console.log('EventSource opened.');
-            // isLoadingStream = false; // Keep loading until first data or end event
         };
 
         eventSource.onmessage = (event) => {
@@ -69,15 +62,8 @@
                 if (data.interpretation) {
                     streamedInterpretation += data.interpretation;
                 }
-                // if (data.tags) { // Tags are no longer streamed
-                //     streamedTags = data.tags;
-                // }
-                // If the backend sends status updates, we can update currentDreamStatus here
             } catch (e) {
                 console.error('Error parsing SSE message:', e, event.data);
-                // This might happen if the backend sends non-JSON data or malformed JSON
-                // We can choose to display this raw data or just log it.
-                // For now, we'll log and ignore, as the backend should ideally send JSON.
             }
         };
 
@@ -88,8 +74,6 @@
             if (eventSource) {
                 eventSource.close();
             }
-            // Optionally, refetch dream data to get final persisted state
-            // goto(window.location.href, { replaceState: true, noScroll: true });
         });
 
         eventSource.addEventListener('error', (event) => {
@@ -134,18 +118,6 @@
                 </p>
             </div>
 
-            <!-- Removed tags display as they are no longer streamed -->
-            <!-- {#if streamedTags && streamedTags.length > 0}
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold mb-2">Tags:</h3>
-                    <div class="flex flex-wrap gap-2">
-                        {#each streamedTags as tag}
-                            <span class="badge badge-primary badge-lg">{tag}</span>
-                        {/each}
-                    </div>
-                </div>
-            {/if} -->
-
             <div class="mb-6">
                 <h3 class="text-lg font-semibold mb-2">Interpretation:</h3>
                 {#if isLoadingStream}
@@ -168,7 +140,7 @@
                     <button on:click={startStream} class="btn btn-primary mt-4">Retry Analysis</button>
                 {:else if streamedInterpretation}
                     <div class="prose max-w-none">
-                        {@html renderedInterpretation}
+                        <Streamdown content={streamedInterpretation} />
                     </div>
                 {:else if currentDreamStatus === 'pending_analysis'}
                     <div class="alert alert-info shadow-lg">
@@ -198,25 +170,7 @@
 </div>
 
 <style lang="postcss">
-    /* Add any specific styles for markdown rendering if needed */
-    /* For example, if you're using TailwindCSS with @tailwindcss/typography */
-    /* Ensure you have @tailwindcss/typography plugin installed and configured in tailwind.config.js */
-    .prose :global(h1) {
-        @apply text-2xl font-bold;
-    }
-    .prose :global(h2) {
-        @apply text-xl font-semibold;
-    }
-    .prose :global(p) {
-        @apply mb-4;
-    }
-    .prose :global(ul) {
-        @apply list-disc pl-5 mb-4;
-    }
-    .prose :global(ol) {
-        @apply list-decimal pl-5 mb-4;
-    }
-    .prose :global(li) {
-        @apply mb-1;
-    }
+    /* The prose class from @tailwindcss/typography will handle most markdown styling. */
+    /* You can add custom styles here if needed, but generally, Streamdown handles its own styling */
+    /* or relies on the prose class. */
 </style>

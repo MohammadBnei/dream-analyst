@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { fade } from 'svelte/transition';
 	import { createEventDispatcher } from 'svelte';
+    import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
 
 	const dispatch = createEventDispatcher();
 
@@ -184,7 +185,7 @@
 				<div class="mb-4">
 					<h3 class="text-lg font-medium mb-2">Interpretation:</h3>
 					<div class="prose max-w-none">
-						<p>{streamedInterpretation}</p>
+						<Streamdown content={streamedInterpretation} />
 					</div>
 				</div>
 			{/if}

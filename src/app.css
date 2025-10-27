@@ -1,7 +1,5 @@
-@import 'tailwindcss/base';
-@import 'tailwindcss/components';
-@import 'tailwindcss/utilities';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* You might need to import specific DaisyUI or Typography styles here if they are not automatically included by Tailwind */
-/* For example, if you want to ensure base styles for typography are present: */
-/* @import '@tailwindcss/typography/src/styles.css'; */
+/* Any global styles not handled by Tailwind or DaisyUI can go here */
