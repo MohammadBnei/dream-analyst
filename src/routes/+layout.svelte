@@ -51,7 +51,7 @@
 			</div>
 		</div>
 		<!-- Page content here -->
-		<main class="flex-grow">
+		<main class="grow">
 			{@render children()}
 		</main>
 	</div>

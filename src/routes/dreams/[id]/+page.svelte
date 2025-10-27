@@ -112,7 +112,7 @@
 			</svg>
 			Back to Dreams
 		</button>
-		<h1 class="text-3xl font-bold flex-grow text-center">Dream Details</h1>
+		<h1 class="text-3xl font-bold grow text-center">Dream Details</h1>
 		<div class="w-24"></div>
 		<!-- Spacer to balance the back button -->
 	</div>
