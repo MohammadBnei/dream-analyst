@@ -135,7 +135,8 @@ export async function GET({ params, locals }) {
         async abort(reason) {
             console.error(`n8n stream for dream ${dreamId} aborted:`, reason);
             n8nStreamErrored = true;
-            await writer.write(encoder.encode(`event: error\ndata: {"message": "Analysis stream aborted: ${reason}"}\n\n`));
+            const errorMessage = reason instanceof Error ? reason.message : String(reason);
+            await writer.write(encoder.encode(`event: error\ndata: {"message": "Analysis stream aborted: ${errorMessage}"}\n\n`));
             await writer.close();
             // Update dream status to analysis_failed
             await prisma.dream.update({
@@ -144,9 +145,10 @@ export async function GET({ params, locals }) {
             }).catch(e => console.error(`Failed to set dream ${dreamId} status to analysis_failed after abort:`, e));
         }
     })).catch(async (e) => {
-        console.error(`Error piping n8n response body for dream ${dreamId}:`, e);
+        const errorMessage = e instanceof Error ? e.message : String(e);
+        console.error(`Error piping n8n response body for dream ${dreamId}:`, errorMessage);
         n8nStreamErrored = true;
-        await writer.write(encoder.encode(`event: error\ndata: {"message": "Internal server error during stream processing: ${e.message}"}\n\n`));
+        await writer.write(encoder.encode(`event: error\ndata: {"message": "Internal server error during stream processing: ${errorMessage}"}\n\n`));
         await writer.close();
         // Update dream status to analysis_failed
         await prisma.dream.update({
