@@ -15,6 +15,10 @@
 	let streamError = $state<string | null>(null);
 	let eventSource = $state<EventSource | null>(null);
 
+	let showDeleteModal = $state(false);
+	let isDeleting = $state(false);
+	let deleteError = $state<string | null>(null);
+
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
 		switch (status) {
@@ -122,6 +126,29 @@
 			isLoadingStream = false;
 		}
 	}
+
+	async function deleteDream() {
+		isDeleting = true;
+		deleteError = null;
+		try {
+			const response = await fetch(`/api/dreams/${dream.id}/delete`, {
+				method: 'DELETE'
+			});
+
+			if (!response.ok) {
+				const errData = await response.json();
+				throw new Error(errData.message || 'Failed to delete dream.');
+			}
+
+			await goto('/dreams'); // Redirect to the dreams list page after successful deletion
+		} catch (e) {
+			console.error('Error deleting dream:', e);
+			deleteError = e instanceof Error ? e.message : 'An unknown error occurred during deletion.';
+		} finally {
+			isDeleting = false;
+			showDeleteModal = false; // Close modal regardless of success/failure
+		}
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -139,8 +166,11 @@
 			Back to Dreams
 		</button>
 		<h1 class="grow text-center text-3xl font-bold">Dream Details</h1>
-		<div class="w-24"></div>
-		<!-- Spacer to balance the back button -->
+		<div class="w-24 text-right">
+			<button onclick={() => (showDeleteModal = true)} class="btn btn-error btn-sm">
+				Delete Dream
+			</button>
+		</div>
 	</div>
 
 	<div class="card bg-base-100 p-6 shadow-xl">
@@ -281,6 +311,46 @@
 		</div>
 	</div>
 </div>
+
+<!-- Delete Confirmation Modal -->
+{#if showDeleteModal}
+	<dialog open class="modal modal-bottom sm:modal-middle" on:click|self={() => (showDeleteModal = false)}>
+		<div class="modal-box">
+			<h3 class="font-bold text-lg">Confirm Deletion</h3>
+			<p class="py-4">Are you sure you want to delete this dream? This action cannot be undone.</p>
+			{#if deleteError}
+				<div class="alert alert-error shadow-lg mb-4">
+					<div>
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							class="h-6 w-6 flex-shrink-0 stroke-current"
+							fill="none"
+							viewBox="0 0 24 24"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+							></path></svg
+						>
+						<span>{deleteError}</span>
+					</div>
+				</div>
+			{/if}
+			<div class="modal-action">
+				<button class="btn btn-ghost" onclick={() => (showDeleteModal = false)} disabled={isDeleting}>Cancel</button>
+				<button class="btn btn-error" onclick={deleteDream} disabled={isDeleting}>
+					{#if isDeleting}
+						<span class="loading loading-spinner"></span>
+						Deleting...
+					{:else}
+						Delete
+					{/if}
+				</button>
+			</div>
+		</div>
+	</dialog>
+{/if}
 
 <style lang="postcss">
 	/* The prose class from @tailwindcss/typography will handle most markdown styling. */
