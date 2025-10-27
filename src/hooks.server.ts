@@ -2,7 +2,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
-import { getUserById } from '$lib/server/userService';
+import prisma from '$lib/server/db';
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -28,7 +28,9 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 		// if we trust the token to contain up-to-date user information.
 		// If not, we would fetch the user from the DB using decodedToken.userId
 		// For now, let's fetch from DB to ensure data consistency.
-		const user = await getUserById(decodedToken.userId);
+		const user = await prisma.user.findUnique({
+			where: { id: decodedToken.userId }
+		});
 		if (user) {
 			event.locals.user = {
 				id: user.id,
