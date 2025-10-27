@@ -55,6 +55,19 @@
             id="password"
             required
           />
+        </div>
+        <div class="form-control">
+          <label class="label" for="passwordConfirm">
+            <span class="label-text">{m.password_confirm_label()}</span>
+          </label>
+          <input
+            type="password"
+            placeholder={m.password_confirm_label().toLowerCase()}
+            class="input input-bordered"
+            name="passwordConfirm"
+            id="passwordConfirm"
+            required
+          />
           <label class="label">
             <a href="/login" class="label-text-alt link link-hover">{m.have_account_link()}</a>
           </label>
