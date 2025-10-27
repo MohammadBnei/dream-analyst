@@ -1,17 +1,14 @@
 import type { PageServerLoad, Actions } from './$types';
 import { sql } from '$lib/server/db';
 import { error, redirect, fail } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-
-// Placeholder for n8n webhook URL
-const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/dream-analysis';
+import { triggerDreamAnalysis } from '$lib/server/n8nService'; // Import the new service
 
 export const load: PageServerLoad = async ({ locals, params }) => {
   if (!locals.user) {
     throw redirect(302, '/login');
   }
 
-  const userId = locals.user.id;
+  const userId = locals.user.userId; // Use userId from locals.user
   const dreamId = params.id;
 
   try {
@@ -46,7 +43,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    const userId = locals.user.id;
+    const userId = locals.user.userId; // Use userId from locals.user
     const dreamId = params.id;
 
     try {
@@ -73,7 +70,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    const userId = locals.user.id;
+    const userId = locals.user.userId; // Use userId from locals.user
     const dreamId = params.id;
 
     try {
@@ -95,34 +92,9 @@ export const actions: Actions = {
         WHERE id = ${dreamId};
       `;
 
-      // Re-trigger n8n workflow
-      const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dreamId, rawText: dream.raw_text }),
-      });
-
-      if (!n8nResponse.ok) {
-        await sql`
-          UPDATE dreams
-          SET status = 'analysis_failed'
-          WHERE id = ${dreamId};
-        `;
-        return fail(500, { error: 'Failed to regenerate analysis. Please try again.' });
-      }
-
-      // Parse and update with new results
-      const analysisData = await n8nResponse.json();
+      // Use the new n8n service
+      const analysisData = await triggerDreamAnalysis(dreamId, dream.raw_text);
       const { tags, interpretation } = analysisData;
-
-      if (!Array.isArray(tags) || typeof interpretation !== 'string') {
-        await sql`
-          UPDATE dreams
-          SET status = 'analysis_failed'
-          WHERE id = ${dreamId};
-        `;
-        return fail(500, { error: 'Invalid analysis response. Please try again.' });
-      }
 
       await sql`
         UPDATE dreams
@@ -131,9 +103,15 @@ export const actions: Actions = {
       `;
 
       return { success: true };
-    } catch (e) {
+    } catch (e: any) {
       console.error('Error regenerating dream:', e);
-      return fail(500, { error: 'Failed to regenerate analysis.' });
+      // Update dream status to analysis_failed if n8n call fails
+      await sql`
+        UPDATE dreams
+        SET status = 'analysis_failed'
+        WHERE id = ${dreamId};
+      `;
+      return fail(500, { error: e.message || 'Failed to regenerate analysis.' });
     }
   },
 };

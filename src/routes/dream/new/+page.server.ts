@@ -1,10 +1,7 @@
 import { type Actions, fail, redirect } from '@sveltejs/kit';
 import { sql } from '$lib/server/db';
-import { env } from '$env/dynamic/private';
 import type { PageServerLoad } from './$types';
-
-// Placeholder for n8n webhook URL
-const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL || 'https://your-n8n-instance.com/webhook/dream-analysis';
+import { triggerDreamAnalysis } from '$lib/server/n8nService'; // Import the new service
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (!locals.user) {
@@ -19,7 +16,7 @@ export const actions: Actions = {
       return fail(401, { error: 'Unauthorized' });
     }
 
-    const userId = locals.user.id;
+    const userId = locals.user.userId; // Use userId from locals.user
 
     const data = await request.formData();
     const dreamText = data.get('dreamText')?.toString();
@@ -44,39 +41,8 @@ export const actions: Actions = {
 
     // Trigger n8n workflow for analysis and wait for the response
     try {
-      const n8nResponse = await fetch(N8N_WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ dreamId, rawText: dreamText }),
-      });
-
-      if (!n8nResponse.ok) {
-        const errorBody = await n8nResponse.text();
-        console.error(`n8n webhook failed for dream ${dreamId}: ${n8nResponse.status} - ${errorBody}`);
-        // Update dream status to analysis_failed if n8n call fails
-        await sql`
-          UPDATE dreams
-          SET status = 'analysis_failed'
-          WHERE id = ${dreamId};
-        `;
-        return fail(500, { error: 'Failed to analyze dream. Please try again later.' });
-      }
-
-      // Parse the n8n response (assuming it returns { tags: string[], interpretation: string })
-      const analysisData = await n8nResponse.json();
+      const analysisData = await triggerDreamAnalysis(dreamId, dreamText);
       const { tags, interpretation } = analysisData;
-
-      if (!Array.isArray(tags) || typeof interpretation !== 'string') {
-        console.error('Invalid analysis data from n8n:', analysisData);
-        await sql`
-          UPDATE dreams
-          SET status = 'analysis_failed'
-          WHERE id = ${dreamId};
-        `;
-        return fail(500, { error: 'Invalid analysis response. Please try again.' });
-      }
 
       // Update the dream with analysis results and set status to completed
       await sql`
@@ -88,15 +54,15 @@ export const actions: Actions = {
       // Return success with the analysis result for immediate display
       return { success: true, analysisResult: { tags, interpretation } };
 
-    } catch (n8nError) {
-      console.error('Error calling n8n webhook:', n8nError);
+    } catch (n8nError: any) {
+      console.error('Error during dream analysis:', n8nError);
       // Update dream status to analysis_failed if n8n call fails
       await sql`
         UPDATE dreams
         SET status = 'analysis_failed'
         WHERE id = ${dreamId};
       `;
-      return fail(500, { error: 'Failed to analyze dream due to network error.' });
+      return fail(500, { error: n8nError.message || 'Failed to analyze dream.' });
     }
   },
 };
