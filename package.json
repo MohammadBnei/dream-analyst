@@ -13,7 +13,8 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"prisma": "prisma",
-		"machine-translate": "inlang machine translate --project project.inlang"
+		"machine-translate": "inlang machine translate --project project.inlang",
+		"release": "release-it"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
