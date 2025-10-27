@@ -1,4 +1,6 @@
-import { N8N_WEBHOOK_URL } from '$env/static/private';
+import { env } from '$env/dynamic/private';
+
+const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL;
 
 // This function will now initiate the request to n8n and return the Response object
 // The caller (the new +server.ts endpoint) will then handle streaming this response to the client.
