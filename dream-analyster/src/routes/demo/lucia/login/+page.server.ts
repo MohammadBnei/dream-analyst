@@ -1,5 +1,4 @@
 import { hash, verify } from '@node-rs/argon2';
-import { encodeBase32LowerCase } from '@oslojs/encoding';
 import { fail, redirect } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import * as auth from '$lib/server/auth';
@@ -64,7 +63,7 @@ export const actions: Actions = {
 			return fail(400, { message: 'Invalid password' });
 		}
 
-		const userId = generateUserId();
+		const userId = crypto.randomUUID(); // Use crypto.randomUUID() for UUID generation
 		const passwordHash = await hash(password, {
 			// recommended minimum parameters
 			memoryCost: 19456,
@@ -74,24 +73,26 @@ export const actions: Actions = {
 		});
 
 		try {
-			await db.insert(table.user).values({ id: userId, username, passwordHash });
+			await db.insert(table.user).values({ id: userId, username, passwordHash }); // Insert into the new user schema
 
 			const sessionToken = auth.generateSessionToken();
 			const session = await auth.createSession(sessionToken, userId);
 			auth.setSessionTokenCookie(event, sessionToken, session.expiresAt);
-		} catch {
-			return fail(500, { message: 'An error has occurred' });
+		} catch (e) { // Catch the error to provide more specific feedback
+			console.error("Registration error:", e);
+			return fail(500, { message: 'An error has occurred during registration' });
 		}
 		return redirect(302, '/demo/lucia');
 	}
 };
 
-function generateUserId() {
-	// ID with 120 bits of entropy, or about the same as UUID v4.
-	const bytes = crypto.getRandomValues(new Uint8Array(15));
-	const id = encodeBase32LowerCase(bytes);
-	return id;
-}
+// Removed generateUserId as crypto.randomUUID() is used directly now.
+// function generateUserId() {
+// 	// ID with 120 bits of entropy, or about the same as UUID v4.
+// 	const bytes = crypto.getRandomValues(new Uint8Array(15));
+// 	const id = encodeBase32LowerCase(bytes);
+// 	return id;
+// }
 
 function validateUsername(username: unknown): username is string {
 	return (
