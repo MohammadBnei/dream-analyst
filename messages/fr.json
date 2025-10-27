@@ -15,5 +15,6 @@
 	"register_subtitle": "Rejoignez-nous pour commencer à journaliser et analyser vos rêves.",
 	"have_account_link": "Vous avez déjà un compte ? Connectez-vous ici.",
 	"register_button": "S'inscrire",
-	"registration_error": "Impossible d'enregistrer l'utilisateur. Veuillez réessayer."
+	"registration_error": "Impossible d'enregistrer l'utilisateur. Veuillez réessayer.",
+	"password_confirm_label": "Confirmer le mot de passe"
 }

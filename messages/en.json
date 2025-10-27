@@ -15,5 +15,6 @@
 	"register_subtitle": "Join us to start journaling and analyzing your dreams.",
 	"have_account_link": "Already have an account? Login here.",
 	"register_button": "Register",
-	"registration_error": "Could not register user. Please try again."
+	"registration_error": "Could not register user. Please try again.",
+	"password_confirm_label": "Confirm Password"
 }
