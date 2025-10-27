@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
 	import { goto } from '$app/navigation';
-	import { onMount, onDestroy } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
 	import * as m from '$lib/paraglide/messages';
 
