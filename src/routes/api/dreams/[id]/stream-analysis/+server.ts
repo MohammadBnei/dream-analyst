@@ -53,36 +53,60 @@ export async function GET({ params, locals }) {
     let fullInterpretation = '';
     let finalTags: string[] = [];
     let n8nStreamErrored = false;
+    let jsonBuffer = ''; // Buffer to accumulate potentially fragmented JSON
 
     // Read from n8n's response stream
     n8nResponse.body?.pipeTo(new WritableStream({
         async write(chunk) {
-            const text = decoder.decode(chunk, { stream: true });
-            // n8n is expected to send JSON objects, potentially one per line or concatenated
-            // We need to parse each potential JSON object
-            const lines = text.split('\n').filter(line => line.trim() !== '');
+            jsonBuffer += decoder.decode(chunk, { stream: true });
 
-            for (const line of lines) {
+            let boundary = jsonBuffer.indexOf('\n');
+            while (boundary !== -1) {
+                const line = jsonBuffer.substring(0, boundary).trim();
+                jsonBuffer = jsonBuffer.substring(boundary + 1);
+
+                if (line) {
+                    try {
+                        const data = JSON.parse(line);
+                        if (data.interpretation) {
+                            fullInterpretation += data.interpretation;
+                        }
+                        if (data.tags) {
+                            finalTags = data.tags;
+                        }
+                        // Forward the chunk as an SSE message
+                        await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+                    } catch (e) {
+                        console.warn('Could not parse stream chunk as JSON:', line, e);
+                        // If it's not JSON, just forward it as a raw message or ignore
+                        // For robust SSE, each message should be `data: {json_payload}\n\n`
+                        // We'll still forward it as data, but it might not be JSON on the client side
+                        await writer.write(encoder.encode(`data: ${line}\n\n`));
+                    }
+                }
+                boundary = jsonBuffer.indexOf('\n');
+            }
+        },
+        async close() {
+            console.log(`n8n stream for dream ${dreamId} finished.`);
+
+            // Process any remaining content in the buffer
+            if (jsonBuffer.trim()) {
                 try {
-                    const data = JSON.parse(line);
+                    const data = JSON.parse(jsonBuffer.trim());
                     if (data.interpretation) {
                         fullInterpretation += data.interpretation;
                     }
                     if (data.tags) {
                         finalTags = data.tags;
                     }
-                    // Forward the chunk as an SSE message
                     await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
                 } catch (e) {
-                    console.warn('Could not parse stream chunk as JSON:', line, e);
-                    // If it's not JSON, just forward it as a raw message or ignore
-                    // For robust SSE, each message should be `data: {json_payload}\n\n`
-                    await writer.write(encoder.encode(`data: ${line}\n\n`));
+                    console.warn('Could not parse final buffer chunk as JSON:', jsonBuffer.trim(), e);
+                    await writer.write(encoder.encode(`data: ${jsonBuffer.trim()}\n\n`));
                 }
             }
-        },
-        async close() {
-            console.log(`n8n stream for dream ${dreamId} finished.`);
+
             // Send a final 'end' event to the client
             await writer.write(encoder.encode('event: end\ndata: {"status": "completed"}\n\n'));
             await writer.close();
