@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
+	import { $state, $derived } from 'svelte'; // Import $state and $derived runes
 
 	let { data }: PageProps = $props();
 
@@ -30,8 +31,12 @@
 	}
 
 	onMount(() => {
+		// If the dream is pending analysis, start the stream immediately
 		if (currentDreamStatus === 'pending_analysis') {
 			startStream();
+		} else if (currentDreamStatus === 'completed' && dream.interpretation) {
+			// If already completed, display the stored interpretation
+			streamedInterpretation = dream.interpretation;
 		}
 	});
 
@@ -45,8 +50,7 @@
 	async function startStream() {
 		isLoadingStream = true;
 		streamError = null;
-		// Clear interpretation only if we are starting a fresh analysis stream
-		streamedInterpretation = '';
+		streamedInterpretation = ''; // Clear previous interpretation for a new stream
 		currentDreamStatus = 'pending_analysis';
 
 		eventSource = new EventSource(`/api/dreams/${dream.id}/stream-analysis`);
@@ -59,7 +63,7 @@
 			isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
 			try {
 				const data = JSON.parse(event.data);
-				console.log({ data });
+				console.log('Received SSE data:', data); // Log received data
 				if (data.interpretation) {
 					streamedInterpretation += data.interpretation;
 				}
@@ -229,6 +233,8 @@
 					<button onclick={startStream} class="btn mt-4 btn-primary">Retry Analysis</button>
 				{:else if streamedInterpretation}
 					<div class="prose max-w-none">
+						<!-- Debug: Display raw interpretation string -->
+						<!-- <pre>{streamedInterpretation}</pre> -->
 						<Streamdown content={streamedInterpretation} />
 					</div>
 				{:else if currentDreamStatus === 'pending_analysis'}
