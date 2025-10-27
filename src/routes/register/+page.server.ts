@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword, generateToken, setAuthTokenCookie } from '$lib/server/auth';
-import { prisma } from '$lib/server/db'; // Import prisma client
+import prisma from '$lib/server/db'; 
 
 export const actions = {
 	default: async ({ request, cookies }) => {
