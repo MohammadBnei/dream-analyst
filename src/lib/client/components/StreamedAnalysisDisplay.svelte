@@ -85,7 +85,7 @@
 		<div class="mb-4">
 			<h3 class="text-lg font-medium mb-2">{m.interpretation_heading()}:</h3>
 			<div class="prose max-w-none">
-				<Streamdown content={interpretation} />
+				<Streamdown animation={{animateOnMount: true, enabled: true, type: 'blur'}} content={interpretation} />
 			</div>
 		</div>
 	{/if}
