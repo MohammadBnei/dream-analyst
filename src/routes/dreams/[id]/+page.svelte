@@ -3,7 +3,6 @@
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy } from 'svelte';
 	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
-	import { $state, $derived } from 'svelte'; // Import $state and $derived runes
 
 	let { data }: PageProps = $props();
 
@@ -64,8 +63,8 @@
 			try {
 				const data = JSON.parse(event.data);
 				console.log('Received SSE data:', data); // Log received data
-				if (data.interpretation) {
-					streamedInterpretation += data.interpretation;
+				if (data.content) {
+					streamedInterpretation += data.content;
 				}
 			} catch (e) {
 				console.error('Error parsing SSE message:', e, event.data);
@@ -233,8 +232,6 @@
 					<button onclick={startStream} class="btn mt-4 btn-primary">Retry Analysis</button>
 				{:else if streamedInterpretation}
 					<div class="prose max-w-none">
-						<!-- Debug: Display raw interpretation string -->
-						<!-- <pre>{streamedInterpretation}</pre> -->
 						<Streamdown content={streamedInterpretation} />
 					</div>
 				{:else if currentDreamStatus === 'pending_analysis'}
