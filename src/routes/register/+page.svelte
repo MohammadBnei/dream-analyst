@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ActionData } from './$types';
-  import * as m from '../../paraglide/messages';
+  import * as m from '$lib/paraglide/messages';
 
   export let form: ActionData;
 </script>
@@ -40,6 +40,7 @@
             name="email"
             id="email"
             value={form?.email ?? ''}
+            required
           />
         </div>
         <div class="form-control">
