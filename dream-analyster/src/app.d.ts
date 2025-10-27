@@ -3,13 +3,17 @@
 declare global {
 	namespace App {
 		interface Locals {
-			user: import('$lib/server/auth').SessionValidationResult['user'];
-			session: import('$lib/server/auth').SessionValidationResult['session'];
+			// The user object will now be derived from the JWT payload
+			// It will contain at least the userId, and potentially other user data
+			user?: {
+				userId: string;
+			};
+			// The 'session' object is removed as we are no longer using Lucia's session management
 		}
-	} // interface Error {}
-	// interface Locals {}
-} // interface PageData {}
-// interface PageState {}
+		// interface Error {}
+		// interface PageData {}
+		// interface Platform {}
+	}
+}
 
-// interface Platform {}
 export {};
