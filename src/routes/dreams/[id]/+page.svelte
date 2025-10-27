@@ -86,6 +86,16 @@
 			}
 		});
 	}
+
+	function regenerateAnalysis() {
+		if (eventSource) {
+			eventSource.close(); // Close any existing stream
+		}
+		streamedInterpretation = ''; // Clear current interpretation
+		streamError = null; // Clear any previous error
+		currentDreamStatus = 'pending_analysis'; // Reset status
+		startStream(); // Start a new stream
+	}
 </script>
 
 <div class="max-w-4xl p-4 container mx-auto">
@@ -126,7 +136,18 @@
 			</div>
 
 			<div class="mb-6">
-				<h3 class="text-lg font-semibold mb-2">Interpretation:</h3>
+				<div class="flex items-center justify-between mb-2">
+					<h3 class="text-lg font-semibold">Interpretation:</h3>
+					{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
+						<button on:click={regenerateAnalysis} class="btn btn-sm btn-primary" disabled={isLoadingStream}>
+							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z" />
+							</svg>
+							Regenerate Analysis
+						</button>
+					{/if}
+				</div>
+
 				{#if isLoadingStream}
 					<div class="alert alert-info shadow-lg">
 						<div>
