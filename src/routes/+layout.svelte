@@ -9,7 +9,7 @@
 
 	// Reactive declaration to check if the user is logged in
 	// This relies on the `user` property being set in `event.locals` by `src/hooks.server.ts`
-	$: isLoggedIn = get(page).data.user;
+	const isLoggedIn = $derived(get(page).data.user);
 </script>
 
 <svelte:head>
