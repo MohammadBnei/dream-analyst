@@ -57,32 +57,39 @@ export async function GET({ params, locals }) {
     // Read from n8n's response stream
     n8nResponse.body?.pipeTo(new WritableStream({
         async write(chunk) {
-            jsonBuffer += decoder.decode(chunk, { stream: true });
+            try { // Added try-catch around the entire write method logic
+                jsonBuffer += decoder.decode(chunk, { stream: true });
 
-            let boundary = jsonBuffer.indexOf('\n');
-            while (boundary !== -1) {
-                const line = jsonBuffer.substring(0, boundary).trim();
-                jsonBuffer = jsonBuffer.substring(boundary + 1);
+                let boundary = jsonBuffer.indexOf('\n');
+                while (boundary !== -1) {
+                    const line = jsonBuffer.substring(0, boundary).trim();
+                    jsonBuffer = jsonBuffer.substring(boundary + 1);
 
-                if (line) {
-                    try {
-                        const data = JSON.parse(line);
-                        if (data.interpretation) {
-                            fullInterpretation += data.interpretation;
+                    if (line) {
+                        try {
+                            const data = JSON.parse(line);
+                            if (data.interpretation) {
+                                fullInterpretation += data.interpretation;
+                            }
+                            // Forward the chunk as an SSE message
+                            await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
+                        } catch (e) {
+                            // Ensure error is always a string for logging
+                            const parseError = e instanceof Error ? e.message : String(e);
+                            console.warn('Could not parse stream chunk as JSON:', line, parseError);
+                            // If it's not JSON, just forward it as a raw message or ignore
+                            // For robust SSE, each message should be `data: {json_payload}\n\n`
+                            // We'll still forward it as data, but it might not be JSON on the client side
+                            await writer.write(encoder.encode(`data: ${line}\n\n`));
                         }
-                        // Forward the chunk as an SSE message
-                        await writer.write(encoder.encode(`data: ${JSON.stringify(data)}\n\n`));
-                    } catch (e) {
-                        // Ensure error is always a string for logging
-                        const parseError = e instanceof Error ? e.message : String(e);
-                        console.warn('Could not parse stream chunk as JSON:', line, parseError);
-                        // If it's not JSON, just forward it as a raw message or ignore
-                        // For robust SSE, each message should be `data: {json_payload}\n\n`
-                        // We'll still forward it as data, but it might not be JSON on the client side
-                        await writer.write(encoder.encode(`data: ${line}\n\n`));
                     }
+                    boundary = jsonBuffer.indexOf('\n');
                 }
-                boundary = jsonBuffer.indexOf('\n');
+            } catch (e) {
+                const writeError = e instanceof Error ? e.message : String(e);
+                console.error(`Error during WritableStream write operation for dream ${dreamId}:`, writeError);
+                // Propagate the error to abort the stream
+                throw e;
             }
         },
         async close() {
