@@ -1,10 +1,24 @@
 <script lang="ts">
     import type { PageData } from './$types';
     import { goto } from '$app/navigation';
+    import { onMount, onDestroy } from 'svelte';
+    import { marked } from 'marked'; // You'll need to install 'marked'
+    import DOMPurify from 'dompurify'; // You'll need to install 'dompurify'
 
     export let data: PageData;
 
-    const dream = data.dream;
+    let dream = data.dream; // Initial dream data from server load function
+
+    let streamedInterpretation = dream.interpretation || '';
+    let streamedTags = dream.tags || [];
+    let currentDreamStatus = dream.status;
+
+    let isLoadingStream = false;
+    let streamError: string | null = null;
+    let eventSource: EventSource | null = null;
+
+    // Reactive variable for rendering markdown
+    $: renderedInterpretation = DOMPurify.sanitize(marked.parse(streamedInterpretation));
 
     // Function to determine badge color based on dream status
     function getStatusBadgeClass(status: App.Dream['status']) {
@@ -18,6 +32,77 @@
             default:
                 return 'badge-neutral';
         }
+    }
+
+    onMount(() => {
+        if (currentDreamStatus === 'pending_analysis') {
+            startStream();
+        }
+    });
+
+    onDestroy(() => {
+        if (eventSource) {
+            eventSource.close();
+            console.log('EventSource closed.');
+        }
+    });
+
+    function startStream() {
+        isLoadingStream = true;
+        streamError = null;
+        // Clear interpretation and tags only if we are starting a fresh analysis stream
+        // If the dream already has partial data, we might want to keep it.
+        // For now, let's clear it to show the stream building up.
+        streamedInterpretation = '';
+        streamedTags = [];
+        currentDreamStatus = 'pending_analysis';
+
+        eventSource = new EventSource(`/api/dreams/${dream.id}/stream-analysis`);
+
+        eventSource.onopen = () => {
+            console.log('EventSource opened.');
+            // isLoadingStream = false; // Keep loading until first data or end event
+        };
+
+        eventSource.onmessage = (event) => {
+            isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
+            try {
+                const data = JSON.parse(event.data);
+                if (data.interpretation) {
+                    streamedInterpretation += data.interpretation;
+                }
+                if (data.tags) {
+                    streamedTags = data.tags;
+                }
+                // If the backend sends status updates, we can update currentDreamStatus here
+            } catch (e) {
+                console.error('Error parsing SSE message:', e, event.data);
+                // This might happen if the backend sends non-JSON data or malformed JSON
+                // We can choose to display this raw data or just log it.
+                // For now, we'll log and ignore, as the backend should ideally send JSON.
+            }
+        };
+
+        eventSource.addEventListener('end', (event) => {
+            console.log('Stream ended:', event.data);
+            isLoadingStream = false;
+            currentDreamStatus = 'completed'; // Assume completed on 'end' event
+            if (eventSource) {
+                eventSource.close();
+            }
+            // Optionally, refetch dream data to get final persisted state
+            // goto(window.location.href, { replaceState: true, noScroll: true });
+        });
+
+        eventSource.addEventListener('error', (event) => {
+            console.error('EventSource error:', event);
+            isLoadingStream = false;
+            currentDreamStatus = 'analysis_failed';
+            streamError = 'Failed to load dream analysis. Please try again.';
+            if (eventSource) {
+                eventSource.close();
+            }
+        });
     }
 </script>
 
@@ -39,8 +124,8 @@
                 <h2 class="card-title text-2xl">
                     Dream on {new Date(dream.createdAt).toLocaleDateString()}
                 </h2>
-                <span class="badge {getStatusBadgeClass(dream.status as App.Dream['status'])}"
-                    >{dream.status.replace('_', ' ')}</span
+                <span class="badge {getStatusBadgeClass(currentDreamStatus)}"
+                    >{currentDreamStatus.replace('_', ' ')}</span
                 >
             </div>
 
@@ -51,39 +136,59 @@
                 </p>
             </div>
 
-            {#if dream.tags && dream.tags.length > 0}
+            {#if streamedTags && streamedTags.length > 0}
                 <div class="mb-6">
                     <h3 class="text-lg font-semibold mb-2">Tags:</h3>
                     <div class="flex flex-wrap gap-2">
-                        {#each dream.tags as tag}
+                        {#each streamedTags as tag}
                             <span class="badge badge-primary badge-lg">{tag}</span>
                         {/each}
                     </div>
                 </div>
             {/if}
 
-            {#if dream.interpretation}
-                <div class="mb-6">
-                    <h3 class="text-lg font-semibold mb-2">Interpretation:</h3>
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">Interpretation:</h3>
+                {#if isLoadingStream}
+                    <div class="alert alert-info shadow-lg">
+                        <div>
+                            <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Analyzing your dream...</span>
+                        </div>
+                    </div>
+                {:else if streamError}
+                    <div class="alert alert-error shadow-lg">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>{streamError}</span>
+                        </div>
+                    </div>
+                    <button on:click={startStream} class="btn btn-primary mt-4">Retry Analysis</button>
+                {:else if streamedInterpretation}
                     <div class="prose max-w-none">
-                        <p>{dream.interpretation}</p>
+                        {@html renderedInterpretation}
                     </div>
-                </div>
-            {:else if dream.status === 'pending_analysis'}
-                <div class="alert alert-info shadow-lg">
-                    <div>
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>Analysis pending... Please check back later.</span>
+                {:else if currentDreamStatus === 'pending_analysis'}
+                    <div class="alert alert-info shadow-lg">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current flex-shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>Analysis pending... Please check back later or refresh.</span>
+                        </div>
                     </div>
-                </div>
-            {:else if dream.status === 'analysis_failed'}
-                <div class="alert alert-error shadow-lg">
-                    <div>
-                        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        <span>Analysis failed. We could not process your dream.</span>
+                {:else if currentDreamStatus === 'analysis_failed'}
+                    <div class="alert alert-error shadow-lg">
+                        <div>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            <span>Analysis failed. We could not process your dream.</span>
+                        </div>
                     </div>
-                </div>
-            {/if}
+                {:else}
+                    <p>No interpretation available.</p>
+                {/if}
+            </div>
 
             <div class="mt-6 text-sm text-base-content/60">
                 <p>Created: {new Date(dream.createdAt).toLocaleString()}</p>
@@ -92,3 +197,27 @@
         </div>
     </div>
 </div>
+
+<style lang="postcss">
+    /* Add any specific styles for markdown rendering if needed */
+    /* For example, if you're using TailwindCSS with @tailwindcss/typography */
+    /* Ensure you have @tailwindcss/typography plugin installed and configured in tailwind.config.js */
+    .prose :global(h1) {
+        @apply text-2xl font-bold;
+    }
+    .prose :global(h2) {
+        @apply text-xl font-semibold;
+    }
+    .prose :global(p) {
+        @apply mb-4;
+    }
+    .prose :global(ul) {
+        @apply list-disc pl-5 mb-4;
+    }
+    .prose :global(ol) {
+        @apply list-decimal pl-5 mb-4;
+    }
+    .prose :global(li) {
+        @apply mb-1;
+    }
+</style>
