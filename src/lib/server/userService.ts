@@ -1,23 +1,34 @@
-import { db } from '$lib/server/db';
-import { user } from '$lib/server/db/schema';
+import { prisma } from '$lib/server/db'; // Import the prisma client
 import { hashPassword, comparePassword } from '$lib/server/auth';
-import { eq } from 'drizzle-orm';
 
 export async function createUser(username: string, email: string | undefined, passwordPlain: string): Promise<string> {
   const passwordHash = await hashPassword(passwordPlain);
-  const [newUser] = await db.insert(user).values({ username, email, passwordHash }).returning({ id: user.id });
+  const newUser = await prisma.user.create({
+    data: {
+      username,
+      email,
+      passwordHash,
+    },
+    select: {
+      id: true,
+    },
+  });
   return newUser.id;
 }
 
 export async function getUserByUsername(username: string) {
-  return db.query.user.findFirst({
-    where: eq(user.username, username),
+  return prisma.user.findUnique({
+    where: {
+      username,
+    },
   });
 }
 
 export async function getUserById(id: string) {
-  return db.query.user.findFirst({
-    where: eq(user.id, id),
+  return prisma.user.findUnique({
+    where: {
+      id,
+    },
   });
 }
 
