@@ -1,3 +1,6 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 @plugin 'daisyui';
+
+/* Add Streamdown styles to your Tailwind build */
+@source "../node_modules/svelte-streamdown/**/*";
