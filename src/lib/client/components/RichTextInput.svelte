@@ -121,7 +121,7 @@
         <div class="flex items-center space-x-2">
             <button
                 on:click={isRecording || isTranscribing ? stopRecording : startRecording}
-                disabled={false}
+                type="button"
                 class="btn {isRecording || isTranscribing ? 'btn-error' : 'btn-primary'} btn-sm"
             >
                 {#if isRecording}
