@@ -27,7 +27,11 @@
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
-	{#await dreamsPromise then resolvedDreams}
+	{#await dreamsPromise}
+		<div class="flex justify-center items-center h-64">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{:then resolvedDreams}
 		{#if resolvedDreams.length === 0}
 			<div class="hero rounded-box bg-base-200 p-8">
 				<div class="hero-content text-center">
@@ -98,10 +102,6 @@
 			>
 			<span>Error loading dreams: {error.message}</span>
 			<!-- No direct retry for await block, user can navigate or refresh page -->
-		</div>
-	{:pending}
-		<div class="flex justify-center items-center h-64">
-			<span class="loading loading-spinner loading-lg"></span>
 		</div>
 	{/await}
 </div>
