@@ -49,10 +49,12 @@ export async function GET({ params, locals }) {
 
     let jsonBuffer = '';
     let dreamStatusUpdated = false; // Flag to ensure status is updated only once
+    let accumulatedInterpretation = ''; // To save partial results
+    let accumulatedTags: string[] = []; // To save partial results
 
     n8nStream.pipeTo(new WritableStream({
         async write(chunk) {
-            try { // Wrap the entire write logic in a try-catch
+            try {
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
@@ -64,36 +66,62 @@ export async function GET({ params, locals }) {
                         try {
                             const parsedChunk: AnalysisStreamChunk = JSON.parse(line);
 
+                            // Accumulate interpretation and tags
+                            if (parsedChunk.content) {
+                                accumulatedInterpretation += parsedChunk.content;
+                            }
+                            if (parsedChunk.tags) {
+                                accumulatedTags = parsedChunk.tags; // Assuming tags are sent as a complete array each time
+                            }
+
                             // Check for final status signals from n8nService
                             if (parsedChunk.finalStatus && !dreamStatusUpdated) {
                                 await prisma.dream.update({
                                     where: { id: dreamId },
-                                    data: { status: parsedChunk.finalStatus }
+                                    data: {
+                                        status: parsedChunk.finalStatus,
+                                        interpretation: accumulatedInterpretation,
+                                        tags: accumulatedTags
+                                    }
                                 }).catch(updateError => console.error(`Failed to update dream status to ${parsedChunk.finalStatus} for ${dreamId} during stream write:`, updateError));
                                 dreamStatusUpdated = true;
                                 console.log(`Dream ${dreamId}: Status updated to ${parsedChunk.finalStatus}`);
                                 // Do not forward finalStatus to client, it's an internal signal
                                 delete parsedChunk.finalStatus;
                             } else if (parsedChunk.status === 'analysis_failed' && !dreamStatusUpdated) {
-                                // This might be redundant if finalStatus is always sent, but good for robustness
                                 await prisma.dream.update({
                                     where: { id: dreamId },
-                                    data: { status: 'analysis_failed' }
+                                    data: {
+                                        status: 'analysis_failed',
+                                        interpretation: accumulatedInterpretation,
+                                        tags: accumulatedTags
+                                    }
                                 }).catch(updateError => console.error(`Failed to update dream status to analysis_failed for ${dreamId} during stream write:`, updateError));
                                 dreamStatusUpdated = true;
                                 console.log(`Dream ${dreamId}: Status updated to analysis_failed (from chunk status)`);
                             }
 
                             // Forward the chunk to the client
-                            if (Object.keys(parsedChunk).length > 0) { // Only send if there's actual data
-                                await writer.write(encoder.encode(JSON.stringify(parsedChunk) + '\n'));
+                            if (Object.keys(parsedChunk).length > 0) {
+                                try {
+                                    await writer.write(encoder.encode(JSON.stringify(parsedChunk) + '\n'));
+                                } catch (writeError) {
+                                    console.warn(`Dream ${dreamId}: Failed to write chunk to client (client likely disconnected):`, writeError);
+                                    // If client disconnected, we should abort the stream
+                                    this.abort(writeError); // Propagate the error to the abort handler
+                                    return; // Stop further processing in this write call
+                                }
                             }
 
                         } catch (e) {
                             console.warn(`Dream ${dreamId}: Failed to parse stream line from n8nService or process chunk: ${line}`, e);
-                            // Forward parsing error to client
-                            await writer.write(encoder.encode(JSON.stringify({ message: `Error processing stream data: ${line}` }) + '\n'))
-                                .catch(writeError => console.error(`Failed to write error message to client for ${dreamId}:`, writeError));
+                            try {
+                                await writer.write(encoder.encode(JSON.stringify({ message: `Error processing stream data: ${line}` }) + '\n'));
+                            } catch (writeError) {
+                                console.warn(`Dream ${dreamId}: Failed to write error message to client (client likely disconnected):`, writeError);
+                                this.abort(writeError);
+                                return;
+                            }
                         }
                     }
                     boundary = jsonBuffer.indexOf('\n');
@@ -104,16 +132,24 @@ export async function GET({ params, locals }) {
                 if (!dreamStatusUpdated) {
                     await prisma.dream.update({
                         where: { id: dreamId },
-                        data: { status: 'analysis_failed' }
+                        data: {
+                            status: 'analysis_failed',
+                            interpretation: accumulatedInterpretation,
+                            tags: accumulatedTags
+                        }
                     }).catch(updateError => console.error(`Failed to update dream status to analysis_failed for ${dreamId} during unhandled write error:`, updateError));
                     dreamStatusUpdated = true;
                 }
-                await writer.write(encoder.encode(JSON.stringify({ message: `Internal server error during stream processing: ${(e instanceof Error ? e.message : String(e))}`, status: 'analysis_failed' }) + '\n'));
+                try {
+                    await writer.write(encoder.encode(JSON.stringify({ message: `Internal server error during stream processing: ${(e instanceof Error ? e.message : String(e))}`, status: 'analysis_failed' }) + '\n'));
+                } catch (writeError) {
+                    console.warn(`Dream ${dreamId}: Failed to write internal error message to client:`, writeError);
+                }
                 writer.close(); // Close the stream to prevent further issues
             }
         },
         async close() {
-            try { // Wrap the entire close logic in a try-catch
+            try {
                 // Process any remaining content in the buffer
                 if (jsonBuffer.trim()) {
                     try {
@@ -121,7 +157,11 @@ export async function GET({ params, locals }) {
                         if (parsedChunk.finalStatus && !dreamStatusUpdated) {
                             await prisma.dream.update({
                                 where: { id: dreamId },
-                                data: { status: parsedChunk.finalStatus }
+                                data: {
+                                    status: parsedChunk.finalStatus,
+                                    interpretation: accumulatedInterpretation,
+                                    tags: accumulatedTags
+                                }
                             }).catch(updateError => console.error(`Failed to update dream status to ${parsedChunk.finalStatus} for ${dreamId} during stream close:`, updateError));
                             dreamStatusUpdated = true;
                             console.log(`Dream ${dreamId}: Status updated to ${parsedChunk.finalStatus} (from final buffer)`);
@@ -129,18 +169,30 @@ export async function GET({ params, locals }) {
                         } else if (parsedChunk.status === 'analysis_failed' && !dreamStatusUpdated) {
                             await prisma.dream.update({
                                 where: { id: dreamId },
-                                data: { status: 'analysis_failed' }
+                                data: {
+                                    status: 'analysis_failed',
+                                    interpretation: accumulatedInterpretation,
+                                    tags: accumulatedTags
+                                }
                             }).catch(updateError => console.error(`Failed to update dream status to analysis_failed for ${dreamId} during stream close:`, updateError));
                             dreamStatusUpdated = true;
                             console.log(`Dream ${dreamId}: Status updated to analysis_failed (from final buffer chunk status)`);
                         }
                         if (Object.keys(parsedChunk).length > 0) {
-                            await writer.write(encoder.encode(JSON.stringify(parsedChunk) + '\n'));
+                            try {
+                                await writer.write(encoder.encode(JSON.stringify(parsedChunk) + '\n'));
+                            } catch (writeError) {
+                                console.warn(`Dream ${dreamId}: Failed to write final chunk to client (client likely disconnected):`, writeError);
+                            }
                         }
                     } catch (e) {
                         console.warn(`Dream ${dreamId}: Failed to parse final stream buffer from n8nService as JSON: ${jsonBuffer.trim()}`, e);
                         if (!writer.closed) {
-                            await writer.write(encoder.encode(JSON.stringify({ message: `Error processing final stream data: ${jsonBuffer.trim()}` }) + '\n'));
+                            try {
+                                await writer.write(encoder.encode(JSON.stringify({ message: `Error processing final stream data: ${jsonBuffer.trim()}` }) + '\n'));
+                            } catch (writeError) {
+                                console.warn(`Dream ${dreamId}: Failed to write final error message to client:`, writeError);
+                            }
                         }
                     }
                 }
@@ -149,7 +201,11 @@ export async function GET({ params, locals }) {
                 if (!dreamStatusUpdated) {
                     await prisma.dream.update({
                         where: { id: dreamId },
-                        data: { status: 'completed' }
+                        data: {
+                            status: 'completed',
+                            interpretation: accumulatedInterpretation,
+                            tags: accumulatedTags
+                        }
                     }).catch(updateError => console.error(`Failed to update dream status to completed for ${dreamId} during stream close:`, updateError));
                     console.log(`Dream ${dreamId}: Status updated to completed (stream closed without explicit finalStatus)`);
                 }
@@ -161,7 +217,11 @@ export async function GET({ params, locals }) {
                 if (!dreamStatusUpdated) {
                     await prisma.dream.update({
                         where: { id: dreamId },
-                        data: { status: 'analysis_failed' }
+                        data: {
+                            status: 'analysis_failed',
+                            interpretation: accumulatedInterpretation,
+                            tags: accumulatedTags
+                        }
                     }).catch(updateError => console.error(`Failed to update dream status to analysis_failed for ${dreamId} during unhandled close error:`, updateError));
                     dreamStatusUpdated = true;
                 }
@@ -172,19 +232,26 @@ export async function GET({ params, locals }) {
         async abort(reason) {
             const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
             console.error(`Dream ${dreamId}: Orchestration stream aborted:`, errorMessage);
+
+            // Always attempt to update the dream status on abort, saving partial results
             if (!dreamStatusUpdated) {
                 await prisma.dream.update({
                     where: { id: dreamId },
-                    data: { status: 'analysis_failed' }
+                    data: {
+                        status: 'analysis_failed', // Mark as failed because it was interrupted
+                        interpretation: accumulatedInterpretation,
+                        tags: accumulatedTags
+                    }
                 }).catch(updateError => console.error(`Failed to update dream status to analysis_failed for ${dreamId} during stream abort:`, updateError));
                 dreamStatusUpdated = true;
                 console.log(`Dream ${dreamId}: Status updated to analysis_failed (orchestration stream aborted)`);
             }
+
             // Attempt to write an error message before closing, but don't let it block if client is already gone
             try {
                 await writer.write(encoder.encode(JSON.stringify({ message: `Analysis stream aborted: ${errorMessage}`, status: 'analysis_failed' }) + '\n'));
             } catch (writeError) {
-                console.warn(`Dream ${dreamId}: Failed to write abort message to client:`, writeError);
+                console.warn(`Dream ${dreamId}: Failed to write abort message to client (client likely disconnected):`, writeError);
             }
             await writer.close();
         }
