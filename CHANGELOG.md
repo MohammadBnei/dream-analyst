@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.4.3](https://github.com/MohammadBnei/dream-analyst/compare/0.4.2...0.4.3) (2025-10-29)
+
+
+### Bug Fixes
+
+* Correctly handle async data fetching in Svelte await block ([9b6ea0a](https://github.com/MohammadBnei/dream-analyst/commit/9b6ea0a71bbda22836424a84d21e483f23e83165))
+* Remove `enhance` from `createDream` call ([c2fb33e](https://github.com/MohammadBnei/dream-analyst/commit/c2fb33e3298bfb5e9a70e6695acdc44e2919b185))
+* Remove unused `resolvedDreams` from await block ([a424df8](https://github.com/MohammadBnei/dream-analyst/commit/a424df8494b2f11ad78737da8b66620330081d4e))
+
 ## [0.4.2](https://github.com/MohammadBnei/dream-analyst/compare/0.4.1...0.4.2) (2025-10-29)
 
 ## [0.4.1](https://github.com/MohammadBnei/dream-analyst/compare/0.4.0...0.4.1) (2025-10-29)
