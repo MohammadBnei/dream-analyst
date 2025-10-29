@@ -27,6 +27,8 @@ export async function GET({ params, locals, platform }) {
     // Check Redis for ongoing analysis state first
     const redisAnalysisState = await analysisStore.getAnalysis(dreamId);
 
+    console.log({ redisAnalysisState })
+
     // If analysis is already completed or failed (either in DB or Redis), just return the final result
     if (dream.status === 'completed' || dream.status === 'analysis_failed') {
         const finalChunk: AnalysisStreamChunk = {
@@ -77,12 +79,12 @@ export async function GET({ params, locals, platform }) {
                 let intervalId: ReturnType<typeof setInterval> | null = setInterval(async () => {
                     // Safeguard: Check if the controller is still active before enqueuing
                     // If desiredSize is 0 or less, the consumer is no longer reading, so close the stream.
-                    if (controller.desiredSize <= 0) {
+                    if (!controller.desiredSize || controller.desiredSize <= 0) {
+                        console.log('controller closed')
                         if (intervalId) {
                             clearInterval(intervalId);
                             intervalId = null;
                         }
-                        controller.close();
                         return;
                     }
 
