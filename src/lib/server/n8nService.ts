@@ -1,8 +1,7 @@
 import { env } from '$env/dynamic/private';
 
 const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL;
-const N8N_USERNAME = env.N8N_USERNAME;
-const N8N_PASSWORD = env.N8N_PASSWORD;
+const N8N_AUTH = env.N8N_AUTH;
 
 // Define the custom type for the processed stream chunks
 export interface AnalysisStreamChunk {
@@ -19,15 +18,9 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
     }
 
     const headers: HeadersInit = {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'N8N_AUTH': N8N_AUTH
     };
-
-    if (N8N_USERNAME && N8N_PASSWORD) {
-        const credentials = btoa(`${N8N_USERNAME}:${N8N_PASSWORD}`);
-        headers['Authorization'] = `Basic ${credentials}`;
-    } else if (N8N_USERNAME || N8N_PASSWORD) {
-        console.warn("N8N_USERNAME or N8N_PASSWORD is set, but not both. Basic authentication will not be used.");
-    }
 
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
@@ -38,7 +31,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
             headers: headers,
             body: JSON.stringify({ dreamId, rawText })
         });
-        
+
         // Log the response body to inspect its type and content
         // Note: response.body can only be read once. If you read it here, pipeTo will fail.
         // So, we'll check its type and then let pipeTo consume it.
