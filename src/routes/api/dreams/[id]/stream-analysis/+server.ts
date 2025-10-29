@@ -1,8 +1,8 @@
 // src/routes/api/dreams/[id]/stream-analysis/+server.ts
-import { error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit';
 import { initiateStreamedDreamAnalysis } from '$lib/server/n8nService';
 import prisma from '$lib/server/db';
-import { createN8nStreamProcessor } from '$lib/server/utils/n8nStreamProcessor';
+// Removed: import { createN8nStreamProcessor } from '$lib/server/utils/n8nStreamProcessor';
 
 export async function GET({ params, locals }) {
     const dreamId = params.id;
@@ -33,9 +33,9 @@ export async function GET({ params, locals }) {
         throw error(409, 'Analysis for this dream is not pending. Please reset its status if you wish to re-analyze.');
     }
 
-    let n8nResponse: Response;
+    let analysisStream: ReadableStream<Uint8Array>;
     try {
-        n8nResponse = await initiateStreamedDreamAnalysis(dreamId, dream.rawText);
+        analysisStream = await initiateStreamedDreamAnalysis(dreamId, dream.rawText);
     } catch (e) {
         console.error(`Failed to initiate n8n stream for dream ${dreamId}:`, e);
         // Update dream status to analysis_failed if n8n initiation fails
@@ -46,23 +46,14 @@ export async function GET({ params, locals }) {
         throw error(500, `Failed to start dream analysis: ${(e instanceof Error ? e.message : String(e))}`);
     }
 
-    if (!n8nResponse.body) {
-        console.error(`n8n response body is null for dream ${dreamId}`);
-        await prisma.dream.update({
-            where: { id: dreamId },
-            data: { status: 'analysis_failed' }
-        }).catch(updateError => console.error(`Failed to update dream status to analysis_failed for ${dreamId}:`, updateError));
-        throw error(500, 'n8n service returned an empty response body.');
-    }
-
-    // Use the new stream processor utility
-    const sseStream = createN8nStreamProcessor(dreamId, n8nResponse.body);
-
-    return new Response(sseStream, {
+    // The analysisStream already contains the processed AnalysisStreamChunk objects
+    // encoded as newline-delimited JSON.
+    return new Response(analysisStream, {
         headers: {
-            'Content-Type': 'text/event-stream',
+            'Content-Type': 'application/x-ndjson', // Newline Delimited JSON
             'Cache-Control': 'no-cache',
             'Connection': 'keep-alive',
+            // 'Transfer-Encoding': 'chunked' is often added automatically by the server for streaming responses
         },
     });
 }
