@@ -1,6 +1,7 @@
 import { getRedisClient } from './redis';
 import type { AnalysisStreamChunk } from './n8nService';
 import Redis from 'ioredis'; // Import Redis for subscriber client
+import { env } from '$env/dynamic/private'; // Import env to check for REDIS_URL
 
 const REDIS_PREFIX = 'dream_analysis:';
 const REDIS_EXPIRATION_SECONDS = 60 * 60 * 2; // Store analysis state for 2 hours (longer than expected analysis)
@@ -15,11 +16,12 @@ interface AnalysisState {
 }
 
 class AnalysisStore {
-    // Store the promise of the Redis client
-    private redisPromise: Promise<Redis>;
+    private redis: Redis; // Directly store the Redis client
 
     constructor() {
-        this.redisPromise = getRedisClient();
+        // Directly get the Redis client. This will throw if REDIS_URL is not defined
+        // at the time this constructor runs.
+        this.redis = getRedisClient();
     }
 
     private getKey(dreamId: string): string {
@@ -38,12 +40,11 @@ class AnalysisStore {
      * @param refreshExpiration If true, refreshes the key's expiration time.
      */
     async updateAnalysis(dreamId: string, chunk: AnalysisStreamChunk, isFinal: boolean = false, refreshExpiration: boolean = false): Promise<void> {
-        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
         let currentState: AnalysisState | null = null;
 
         try {
-            const rawState = await redis.get(key);
+            const rawState = await this.redis.get(key); // Use this.redis directly
             if (rawState) {
                 currentState = JSON.parse(rawState);
             }
@@ -78,10 +79,10 @@ class AnalysisStore {
 
         // Always refresh expiration if it's a final update or explicitly requested (heartbeat)
         if (isFinal || refreshExpiration) {
-            await redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(currentState));
+            await this.redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(currentState));
         } else {
             // Otherwise, just update the value without changing expiration
-            await redis.set(key, JSON.stringify(currentState));
+            await this.redis.set(key, JSON.stringify(currentState));
         }
     }
 
@@ -91,9 +92,8 @@ class AnalysisStore {
      * @returns The analysis state or null if not found.
      */
     async getAnalysis(dreamId: string): Promise<AnalysisState | null> {
-        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
-        const rawState = await redis.get(key);
+        const rawState = await this.redis.get(key); // Use this.redis directly
         if (rawState) {
             try {
                 return JSON.parse(rawState);
@@ -130,7 +130,6 @@ class AnalysisStore {
      * @param dreamId The ID of the dream.
      */
     async markAnalysisStarted(dreamId: string): Promise<void> {
-        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
         const initialState: AnalysisState = {
             interpretation: '',
@@ -139,7 +138,7 @@ class AnalysisStore {
             lastUpdate: Date.now()
         };
         // Set with initial expiration
-        await redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(initialState));
+        await this.redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(initialState)); // Use this.redis directly
     }
 
     /**
@@ -147,12 +146,11 @@ class AnalysisStore {
      * @param dreamId The ID of the dream.
      */
     async clearAnalysis(dreamId: string): Promise<void> {
-        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
         const channel = this.getChannel(dreamId);
-        await redis.del(key);
+        await this.redis.del(key); // Use this.redis directly
         // Publish a final message to the channel before clearing
-        await redis.publish(channel, JSON.stringify({ finalStatus: 'cleared' }));
+        await this.redis.publish(channel, JSON.stringify({ finalStatus: 'cleared' })); // Use this.redis directly
     }
 
     /**
@@ -161,9 +159,8 @@ class AnalysisStore {
      * @param chunk The analysis chunk to publish.
      */
     async publishUpdate(dreamId: string, chunk: AnalysisStreamChunk): Promise<void> {
-        const redis = await this.redisPromise; // Await the client
         const channel = this.getChannel(dreamId);
-        await redis.publish(channel, JSON.stringify(chunk));
+        await this.redis.publish(channel, JSON.stringify(chunk)); // Use this.redis directly
     }
 
     /**
@@ -173,7 +170,7 @@ class AnalysisStore {
      * @returns A Redis client instance that is subscribed.
      */
     async subscribeToUpdates(dreamId: string, callback: (message: AnalysisStreamChunk) => void): Promise<Redis> {
-        const subscriber = (await getRedisClient()).duplicate(); // Use a duplicate client for subscribing
+        const subscriber = getRedisClient().duplicate(); // Use getRedisClient directly
         const channel = this.getChannel(dreamId);
 
         subscriber.subscribe(channel, (err) => {
@@ -219,4 +216,7 @@ class AnalysisStore {
     }
 }
 
+// Export the instance directly. This will cause the constructor to run
+// when the module is imported, potentially leading to the REDIS_URL error
+// if not properly handled in the build environment.
 export const analysisStore = new AnalysisStore();

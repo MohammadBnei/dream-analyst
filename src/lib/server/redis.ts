@@ -3,9 +3,11 @@ import { env } from '$env/dynamic/private';
 
 let redis: Redis | null = null; // Initialize as null
 
-export async function getRedisClient(): Promise<Redis> {
+export function getRedisClient(): Redis { // Removed async
     if (!redis) {
         if (!env.REDIS_URL) {
+            // This error will now be thrown synchronously if REDIS_URL is missing
+            // during any import/instantiation of this module.
             throw new Error('REDIS_URL is not defined');
         }
         redis = new Redis(env.REDIS_URL);
