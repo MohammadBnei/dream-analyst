@@ -81,9 +81,16 @@
 	"minimum_characters_label": "Minimum {count} characters",
 	"saving_button": "Saving...",
 	"save_dream_button": "Save Dream",
-	"dream_analysis_instant_message": "Your dream will be analyzed instantly – please wait a few seconds.",
+	"dream_saved_no_id_error": "Dream saved, but no ID received to start analysis.",
+	"unknown_error_occurred": "An unknown error occurred.",
+	"failed_to_save_dream": "Failed to save dream.",
 	"error_prefix": "Error",
 	"retry_button": "Retry",
 	"change_status_option": "Change Status",
-	"reset_to_failed_analysis_option": "Reset to Failed Analysis"
+	"reset_to_failed_analysis_option": "Reset to Failed Analysis",
+	"dream_analysis_heading": "Dream Analysis",
+	"tags_heading": "Tags",
+	"add_another_dream_button": "Add Another Dream",
+	"analysis_stream_failed_error": "Analysis stream failed. Please try again.",
+	"analysis_stream_error": "Analysis stream encountered an error."
 }

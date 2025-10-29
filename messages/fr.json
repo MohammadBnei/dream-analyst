@@ -87,5 +87,10 @@
 	"error_prefix": "Erreur",
 	"retry_button": "Réessayer",
 	"change_status_option": "Changer le statut",
-	"reset_to_failed_analysis_option": "Réinitialiser à l'analyse en échec"
+	"reset_to_failed_analysis_option": "Réinitialiser à l'analyse en échec",
+	"dream_analysis_heading": "Analyse du Rêve",
+	"tags_heading": "Balises",
+	"add_another_dream_button": "Ajouter un autre Rêve",
+	"analysis_stream_failed_error": "Le flux d'analyse a échoué. Veuillez réessayer.",
+	"analysis_stream_error": "Le flux d'analyse a rencontré une erreur."
 }
