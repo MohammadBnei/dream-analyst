@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t } from '@inlang/sdk-js';
+
 	export let value: string = '';
 	export let placeholder: string = 'Start typing or record your thoughts...';
 	export let rows: number = 5;
@@ -33,7 +35,9 @@
 
 			mediaRecorder.onerror = (event) => {
 				console.error('MediaRecorder error:', event);
-				recordingError = 'Recording failed: ' + (event.error?.message || 'Unknown error');
+				recordingError = $t('recording_failed_error', {
+					message: event.error?.message || 'Unknown error'
+				});
 				isRecording = false;
 				stream.getTracks().forEach((track) => track.stop());
 			};
@@ -42,8 +46,7 @@
 			isRecording = true;
 		} catch (err) {
 			console.error('Error accessing microphone:', err);
-			recordingError =
-				'Could not access microphone. Please ensure it is connected and permissions are granted.';
+			recordingError = $t('microphone_access_error');
 			isRecording = false;
 		}
 	}
@@ -55,7 +58,7 @@
 			// If not recording but transcribing, cancel the transcription
 			abortController.abort();
 			console.log('Transcription cancelled by user.');
-			recordingError = 'Transcription cancelled.';
+			recordingError = $t('transcription_cancelled_message');
 			isTranscribing = false;
 			abortController = null;
 		}
@@ -92,10 +95,12 @@
 		} catch (error: any) {
 			if (error.name === 'AbortError') {
 				console.log('Fetch aborted by user.');
-				recordingError = 'Transcription cancelled.';
+				recordingError = $t('transcription_cancelled_message');
 			} else {
 				console.error('Transcription error:', error);
-				recordingError = 'Transcription failed: ' + (error.message || 'Unknown error');
+				recordingError = $t('transcription_failed_message', {
+					message: error.message || 'Unknown error'
+				});
 			}
 		} finally {
 			isTranscribing = false;
@@ -112,7 +117,7 @@
 <div class="">
 	<div class="mt-2 w-full">
 		<fieldset class="fieldset rounded-box border border-base-300 bg-base-200 p-4">
-			<legend class="fieldset-legend">Audio Input</legend>
+			<legend class="fieldset-legend">{$t('audio_input_fieldset_legend')}</legend>
 			<textarea
 				{placeholder}
 				{rows}
@@ -138,7 +143,7 @@
 								clip-rule="evenodd"
 							></path></svg
 						>
-						Stop Recording
+						{$t('stop_recording_button')}
 					{:else if isTranscribing}
 						<svg
 							class="inline-block h-5 w-5"
@@ -151,7 +156,7 @@
 								clip-rule="evenodd"
 							></path></svg
 						>
-						Cancel Transcription
+						{$t('cancel_transcription_button')}
 					{:else}
 						<svg
 							class="inline-block h-5 w-5"
@@ -162,7 +167,7 @@
 								d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.25 1.25 0 01-2.095-1.15l.003-.003.002-.002A6.25 6.25 0 0110 10c2.817 0 5.323 1.39 6.827 3.513l.002.002.003.003a1.25 1.25 0 01-2.095 1.15 3.75 3.75 0 00-9.564 0z"
 							></path></svg
 						>
-						Record Audio
+						{$t('record_audio_button')}
 					{/if}
 				</button>
 
@@ -171,8 +176,8 @@
 					class="select-bordered select select-sm w-30"
 					disabled={isRecording || isTranscribing}
 				>
-					<option value="en">English</option>
-					<option value="fr">Français</option>
+					<option value="en">{$t('language_english_option')}</option>
+					<option value="fr">{$t('language_french_option')}</option>
 				</select>
 			</div>
 		</fieldset>
@@ -180,7 +185,7 @@
 		{#if isTranscribing}
 			<p class="flex items-center gap-2 text-info">
 				<span class="loading loading-sm loading-spinner"></span>
-				Transcribing audio...
+				{$t('transcribing_audio_message')}
 			</p>
 		{/if}
 	</div>
