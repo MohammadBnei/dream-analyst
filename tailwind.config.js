@@ -8,6 +8,16 @@ export default {
     extend: {},
   },
   daisyui: {
-    themes: ["light", "dark"],
+    themes: ["light", "dark"], // Ensure light and dark themes are enabled
+    // You can also specify a default theme and a theme for prefers-color-scheme: dark
+    // For example:
+    // themes: [
+    //   {
+    //     light: { ...require("daisyui/src/theming/themes")["[data-theme=light]"] },
+    //   },
+    //   {
+    //     dark: { ...require("daisyui/src/theming/themes")["[data-theme=dark]"] },
+    //   },
+    // ],
   },
 }
