@@ -1,12 +1,10 @@
 <script lang="ts">
     import { transcribeAudio } from '$lib/remote/audio.remote';
-    import { createEventDispatcher } from 'svelte';
 
     export let value: string = '';
     export let placeholder: string = 'Start typing or record your thoughts...';
     export let rows: number = 5;
-
-    const dispatch = createEventDispatcher();
+    export let onInput: (value: string) => void = () => {}; // Callback prop for input changes
 
     let isRecording = false;
     let mediaRecorder: MediaRecorder | null = null;
@@ -65,7 +63,7 @@
 
             if (transcription) {
                 value = (value ? value + '\n' : '') + transcription;
-                dispatch('input', value); // Dispatch input event for two-way binding
+                onInput(value); // Call the callback prop
             }
         } catch (error) {
             console.error('Transcription error:', error);
@@ -77,7 +75,7 @@
 
     function handleInput(event: Event) {
         value = (event.target as HTMLTextAreaElement).value;
-        dispatch('input', value);
+        onInput(value); // Call the callback prop
     }
 </script>
 
