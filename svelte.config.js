@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-node';
+import adapter from 'svelte-adapter-bun';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -22,7 +22,12 @@ const config = {
 	extensions: ['.svelte'],
 	experimental: {
 		async: true
-	}
+	},
+	build: {
+		rollupOptions: {
+			external: ['@sveltejs/kit/*']
+		}
+  },
 };
 
 export default config;

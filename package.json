@@ -22,8 +22,6 @@
 		"@eslint/js": "^9.38.0",
 		"@inlang/cli": "^3.0.12",
 		"@inlang/paraglide-js": "2.4.0",
-		"@oslojs/crypto": "^1.0.1",
-		"@oslojs/encoding": "^1.1.0",
 		"@release-it/conventional-changelog": "^10.0.1",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/adapter-node": "^5.4.0",
@@ -39,26 +37,21 @@
 		"eslint": "^9.38.0",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.12.5",
-		"globals": "^16.4.0",
 		"prettier": "^3.6.2",
 		"prettier-plugin-svelte": "^3.4.0",
 		"prettier-plugin-tailwindcss": "^0.7.1",
-		"prisma": "^6.18.0",
 		"release-it": "^19.0.5",
 		"svelte": "^5.43.0",
-		"svelte-adapter-bun": "^1.0.1",
+		"svelte-adapter-bun": "^0.5.2",
 		"svelte-check": "^4.3.3",
 		"svelte-streamdown": "^2.6.1",
 		"tailwindcss": "^4.1.16",
-		"tsx": "^4.20.6",
-		"typescript": "^5.9.3",
-		"typescript-eslint": "^8.46.2",
 		"vite": "^7.1.12"
 	},
 	"dependencies": {
-		"@node-rs/argon2": "^2.0.2",
 		"@prisma/client": "^6.18.0",
 		"@prisma/extension-accelerate": "^2.0.2",
+		"prisma": "^6.18.0",
 		"bcrypt": "^6.0.0",
 		"dotenv": "^17.2.3",
 		"ioredis": "^5.8.2",
@@ -67,7 +60,7 @@
 		"valibot": "^1.1.0"
 	},
 	"release-it": {
-		"$schema": "https://unpkg.com/release-it@17/schema/release-it.json",
+		"$schema": "https://unpkg.com/release-it@19/schema/release-it.json",
 		"git": {
 			"commitMessage": "chore: release v${version}"
 		},

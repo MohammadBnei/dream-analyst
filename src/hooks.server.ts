@@ -3,6 +3,7 @@ import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
 import { getPrismaClient } from '$lib/server/db';
+
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
 		event.request = request;
@@ -19,6 +20,8 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 		event.locals.user = undefined; // Set to undefined as per app.d.ts
 		return resolve(event);
 	}
+
+	const prisma = await getPrismaClient();
 
 	const decodedToken = auth.verifyToken(authToken);
 

@@ -17,6 +17,8 @@ async function getCurrentUser() {
 export const getDreams = query(async () => {
     const sessionUser = await getCurrentUser();
 
+    const prisma = await getPrismaClient();
+
     const dreams = await prisma.dream.findMany({
         where: {
             userId: sessionUser.id
@@ -40,6 +42,8 @@ export const getDream = query(
     v.string(),
     async (dreamId) => {
         const sessionUser = await getCurrentUser();
+
+        const prisma = await getPrismaClient();
 
         const dream = await prisma.dream.findUnique({
             where: {
@@ -72,6 +76,8 @@ export const createDream = command(
     async ({ rawText }) => {
         const sessionUser = await getCurrentUser();
 
+        const prisma = await getPrismaClient();
+
         try {
             const newDream = await prisma.dream.create({
                 data: {
@@ -97,6 +103,8 @@ export const updateDream = command(
     }),
     async ({ dreamId, rawText }) => {
         const sessionUser = await getCurrentUser();
+
+        const prisma = await getPrismaClient();
 
         try {
             const existingDream = await prisma.dream.findUnique({
@@ -131,6 +139,8 @@ export const updateDreamInterpretation = command(
     async ({ dreamId, interpretation }) => {
         const sessionUser = await getCurrentUser();
 
+        const prisma = await getPrismaClient();
+
         try {
             const existingDream = await prisma.dream.findUnique({
                 where: { id: dreamId }
@@ -161,6 +171,8 @@ export const deleteDream = command(
     v.string(), // dreamId
     async (dreamId) => {
         const sessionUser = await getCurrentUser();
+
+        const prisma = await getPrismaClient();
 
         try {
             const dream = await prisma.dream.findUnique({
@@ -196,6 +208,7 @@ export const updateDreamStatus = command(
     }),
     async ({ dreamId, status }) => {
         const sessionUser = await getCurrentUser();
+        const prisma = await getPrismaClient();
 
         try {
             const existingDream = await prisma.dream.findUnique({
@@ -226,6 +239,7 @@ export const resetDreamStatus = command(
     v.string(), // dreamId
     async (dreamId) => {
         const sessionUser = await getCurrentUser();
+        const prisma = await getPrismaClient();
 
         const dream = await prisma.dream.findUnique({
             where: { id: dreamId }
