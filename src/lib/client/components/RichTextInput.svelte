@@ -57,9 +57,16 @@
     async function transcribeAndAppend(audioBlob: Blob) {
         isTranscribing = true;
         try {
-            // Create a File object from the Blob for the remote function
-            const audioFile = new File([audioBlob], `audio-${Date.now()}.webm`, { type: audioBlob.type });
-            const transcription = await transcribeAudio({ audioFile, lang: selectedLanguage });
+            // Convert Blob to ArrayBuffer for serialization
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            const audioData = new Uint8Array(arrayBuffer);
+
+            const transcription = await transcribeAudio({
+                audioData: Array.from(audioData), // Convert Uint8Array to a plain array for serialization
+                fileName: `audio-${Date.now()}.webm`,
+                fileType: audioBlob.type,
+                lang: selectedLanguage
+            });
 
             if (transcription) {
                 value = (value ? value + '\n' : '') + transcription;
