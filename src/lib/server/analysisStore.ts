@@ -3,13 +3,15 @@ import type { AnalysisStreamChunk } from './n8nService';
 import Redis from 'ioredis'; // Import Redis for subscriber client
 
 const REDIS_PREFIX = 'dream_analysis:';
-const REDIS_EXPIRATION_SECONDS = 60 * 60; // Store analysis state for 1 hour
+const REDIS_EXPIRATION_SECONDS = 60 * 60 * 2; // Store analysis state for 2 hours (longer than expected analysis)
+const REDIS_HEARTBEAT_INTERVAL_SECONDS = 30; // How often the background process refreshes the key expiration
+const REDIS_STALL_THRESHOLD_SECONDS = REDIS_HEARTBEAT_INTERVAL_SECONDS * 2; // If lastUpdate is older than this, consider stalled
 
 interface AnalysisState {
     interpretation: string;
     tags: string[];
     status: 'pending_analysis' | 'completed' | 'analysis_failed';
-    lastUpdate: number; // Timestamp of last update
+    lastUpdate: number; // Timestamp of last update (milliseconds)
 }
 
 class AnalysisStore {
@@ -32,8 +34,9 @@ class AnalysisStore {
      * @param dreamId The ID of the dream.
      * @param chunk The analysis chunk containing updates.
      * @param isFinal If true, sets the final status and potentially clears the key.
+     * @param refreshExpiration If true, refreshes the key's expiration time.
      */
-    async updateAnalysis(dreamId: string, chunk: AnalysisStreamChunk, isFinal: boolean = false): Promise<void> {
+    async updateAnalysis(dreamId: string, chunk: AnalysisStreamChunk, isFinal: boolean = false, refreshExpiration: boolean = false): Promise<void> {
         const key = this.getKey(dreamId);
         let currentState: AnalysisState | null = null;
 
@@ -71,7 +74,13 @@ class AnalysisStore {
             currentState.status = chunk.finalStatus;
         }
 
-        await this.redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(currentState));
+        // Always refresh expiration if it's a final update or explicitly requested (heartbeat)
+        if (isFinal || refreshExpiration) {
+            await this.redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(currentState));
+        } else {
+            // Otherwise, just update the value without changing expiration
+            await this.redis.set(key, JSON.stringify(currentState));
+        }
     }
 
     /**
@@ -94,14 +103,23 @@ class AnalysisStore {
     }
 
     /**
-     * Checks if an analysis is currently being processed.
+     * Checks if an analysis is currently being processed and is not stalled.
      * @param dreamId The ID of the dream.
-     * @returns True if analysis is ongoing, false otherwise.
+     * @returns True if analysis is ongoing and active, false otherwise.
      */
     async isAnalysisOngoing(dreamId: string): Promise<boolean> {
-        const key = this.getKey(dreamId);
         const state = await this.getAnalysis(dreamId);
-        return state?.status === 'pending_analysis' || false;
+        if (state?.status === 'pending_analysis') {
+            const now = Date.now();
+            // If the last update is too old, consider it stalled
+            if ((now - state.lastUpdate) / 1000 > REDIS_STALL_THRESHOLD_SECONDS) {
+                console.warn(`Dream ${dreamId}: Detected stalled analysis (last update ${state.lastUpdate}, now ${now}). Clearing Redis state.`);
+                await this.clearAnalysis(dreamId); // Clear the stalled state
+                return false; // Not truly ongoing
+            }
+            return true; // Ongoing and active
+        }
+        return false; // Not pending or no state
     }
 
     /**
@@ -116,7 +134,7 @@ class AnalysisStore {
             status: 'pending_analysis',
             lastUpdate: Date.now()
         };
-        // Set with a short expiration to prevent stale locks if process crashes
+        // Set with initial expiration
         await this.redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(initialState));
     }
 
@@ -128,7 +146,7 @@ class AnalysisStore {
         const key = this.getKey(dreamId);
         const channel = this.getChannel(dreamId);
         await this.redis.del(key);
-        // Optionally publish a final message to the channel before clearing
+        // Publish a final message to the channel before clearing
         await this.redis.publish(channel, JSON.stringify({ finalStatus: 'cleared' }));
     }
 

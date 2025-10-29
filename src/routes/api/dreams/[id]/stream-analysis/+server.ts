@@ -2,7 +2,7 @@
 import { error } from '@sveltejs/kit';
 import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/n8nService';
 import prisma from '$lib/server/db';
-import { analysisStore } from '$lib/server/analysisStore';
+import { analysisStore, REDIS_HEARTBEAT_INTERVAL_SECONDS } from '$lib/server/analysisStore'; // Import REDIS_HEARTBEAT_INTERVAL_SECONDS
 import Redis from 'ioredis'; // Import Redis for the subscriber client
 
 export async function GET({ params, locals, platform }) {
@@ -44,7 +44,7 @@ export async function GET({ params, locals, platform }) {
 
     // If status is pending_analysis, ensure a background process is running
     if (dream.status === 'pending_analysis') {
-        // Use Redis to check if analysis is already ongoing
+        // Use Redis to check if analysis is already ongoing and not stalled
         const isOngoing = await analysisStore.isAnalysisOngoing(dreamId);
 
         if (!isOngoing) {
@@ -81,7 +81,6 @@ export async function GET({ params, locals, platform }) {
 
                 // Subscribe to Redis Pub/Sub for real-time updates
                 subscriberClient = analysisStore.subscribeToUpdates(dreamId, (message) => {
-                    console.log({ message })
                     if (controller.desiredSize <= 0) {
                         // If client is no longer consuming, close the stream and unsubscribe
                         console.log(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
@@ -150,13 +149,13 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
     let dreamStatusUpdatedInDb = false; // Track if final status was updated in DB
     let accumulatedInterpretation = '';
     let accumulatedTags: string[] = [];
+    let lastHeartbeat = Date.now(); // Track last heartbeat time
 
     try {
         const n8nStream = await initiateStreamedDreamAnalysis(dreamId, rawText);
 
         const backgroundProcessingPromise = n8nStream.pipeTo(new WritableStream({
             async write(chunk) {
-                console.log({ chunk })
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
@@ -182,7 +181,12 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                                 tags: parsedChunk.tags,
                                 status: parsedChunk.status || 'pending_analysis'
                             };
-                            await analysisStore.updateAnalysis(dreamId, redisUpdateChunk);
+                            // Refresh expiration periodically (heartbeat)
+                            const now = Date.now();
+                            const refresh = (now - lastHeartbeat) / 1000 >= REDIS_HEARTBEAT_INTERVAL_SECONDS;
+                            await analysisStore.updateAnalysis(dreamId, redisUpdateChunk, false, refresh);
+                            if (refresh) lastHeartbeat = now;
+
                             await analysisStore.publishUpdate(dreamId, redisUpdateChunk);
 
 
