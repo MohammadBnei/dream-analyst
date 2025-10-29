@@ -27,13 +27,27 @@ model Dream {
   user          User?     @relation(fields: [userId], references: [id])
   rawText       String    @map("raw_text")
   analysisText  String?   @map("analysis_text")
-  interpretation String?
+  interpretation String? // Current active interpretation
   status        String    @default("pending_analysis")
   tags          Json?
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
+  versions      DreamVersion[] // Add relation to DreamVersion
 
   @@map("dreams")
+}
+
+model DreamVersion {
+  id             String    @id @default(uuid())
+  dreamId        String    @map("dream_id")
+  dream          Dream     @relation(fields: [dreamId], references: [id], onDelete: Cascade)
+  versionNumber  Int       @default(1)
+  interpretation String?
+  tags           Json?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@unique([dreamId, versionNumber]) // Ensure unique version for each dream
+  @@map("dream_versions")
 }
 
 model DailyDreamCount {
