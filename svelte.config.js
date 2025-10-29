@@ -17,6 +17,9 @@ const config = {
         }),
 		experimental: {
 			remoteFunctions: true
+		},
+		csrf: {
+			checkOrigin: false
 		}
 	},
 	extensions: ['.svelte'],
