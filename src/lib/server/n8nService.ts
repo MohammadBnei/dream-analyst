@@ -171,12 +171,12 @@ export async function initiateAudioTranscription(audioFile: Blob | File): Promis
         }
 
         const result = await response.json();
-        if (typeof result.transcription !== 'string') {
+        if (typeof result.text !== 'string') {
             console.error('n8n audio transcription response did not contain a string "transcription":', result);
             throw new Error('Invalid response from audio transcription service.');
         }
 
-        return { transcription: result.transcription };
+        return { transcription: result.text };
 
     } catch (error) {
         console.error('Error initiating n8n audio transcription:', error);
