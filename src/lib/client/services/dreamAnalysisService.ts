@@ -12,6 +12,7 @@ export class DreamAnalysisService {
     private callbacks: StreamCallbacks;
     private abortController: AbortController | null = null;
     private jsonBuffer: string = '';
+    private intervalId: ReturnType<typeof setInterval> | null = null; // To store interval ID for polling
 
     constructor(dreamId: string, callbacks: StreamCallbacks) {
         this.dreamId = dreamId;
@@ -78,8 +79,7 @@ export class DreamAnalysisService {
                                     // Check for finalStatus from the server
                                     if (parsed.finalStatus) {
                                         this.callbacks.onEnd({ status: parsed.finalStatus, message: parsed.message });
-                                        clearInterval(intervalId); // If polling, stop it
-                                        controller.close(); // Close the client stream
+                                        this.closeStream(); // Close the client stream
                                         return; // Exit readStream
                                     }
                                     this.callbacks.onMessage(parsed);
@@ -125,6 +125,10 @@ export class DreamAnalysisService {
             this.abortController = null;
             console.log('Stream manually closed for dream:', this.dreamId);
             this.callbacks.onClose?.();
+        }
+        if (this.intervalId) { // Clear any polling interval if it was set
+            clearInterval(this.intervalId);
+            this.intervalId = null;
         }
     }
 }
