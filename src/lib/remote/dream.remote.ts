@@ -90,6 +90,40 @@ export const createDream = command(
     }
 );
 
+// Update an existing dream's rawText
+export const updateDream = command(
+    v.object({
+        dreamId: v.string(),
+        rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.'))
+    }),
+    async ({ dreamId, rawText }) => {
+        const sessionUser = await getCurrentUser();
+
+        try {
+            const existingDream = await prisma.dream.findUnique({
+                where: { id: dreamId }
+            });
+
+            if (!existingDream || existingDream.userId !== sessionUser.id) {
+                error(403, 'Forbidden: You do not own this dream or it does not exist.');
+            }
+
+            const updatedDream = await prisma.dream.update({
+                where: { id: dreamId },
+                data: {
+                    rawText: rawText,
+                    updatedAt: new Date()
+                }
+            });
+            return { message: 'Dream updated successfully', dream: updatedDream };
+        } catch (e) {
+            console.error('Error updating dream:', e);
+            error(500, 'Failed to update dream due to a server error.');
+        }
+    }
+);
+
+
 // Delete a dream
 export const deleteDream = command(
     v.string(), // dreamId

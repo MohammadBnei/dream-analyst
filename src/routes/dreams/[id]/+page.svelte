@@ -4,7 +4,7 @@
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
-	import { getDream, deleteDream, updateDreamStatus, resetDreamStatus } from '$lib/remote/dream.remote';
+	import { getDream, deleteDream, updateDreamStatus, resetDreamStatus, updateDream } from '$lib/remote/dream.remote';
 
 	let { params } = $props();
 	const dreamId = params.id;
@@ -23,6 +23,11 @@
 	let showDeleteModal = $state(false);
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
+
+	let isEditing = $state(false);
+	let editedRawText = $state(dream?.rawText || '');
+	let isSavingEdit = $state(false);
+	let editError = $state<string | null>(null);
 
 	let analysisService: DreamAnalysisService | null = null;
 
@@ -50,6 +55,7 @@
 			streamedInterpretation = dream.interpretation || '';
 			streamedTags = dream.tags || [];
 			currentDreamStatus = dream.status;
+			editedRawText = dream.rawText; // Update edited text when dream data changes
 			// Reset stream-related states if dream is no longer pending
 			if (dream.status !== 'pending_analysis') {
 				isLoadingStream = false;
@@ -187,6 +193,41 @@
 	function handleModalSelfClick() {
 		showDeleteModal = false;
 	}
+
+	function toggleEditMode() {
+		isEditing = !isEditing;
+		if (isEditing) {
+			editedRawText = dream?.rawText || ''; // Initialize with current rawText
+			editError = null; // Clear any previous edit errors
+		}
+	}
+
+	async function handleSaveEdit() {
+		if (!dream?.id || editedRawText.length < 10) {
+			editError = m.dream_text_too_short_error();
+			return;
+		}
+
+		isSavingEdit = true;
+		editError = null;
+		try {
+			await updateDream({ dreamId: dream.id, rawText: editedRawText });
+			await dreamQuery.refresh(); // Refresh to get the updated dream object
+			isEditing = false; // Exit edit mode
+			console.log('Dream raw text updated successfully!');
+		} catch (e) {
+			console.error('Error saving dream edit:', e);
+			editError = e instanceof Error ? e.message : m.unknown_error_saving_dream();
+		} finally {
+			isSavingEdit = false;
+		}
+	}
+
+	function handleCancelEdit() {
+		isEditing = false;
+		editedRawText = dream?.rawText || ''; // Revert to original text
+		editError = null;
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -253,10 +294,42 @@
 				</div>
 
 				<div class="mb-6">
-					<h3 class="mb-2 text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
-					<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
-						{dream.rawText}
-					</p>
+					<div class="flex items-center justify-between mb-2">
+						<h3 class="text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
+						{#if !isEditing}
+							<button onclick={toggleEditMode} class="btn btn-sm btn-ghost">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+								</svg>
+								{m.edit_button()}
+							</button>
+						{/if}
+					</div>
+					{#if isEditing}
+						<textarea
+							class="textarea textarea-bordered w-full h-48"
+							bind:value={editedRawText}
+							minlength="10"
+						></textarea>
+						{#if editError}
+							<div class="text-error text-sm mt-1">{editError}</div>
+						{/if}
+						<div class="mt-2 flex justify-end gap-2">
+							<button onclick={handleCancelEdit} class="btn btn-sm btn-ghost">{m.cancel_button()}</button>
+							<button onclick={handleSaveEdit} class="btn btn-sm btn-primary" disabled={isSavingEdit || editedRawText.length < 10}>
+								{#if isSavingEdit}
+									<span class="loading loading-spinner"></span>
+									{m.saving_button()}
+								{:else}
+									{m.save_button()}
+								{/if}
+							</button>
+						</div>
+					{:else}
+						<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
+							{dream.rawText}
+						</p>
+					{/if}
 				</div>
 
 				<div class="mb-6">
