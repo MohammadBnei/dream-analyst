@@ -154,5 +154,12 @@ export async function GET({ params, locals }) {
         }
     }));
 
-    return readable;
+    // Return the readable side of the TransformStream as a Response
+    return new Response(readable, {
+        headers: {
+            'Content-Type': 'application/x-ndjson', // Newline Delimited JSON
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+        },
+    });
 }
