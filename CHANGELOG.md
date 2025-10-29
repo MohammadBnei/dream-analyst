@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.5](https://github.com/MohammadBnei/dream-analyst/compare/0.3.4...0.3.5) (2025-10-29)
+
+
+### Bug Fixes
+
+* Move runtime dependencies from devDependencies to dependencies ([4f09181](https://github.com/MohammadBnei/dream-analyst/commit/4f0918165815bed778be349d1a53cce1d25a326e))
+* Remove unused Drizzle dependencies ([44591dd](https://github.com/MohammadBnei/dream-analyst/commit/44591dd5e7a681c104da732ff476887b02f97710))
+
 ## [0.3.4](https://github.com/MohammadBnei/dream-analyst/compare/0.3.3...0.3.4) (2025-10-29)
 
 ## [0.3.3](https://github.com/MohammadBnei/dream-analyst/compare/0.3.2...0.3.3) (2025-10-29)
