@@ -241,7 +241,7 @@
 					</h2>
 					<div class="flex items-center gap-2">
 						<span class="badge {getStatusBadgeClass(currentDreamStatus)}"
-							>{currentDreamStatus.replace('_', ' ')}</span
+							>{currentDreamStatus?.replace('_', ' ')}</span
 						>
 						{#if currentDreamStatus === 'pending_analysis'}
 							<select class="select select-bordered select-sm" onchange={handleManualStatusChange}>
