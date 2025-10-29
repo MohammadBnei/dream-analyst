@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
 	import { fade } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
+	import { createDream } from '$lib/remote/dream.remote';
 
 	let dreamText: string = '';
 	let isSaving: boolean = false;
@@ -10,48 +10,49 @@
 
 	$: isSaveDisabled = dreamText.length < 10 || isSaving;
 
-	function resetForm() {
-		dreamText = '';
-		isSaving = false;
-		errorMessage = null;
-	}
-
-	const submitForm = async ({ form, data, action, cancel }) => {
+	const submitForm = createDream.enhance(async ({ data, submit }) => {
 		isSaving = true;
 		errorMessage = null;
 
-		return async ({ result, update }) => {
+		try {
+			const result = await submit();
 			if (result.type === 'success') {
 				const dreamId = result.data?.dreamId;
 				if (dreamId) {
 					await goto(`/dreams/${dreamId}`);
 				} else {
 					errorMessage = m.dream_saved_no_id_error();
-					isSaving = false;
 				}
 			} else if (result.type === 'error') {
 				errorMessage = result.error?.message || m.unknown_error_occurred();
-				isSaving = false;
 			} else if (result.type === 'failure') {
 				errorMessage = result.data?.message || m.failed_to_save_dream();
-				isSaving = false;
 			}
-			update(); // Update the page with the new data
-		};
-	};
+		} catch (e) {
+			errorMessage = (e instanceof Error ? e.message : String(e)) || m.unknown_error_occurred();
+		} finally {
+			isSaving = false;
+		}
+	});
+
+	function resetForm() {
+		dreamText = '';
+		isSaving = false;
+		errorMessage = null;
+	}
 </script>
 
 <div class="container mx-auto p-4 max-w-2xl">
 	<h1 class="text-3xl font-bold mb-6 text-center">{m.new_dream_title()}</h1>
 
-	<form method="POST" use:enhance={submitForm} class="space-y-6">
+	<form method="POST" {...submitForm} class="space-y-6">
 		<div class="form-control">
 			<label for="dreamText" class="label">
 				<span class="label-text">{m.what_did_you_dream_label()}</span>
 			</label>
 			<textarea
 				id="dreamText"
-				name="dreamText"
+				name="rawText"
 				class="textarea textarea-bordered h-48 w-full"
 				placeholder={m.describe_dream_placeholder()}
 				bind:value={dreamText}

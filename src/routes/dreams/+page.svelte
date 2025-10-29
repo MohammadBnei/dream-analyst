@@ -1,9 +1,11 @@
 <script lang="ts">
-	import type { PageData } from './$types';
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
+	import { getDreams } from '$lib/remote/dream.remote';
 
-	export let data: PageData;
+	// Fetch dreams using the remote query
+	const dreamsQuery = getDreams();
+	let dreams = $derived(dreamsQuery.current || []);
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
@@ -26,7 +28,28 @@
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
-	{#if data.dreams.length === 0}
+	{#if dreamsQuery.loading}
+		<div class="flex justify-center items-center h-64">
+			<span class="loading loading-spinner loading-lg"></span>
+		</div>
+	{:else if dreamsQuery.error}
+		<div role="alert" class="alert alert-error">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="stroke-current shrink-0 h-6 w-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+				></path></svg
+			>
+			<span>Error loading dreams: {dreamsQuery.error.message}</span>
+			<button class="btn btn-sm btn-ghost" onclick={() => dreamsQuery.refresh()}>Retry</button>
+		</div>
+	{:else if dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
 			<div class="hero-content text-center">
 				<div class="max-w-md">
@@ -38,12 +61,12 @@
 		</div>
 	{:else}
 		<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-			{#each data.dreams as dream (dream.id)}
+			{#each dreams as dream (dream.id)}
 				<div class="card bg-base-100 shadow-xl" transition:fade>
 					<div class="card-body">
 						<div class="mb-2 flex items-start justify-between">
 							<h2 class="card-title text-lg">
-								{m.dream_on_date({ date: dream.createdAt.toLocaleDateString() })}
+								{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
 							</h2>
 							<span class="badge {getStatusBadgeClass(dream.status as App.Dream['status'])}"
 								>{dream.status.replace('_', ' ')}</span
