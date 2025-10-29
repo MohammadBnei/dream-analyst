@@ -81,6 +81,7 @@ export async function GET({ params, locals, platform }) {
 
                 // Subscribe to Redis Pub/Sub for real-time updates
                 subscriberClient = analysisStore.subscribeToUpdates(dreamId, (message) => {
+                    console.log({ message })
                     if (controller.desiredSize <= 0) {
                         // If client is no longer consuming, close the stream and unsubscribe
                         console.log(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
@@ -155,6 +156,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
 
         const backgroundProcessingPromise = n8nStream.pipeTo(new WritableStream({
             async write(chunk) {
+                console.log({ chunk })
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
