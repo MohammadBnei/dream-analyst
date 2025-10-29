@@ -50,24 +50,13 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
                     if (line) {
                         try {
                             const n8nChunk = JSON.parse(line);
-                            const outputChunk: AnalysisStreamChunk = {};
-
-                            if (n8nChunk.type === 'item' && n8nChunk.content) {
-                                outputChunk.content = n8nChunk.content;
-                            }
-                            // Add logic here to handle other n8nChunk types if they contain status/tags
-                            // For example:
-                            // if (n8nChunk.type === 'end' && n8nChunk.tags) {
-                            //     outputChunk.tags = n8nChunk.tags;
-                            //     outputChunk.status = 'completed';
-                            // }
-
-                            if (Object.keys(outputChunk).length > 0) {
-                                await writer.write(encoder.encode(JSON.stringify(outputChunk) + '\n'));
-                            }
+                            // Directly forward the parsed n8nChunk as an AnalysisStreamChunk
+                            // This makes n8nService a transparent proxy for n8n's stream format
+                            // The downstream +server.ts can then decide what to do with different types.
+                            await writer.write(encoder.encode(JSON.stringify(n8nChunk) + '\n'));
                         } catch (e) {
                             console.warn(`Dream ${dreamId}: Failed to parse n8n stream line as JSON: ${line}`, e);
-                            // Optionally, send an error message to the client
+                            // If it's not JSON, we might still want to return it as a plain message
                             await writer.write(encoder.encode(JSON.stringify({ message: `Error parsing n8n data: ${line}` }) + '\n'));
                         }
                     }
@@ -79,13 +68,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
                 if (jsonBuffer.trim()) {
                     try {
                         const n8nChunk = JSON.parse(jsonBuffer.trim());
-                        const outputChunk: AnalysisStreamChunk = {};
-                        if (n8nChunk.type === 'item' && n8nChunk.content) {
-                            outputChunk.content = n8nChunk.content;
-                        }
-                        if (Object.keys(outputChunk).length > 0) {
-                            await writer.write(encoder.encode(JSON.stringify(outputChunk) + '\n'));
-                        }
+                        await writer.write(encoder.encode(JSON.stringify(n8nChunk) + '\n'));
                     } catch (e) {
                         console.warn(`Dream ${dreamId}: Failed to parse final n8n stream buffer as JSON: ${jsonBuffer.trim()}`, e);
                         await writer.write(encoder.encode(JSON.stringify({ message: `Error parsing final n8n data: ${jsonBuffer.trim()}` }) + '\n'));
