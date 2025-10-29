@@ -5,6 +5,7 @@
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
+	import { invalidate } from '$app/navigation'; // <--- Keep this import
 
 	let { data }: PageProps = $props();
 
@@ -61,15 +62,17 @@
 					currentDreamStatus = data.status as App.Dream['status'];
 				}
 			},
-			onEnd: (data) => {
+			onEnd: async (data) => {
 				console.log('Stream ended:', data);
 				isLoadingStream = false;
-				currentDreamStatus = (data.status as App.Dream['status']) || 'completed'; // Assume completed on 'end' event
+				// Invalidate the page data to re-fetch the dream's final status and interpretation from the server
+				await invalidate('dreams:id'); // <--- This is crucial for getting the final persisted status
+				// The currentDreamStatus will be updated by the re-fetched data.
 			},
 			onError: (errorMsg) => {
-				console.error('EventSource error:', errorMsg);
+				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				currentDreamStatus = 'analysis_failed';
+				currentDreamStatus = 'analysis_failed'; // Optimistic update, will be confirmed by invalidate
 				streamError = errorMsg;
 			},
 			onClose: () => {
