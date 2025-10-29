@@ -348,7 +348,7 @@
 					</div>
 					{#if isEditing}
 						<textarea
-							class="textarea textarea-bordered w-full h-48"
+							class="input textarea textarea-bordered w-full h-48"
 							bind:value={editedRawText}
 							minlength="10"
 						></textarea>

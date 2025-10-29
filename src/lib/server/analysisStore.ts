@@ -169,8 +169,8 @@ class AnalysisStore {
      * @param callback Function to call when an update is received.
      * @returns A Redis client instance that is subscribed.
      */
-    async subscribeToUpdates(dreamId: string, callback: (message: AnalysisStreamChunk) => void): Promise<Redis> {
-        const subscriber = getRedisClient().duplicate(); // Use getRedisClient directly
+    subscribeToUpdates(dreamId: string, callback: (message: AnalysisStreamChunk) => void): Redis {
+        const subscriber = this.redis.duplicate(); // Use getRedisClient directly
         const channel = this.getChannel(dreamId);
 
         subscriber.subscribe(channel, (err) => {
