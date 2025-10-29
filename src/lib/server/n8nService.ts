@@ -150,7 +150,8 @@ export async function initiateAudioTranscription(audioFile: Blob | File, lang: s
     }
 
     const formData = new FormData();
-    formData.append('file', audioFile);
+    // Changed 'file' to 'audio' to match the endpoint's expectation
+    formData.append('audio', audioFile);
 
     const headers: HeadersInit = {};
     if (N8N_AUTH) {
