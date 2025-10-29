@@ -1,113 +1,44 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { fade } from 'svelte/transition';
-	import { createEventDispatcher, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
-	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
-	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
-
-	const dispatch = createEventDispatcher();
 
 	let dreamText: string = '';
 	let isSaving: boolean = false;
-	let isAnalyzing: boolean = false;
-	let currentDreamId: string | null = null;
-	let streamedInterpretation: string = '';
-	let streamedTags: string[] = [];
 	let errorMessage: string | null = null;
-	let analysisStatus: 'pending_analysis' | 'completed' | 'analysis_failed' | 'idle' = 'idle';
 
-	let analysisService: DreamAnalysisService | null = null;
-
-	$: isSaveDisabled = dreamText.length < 10 || isSaving || isAnalyzing;
+	$: isSaveDisabled = dreamText.length < 10 || isSaving;
 
 	function resetForm() {
 		dreamText = '';
 		isSaving = false;
-		isAnalyzing = false;
-		currentDreamId = null;
-		streamedInterpretation = '';
-		streamedTags = [];
 		errorMessage = null;
-		analysisStatus = 'idle';
-		analysisService?.closeStream();
-		analysisService = null;
-	}
-
-	function startStreamingAnalysis(dreamId: string) {
-		isAnalyzing = true;
-		analysisStatus = 'pending_analysis';
-		streamedInterpretation = '';
-		streamedTags = [];
-		errorMessage = null;
-
-		analysisService = new DreamAnalysisService(dreamId, {
-			onMessage: (data) => {
-				if (data.content) {
-					streamedInterpretation += data.content;
-				}
-				if (data.tags) {
-					streamedTags = data.tags;
-				}
-				if (data.status) {
-					analysisStatus = data.status as typeof analysisStatus;
-				}
-			},
-			onEnd: (data) => {
-				console.log('Analysis stream ended.');
-				isAnalyzing = false;
-				analysisStatus = (data.status as typeof analysisStatus) || 'completed';
-				dispatch('dreamAnalysisCompleted', { dreamId, interpretation: streamedInterpretation, tags: streamedTags });
-			},
-			onError: (errorMsg) => {
-				console.error('Analysis stream error:', errorMsg);
-				errorMessage = errorMsg;
-				isAnalyzing = false;
-				analysisStatus = 'analysis_failed';
-			},
-			onClose: () => {
-				console.log('Analysis service stream closed.');
-			}
-		});
-		analysisService.startStream();
 	}
 
 	const submitForm = async ({ form, data, action, cancel }) => {
 		isSaving = true;
 		errorMessage = null;
-		currentDreamId = null;
-		streamedInterpretation = '';
-		streamedTags = [];
-		analysisStatus = 'idle';
-		analysisService?.closeStream(); // Close any previous service if it exists
 
 		return async ({ result, update }) => {
 			if (result.type === 'success') {
-				currentDreamId = result.data?.dreamId;
-				if (currentDreamId) {
-					await startStreamingAnalysis(currentDreamId);
+				const dreamId = result.data?.dreamId;
+				if (dreamId) {
+					await goto(`/dreams/${dreamId}`);
 				} else {
 					errorMessage = m.dream_saved_no_id_error();
 					isSaving = false;
-					analysisStatus = 'analysis_failed';
 				}
 			} else if (result.type === 'error') {
 				errorMessage = result.error?.message || m.unknown_error_occurred();
 				isSaving = false;
-				analysisStatus = 'analysis_failed';
 			} else if (result.type === 'failure') {
 				errorMessage = result.data?.message || m.failed_to_save_dream();
 				isSaving = false;
-				analysisStatus = 'analysis_failed';
 			}
-			isSaving = false; // Saving is done, now analysis starts (or failed)
 			update(); // Update the page with the new data
 		};
 	};
-
-	onDestroy(() => {
-		analysisService?.closeStream();
-	});
 </script>
 
 <div class="container mx-auto p-4 max-w-2xl">
@@ -137,23 +68,14 @@
 				{#if isSaving}
 					<span class="loading loading-spinner"></span>
 					{m.saving_button()}
-				{:else if isAnalyzing}
-					<span class="loading loading-spinner"></span>
-					{m.analyzing_button()}
 				{:else}
 					{m.save_dream_button()}
 				{/if}
 			</button>
 		</div>
-
-		{#if !isSaving && !isAnalyzing && !streamedInterpretation && !errorMessage && analysisStatus === 'idle'}
-			<p class="text-center text-sm text-base-content/70 mt-4">
-				{m.dream_analysis_instant_message()}
-			</p>
-		{/if}
 	</form>
 
-	{#if errorMessage && !isAnalyzing}
+	{#if errorMessage}
 		<div role="alert" class="alert alert-error mt-8" transition:fade>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -169,23 +91,6 @@
 			>
 			<span>{m.error_prefix()}: {errorMessage}</span>
 			<button class="btn btn-sm btn-ghost" on:click={resetForm}>{m.retry_button()}</button>
-		</div>
-	{/if}
-
-	{#if streamedInterpretation || streamedTags.length > 0 || isAnalyzing || errorMessage}
-		<div transition:fade>
-			<StreamedAnalysisDisplay
-				interpretation={streamedInterpretation}
-				tags={streamedTags}
-				isLoading={isAnalyzing}
-				errorMessage={errorMessage}
-				status={analysisStatus}
-			/>
-			{#if !isAnalyzing && (streamedInterpretation || streamedTags.length > 0)}
-				<div class="flex justify-end mt-6">
-					<button class="btn btn-secondary" on:click={resetForm}>{m.add_another_dream_button()}</button>
-				</div>
-			{/if}
 		</div>
 	{/if}
 </div>
