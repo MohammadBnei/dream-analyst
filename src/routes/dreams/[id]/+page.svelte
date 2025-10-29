@@ -5,6 +5,7 @@
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import { invalidate } from '$app/navigation';
+	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 
 	let { data }: PageData = $props();
 
@@ -220,10 +221,10 @@
 					<span class="badge {getStatusBadgeClass(currentDreamStatus)}"
 						>{currentDreamStatus.replace('_', ' ')}</span
 					>
-					{#if currentDreamStatus === 'analysis_failed'}
-						<select class="select select-bordered select-sm" on:change={handleManualStatusChange}>
+					{#if currentDreamStatus === 'pending_analysis'}
+						<select class="select select-bordered select-sm" onchange={handleManualStatusChange}>
 							<option value="" disabled selected>{m.change_status_option()}</option>
-							<option value="pending_analysis">{m.reset_to_pending_analysis_option()}</option>
+							<option value="analysis_failed">{m.reset_to_failed_analysis_option()}</option>
 						</select>
 					{/if}
 				</div>
