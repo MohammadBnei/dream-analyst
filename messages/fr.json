@@ -94,5 +94,5 @@
 	"unknown_error_occurred": "Une erreur inconnue est survenue.",
 	"failed_to_save_dream": "Échec de l'enregistrement du rêve.",
 	"change_status_option": "Changer le statut",
-	"reset_to_pending_analysis_option": "Réinitialiser à l'analyse en attente"
+	"reset_to_failed_analysis_option": "Réinitialiser à l'analyse en échec"
 }

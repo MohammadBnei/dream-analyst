@@ -94,5 +94,5 @@
 	"unknown_error_occurred": "An unknown error occurred.",
 	"failed_to_save_dream": "Failed to save dream.",
 	"change_status_option": "Change Status",
-	"reset_to_pending_analysis_option": "Reset to Pending Analysis"
+	"reset_to_failed_analysis_option": "Reset to Failed Analysis"
 }
