@@ -50,6 +50,9 @@ export function setAuthTokenCookie(cookies: Cookies, token: string, maxAge: numb
 
 export function deleteAuthTokenCookie(cookies: Cookies) {
 	cookies.delete(authTokenCookieName, {
-		path: '/'
+		path: '/',
+		httpOnly: true, // Ensure httpOnly is set for deletion as well
+		secure: process.env.NODE_ENV === 'production',
+		sameSite: 'lax'
 	});
 }

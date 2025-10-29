@@ -42,7 +42,11 @@
 					<li><a href="/">{m.home_link()}</a></li>
 					{#if isLoggedIn}
 						<li><a href="/dreams">{m.dreams_link()}</a></li>
-						<li><a href="/logout">{m.logout_link()}</a></li>
+						<li>
+							<form action="/logout" method="POST">
+								<button type="submit">{m.logout_link()}</button>
+							</form>
+						</li>
 					{:else}
 						<li><a href="/login">{m.login_link()}</a></li>
 						<li><a href="/register">{m.register_link()}</a></li>
@@ -62,7 +66,11 @@
 			<li><a href="/">{m.home_link()}</a></li>
 			{#if isLoggedIn}
 				<li><a href="/dreams">{m.dreams_link()}</a></li>
-				<li><a href="/logout">{m.logout_link()}</a></li>
+				<li>
+					<form action="/logout" method="POST">
+						<button type="submit">{m.logout_link()}</button>
+					</form>
+				</li>
 			{:else}
 				<li><a href="/login">{m.login_link()}</a></li>
 				<li><a href="/register">{m.register_link()}</a></li>
