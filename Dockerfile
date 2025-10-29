@@ -9,6 +9,8 @@ RUN bun ci
 
 # Copy source and build
 COPY . .
+
+RUN bun run prisma generate
 RUN bun run build
 
 FROM node:alpine AS runner
@@ -20,4 +22,4 @@ COPY --from=builder /app/build /app/build
 COPY --from=builder /app/package.json /app
 WORKDIR /app
 ENV NODE_ENV=production
-CMD [ "bun", "./build/index.js"]
+CMD [ "bun", "start"]
