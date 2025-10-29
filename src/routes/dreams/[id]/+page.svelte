@@ -1,13 +1,12 @@
 <script lang="ts">
-	import type { PageProps } from './$types';
+	import type { PageData } from './$types';
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
-	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
-	import { invalidate } from '$app/navigation'; // <--- Keep this import
+	import { invalidate } from '$app/navigation';
 
-	let { data }: PageProps = $props();
+	let { data }: PageData = $props();
 
 	let dream = $derived(data.dream);
 
@@ -138,6 +137,40 @@
 		}
 	}
 
+	async function handleManualStatusChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		const newStatus = target.value;
+
+		if (!dream || !newStatus) return;
+
+		try {
+			const response = await fetch(`/api/dreams/${dream.id}/update-status`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ status: newStatus })
+			});
+
+			if (response.ok) {
+				currentDreamStatus = newStatus as App.Dream['status'];
+				// Invalidate to ensure the server-side data is consistent
+				await invalidate('dreams:id');
+				console.log('Dream status updated successfully!');
+			} else {
+				const errorData = await response.json();
+				alert(`Failed to update dream status: ${errorData.message || response.statusText}`);
+				// Revert dropdown if update failed
+				target.value = dream.status; // Revert to original status
+			}
+		} catch (error) {
+			console.error('Error updating dream status:', error);
+			alert(`Error updating dream status: ${(error as Error).message}`);
+			// Revert dropdown if update failed
+			target.value = dream.status; // Revert to original status
+		}
+	}
+
 	function handleBackClick() {
 		goto('/dreams');
 	}
@@ -183,9 +216,17 @@
 				<h2 class="card-title text-2xl">
 					{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
 				</h2>
-				<span class="badge {getStatusBadgeClass(currentDreamStatus)}"
-					>{currentDreamStatus.replace('_', ' ')}</span
-				>
+				<div class="flex items-center gap-2">
+					<span class="badge {getStatusBadgeClass(currentDreamStatus)}"
+						>{currentDreamStatus.replace('_', ' ')}</span
+					>
+					{#if currentDreamStatus === 'analysis_failed'}
+						<select class="select select-bordered select-sm" on:change={handleManualStatusChange}>
+							<option value="" disabled selected>{m.change_status_option()}</option>
+							<option value="pending_analysis">{m.reset_to_pending_analysis_option()}</option>
+						</select>
+					{/if}
+				</div>
 			</div>
 
 			<div class="mb-6">
@@ -281,47 +322,49 @@
 			</div>
 		</div>
 	</div>
-</div>
 
-<!-- Delete Confirmation Modal -->
-{#if showDeleteModal}
-	<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick}>
-		<div class="modal-box">
-			<h3 class="font-bold text-lg">{m.confirm_deletion_title()}</h3>
-			<p class="py-4">{m.confirm_deletion_message()}</p>
-			{#if deleteError}
-				<div class="alert alert-error shadow-lg mb-4">
-					<div>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6 flex-shrink-0 stroke-current"
-							fill="none"
-							viewBox="0 0 24 24"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-							></path></svg
-						>
-						<span>{deleteError}</span>
+	<!-- Delete Confirmation Modal -->
+	{#if showDeleteModal}
+		<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick}>
+			<div class="modal-box">
+				<h3 class="font-bold text-lg">{m.confirm_deletion_title()}</h3>
+				<p class="py-4">{m.confirm_deletion_message()}</p>
+				{#if deleteError}
+					<div class="alert alert-error shadow-lg mb-4">
+						<div>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-6 w-6 flex-shrink-0 stroke-current"
+								fill="none"
+								viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+								></path></svg
+							>
+							<span>{deleteError}</span>
+						</div>
 					</div>
+				{/if}
+				<div class="modal-action">
+					<button class="btn btn-ghost" onclick={handleCancelDelete} disabled={isDeleting}
+						>{m.cancel_button()}</button
+					>
+					<button class="btn btn-error" onclick={deleteDream} disabled={isDeleting}>
+						{#if isDeleting}
+							<span class="loading loading-spinner"></span>
+							{m.deleting_button()}
+						{:else}
+							{m.delete_button()}
+						{/if}
+					</button>
 				</div>
-			{/if}
-			<div class="modal-action">
-				<button class="btn btn-ghost" onclick={handleCancelDelete} disabled={isDeleting}>{m.cancel_button()}</button>
-				<button class="btn btn-error" onclick={deleteDream} disabled={isDeleting}>
-					{#if isDeleting}
-						<span class="loading loading-spinner"></span>
-						{m.deleting_button()}
-					{:else}
-						{m.delete_button()}
-					{/if}
-				</button>
 			</div>
-		</div>
-	</dialog>
-{/if}
+		</dialog>
+	{/if}
+</div>
 
 <style lang="postcss">
 	/* The prose class from @tailwindcss/typography will handle most markdown styling. */
