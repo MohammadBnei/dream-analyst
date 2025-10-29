@@ -2,7 +2,8 @@
 import { error } from '@sveltejs/kit';
 import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/n8nService';
 import prisma from '$lib/server/db';
-import { analysisStore } from '$lib/server/analysisStore'; // Import the new analysis store
+import { analysisStore } from '$lib/server/analysisStore';
+import Redis from 'ioredis'; // Import Redis for the subscriber client
 
 export async function GET({ params, locals, platform }) {
     const dreamId = params.id;
@@ -23,11 +24,6 @@ export async function GET({ params, locals, platform }) {
     if (!dream || dream.userId !== sessionUser.id) {
         throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
     }
-
-    // Check Redis for ongoing analysis state first
-    const redisAnalysisState = await analysisStore.getAnalysis(dreamId);
-
-    console.log({ redisAnalysisState })
 
     // If analysis is already completed or failed (either in DB or Redis), just return the final result
     if (dream.status === 'completed' || dream.status === 'analysis_failed') {
@@ -55,94 +51,81 @@ export async function GET({ params, locals, platform }) {
             console.log(`Dream ${dreamId}: Initiating new background analysis process.`);
             await analysisStore.markAnalysisStarted(dreamId); // Mark as started in Redis
             const analysisPromise = runBackgroundAnalysis(dreamId, dream.rawText, platform);
-            // We don't need to store the promise in an in-memory map anymore, Redis handles the "ongoing" state.
             // The promise will handle its own cleanup (clearing Redis key) on completion/failure.
         } else {
             console.log(`Dream ${dreamId}: Background analysis process already running (tracked by Redis).`);
         }
 
-        // Now, create a stream that sends updates from Redis to the client
+        // Now, create a stream that subscribes to Redis Pub/Sub for updates
         const encoder = new TextEncoder();
-        let lastInterpretation = redisAnalysisState?.interpretation || dream.interpretation || '';
-        let lastTags = redisAnalysisState?.tags || dream.tags || [];
-        let lastStatus = redisAnalysisState?.status || dream.status;
+        let subscriberClient: Redis | null = null; // Declare subscriber client here
 
         const clientStream = new ReadableStream({
             async start(controller) {
-                // Send initial state (from Redis if available, otherwise from DB)
+                // Send initial state from Redis (if available) or DB
+                const initialRedisState = await analysisStore.getAnalysis(dreamId);
+                const initialDream = await prisma.dream.findUnique({
+                    where: { id: dreamId },
+                    select: { interpretation: true, tags: true, status: true }
+                });
+
+                const initialContent = initialRedisState?.interpretation || initialDream?.interpretation || '';
+                const initialTags = initialRedisState?.tags || initialDream?.tags || [];
+                const initialStatus = initialRedisState?.status || initialDream?.status || 'pending_analysis';
+
                 controller.enqueue(encoder.encode(JSON.stringify({
-                    content: lastInterpretation,
-                    tags: lastTags,
-                    status: lastStatus
+                    content: initialContent,
+                    tags: initialTags,
+                    status: initialStatus
                 }) + '\n'));
 
-                let intervalId: ReturnType<typeof setInterval> | null = setInterval(async () => {
-                    // Safeguard: Check if the controller is still active before enqueuing
-                    // If desiredSize is 0 or less, the consumer is no longer reading, so close the stream.
-                    if (!controller.desiredSize || controller.desiredSize <= 0) {
-                        console.log('controller closed')
-                        if (intervalId) {
-                            clearInterval(intervalId);
-                            intervalId = null;
+                // Subscribe to Redis Pub/Sub for real-time updates
+                subscriberClient = analysisStore.subscribeToUpdates(dreamId, (message) => {
+                    if (controller.desiredSize <= 0) {
+                        // If client is no longer consuming, close the stream and unsubscribe
+                        console.log(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
+                        if (subscriberClient) {
+                            analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
+                            subscriberClient = null;
                         }
+                        controller.close();
                         return;
                     }
 
-                    const currentRedisState = await analysisStore.getAnalysis(dreamId);
-                    const currentDbDream = await prisma.dream.findUnique({
-                        where: { id: dreamId },
-                        select: { interpretation: true, tags: true, status: true }
-                    });
-
-                    const effectiveStatus = currentRedisState?.status || currentDbDream?.status || 'pending_analysis';
-                    const effectiveInterpretation = currentRedisState?.interpretation || currentDbDream?.interpretation || '';
-                    const effectiveTags = currentRedisState?.tags || currentDbDream?.tags || [];
-
-                    let hasUpdate = false;
-                    const chunk: AnalysisStreamChunk = {};
-
-                    // Send full interpretation if it changed (from Redis or DB)
-                    if (effectiveInterpretation !== lastInterpretation) {
-                        chunk.content = effectiveInterpretation;
-                        lastInterpretation = effectiveInterpretation;
-                        hasUpdate = true;
-                    }
-                    if (JSON.stringify(effectiveTags) !== JSON.stringify(lastTags)) {
-                        chunk.tags = effectiveTags;
-                        lastTags = effectiveTags;
-                        hasUpdate = true;
-                    }
-                    if (effectiveStatus !== lastStatus) {
-                        chunk.status = effectiveStatus;
-                        lastStatus = effectiveStatus;
-                        hasUpdate = true;
-                    }
-
-                    if (hasUpdate) {
-                        controller.enqueue(encoder.encode(JSON.stringify(chunk) + '\n'));
-                    }
-
-                    if (effectiveStatus === 'completed' || effectiveStatus === 'analysis_failed') {
-                        console.log(`Dream ${dreamId}: Client stream ending due to final status: ${effectiveStatus}`);
-                        controller.enqueue(encoder.encode(JSON.stringify({ finalStatus: effectiveStatus }) + '\n'));
-                        clearInterval(intervalId);
-                        intervalId = null; // Mark interval as cleared
+                    // If the message contains a finalStatus, signal end of stream
+                    if (message.finalStatus) {
+                        controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
+                        console.log(`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`);
+                        if (subscriberClient) {
+                            analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
+                            subscriberClient = null;
+                        }
                         controller.close();
+                    } else {
+                        // Otherwise, enqueue the update
+                        controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
                     }
-                }, 1000); // Poll every 1 second
-
-                // Cleanup on client disconnect
-                signal.addEventListener('abort', () => {
-                    console.log(`Dream ${dreamId}: Client disconnected from stream.`);
-                    if (intervalId) {
-                        clearInterval(intervalId);
-                        intervalId = null; // Mark interval as cleared
-                    }
-                    controller.close(); // Ensure controller is closed
                 });
+
+                // Cleanup on client disconnect (HTTP connection aborts)
+                platform?.context?.waitUntil(new Promise<void>(resolve => {
+                    signal.addEventListener('abort', () => {
+                        console.log(`Dream ${dreamId}: Client disconnected from stream (HTTP abort).`);
+                        if (subscriberClient) {
+                            analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
+                            subscriberClient = null;
+                        }
+                        controller.close(); // Ensure controller is closed
+                        resolve();
+                    });
+                }));
             },
-            cancel() {
-                console.log(`Dream ${dreamId}: Client stream cancelled.`);
+            async cancel() {
+                console.log(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
+                if (subscriberClient) {
+                    await analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
+                    subscriberClient = null;
+                }
             }
         });
 
@@ -191,12 +174,15 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                                 accumulatedTags = parsedChunk.tags;
                             }
 
-                            // Update Redis with current progress
-                            await analysisStore.updateAnalysis(dreamId, {
-                                content: parsedChunk.content,
+                            // Update Redis with current progress and publish
+                            const redisUpdateChunk: AnalysisStreamChunk = {
+                                content: parsedChunk.content, // Send delta content
                                 tags: parsedChunk.tags,
                                 status: parsedChunk.status || 'pending_analysis'
-                            });
+                            };
+                            await analysisStore.updateAnalysis(dreamId, redisUpdateChunk);
+                            await analysisStore.publishUpdate(dreamId, redisUpdateChunk);
+
 
                             // Database update only on finalStatus or analysis_failed
                             if (parsedChunk.finalStatus && !dreamStatusUpdatedInDb) {
@@ -211,6 +197,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                                 dreamStatusUpdatedInDb = true;
                                 console.log(`Dream ${dreamId}: Background process updated final status to ${parsedChunk.finalStatus} in DB.`);
                                 await analysisStore.updateAnalysis(dreamId, { finalStatus: parsedChunk.finalStatus }, true); // Update Redis with final status
+                                await analysisStore.publishUpdate(dreamId, { finalStatus: parsedChunk.finalStatus }); // Publish final status
                             } else if (parsedChunk.status === 'analysis_failed' && !dreamStatusUpdatedInDb) {
                                 await prisma.dream.update({
                                     where: { id: dreamId },
@@ -223,6 +210,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                                 dreamStatusUpdatedInDb = true;
                                 console.log(`Dream ${dreamId}: Background process updated final status to analysis_failed (from chunk status) in DB.`);
                                 await analysisStore.updateAnalysis(dreamId, { finalStatus: 'analysis_failed' }, true); // Update Redis with final status
+                                await analysisStore.publishUpdate(dreamId, { finalStatus: 'analysis_failed' }); // Publish final status
                             }
 
                         } catch (e) {
@@ -249,6 +237,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                             dreamStatusUpdatedInDb = true;
                             console.log(`Dream ${dreamId}: Background process updated final status to ${parsedChunk.finalStatus} (from final buffer) in DB.`);
                             await analysisStore.updateAnalysis(dreamId, { finalStatus: parsedChunk.finalStatus }, true); // Update Redis with final status
+                            await analysisStore.publishUpdate(dreamId, { finalStatus: parsedChunk.finalStatus }); // Publish final status
                         }
                     } catch (e) {
                         console.warn(`Dream ${dreamId}: Background process failed to parse final n8nService stream buffer as JSON: ${jsonBuffer.trim()}`, e);
@@ -267,6 +256,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                     }).catch(updateError => console.error(`Dream ${dreamId}: Failed to update status to completed in DB:`, updateError));
                     console.log(`Dream ${dreamId}: Background process finished, status set to completed in DB.`);
                     await analysisStore.updateAnalysis(dreamId, { finalStatus: 'completed' }, true); // Update Redis with final status
+                    await analysisStore.publishUpdate(dreamId, { finalStatus: 'completed' }); // Publish final status
                 }
                 await analysisStore.clearAnalysis(dreamId); // Clear from Redis once fully processed
             },
@@ -285,6 +275,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                     dreamStatusUpdatedInDb = true;
                     console.log(`Dream ${dreamId}: Background process aborted, status set to analysis_failed in DB.`);
                     await analysisStore.updateAnalysis(dreamId, { finalStatus: 'analysis_failed' }, true); // Update Redis with final status
+                    await analysisStore.publishUpdate(dreamId, { finalStatus: 'analysis_failed' }); // Publish final status
                 }
                 await analysisStore.clearAnalysis(dreamId); // Clear from Redis on abort
             }
