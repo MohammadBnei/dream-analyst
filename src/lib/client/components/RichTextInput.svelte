@@ -1,6 +1,4 @@
 <script lang="ts">
-    // Removed import { transcribeAudio } from '$lib/remote/audio.remote';
-
     export let value: string = '';
     export let placeholder: string = 'Start typing or record your thoughts...';
     export let rows: number = 5;
@@ -97,7 +95,7 @@
         {rows}
         bind:value
         on:input={handleInput}
-        class="text-input w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="textarea textarea-bordered w-full p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
     ></textarea>
 
     <div class="flex items-center justify-between mt-2">
@@ -105,33 +103,39 @@
             <button
                 on:click={isRecording ? stopRecording : startRecording}
                 disabled={isTranscribing}
-                class="px-4 py-2 rounded-md text-white {isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'} disabled:opacity-50 disabled:cursor-not-allowed"
+                class="btn {isRecording ? 'btn-error' : 'btn-primary'} btn-sm"
             >
                 {#if isRecording}
-                    <svg class="w-5 h-5 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.75 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM12.25 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5z" clip-rule="evenodd"></path></svg>
+                    <svg class="w-5 h-5 inline-block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.75 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM12.25 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5z" clip-rule="evenodd"></path></svg>
                     Stop Recording
                 {:else}
-                    <svg class="w-5 h-5 inline-block mr-1" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.25 1.25 0 01-2.095-1.15l.003-.003.002-.002A6.25 6.25 0 0110 10c2.817 0 5.323 1.39 6.827 3.513l.002.002.003.003a1.25 1.25 0 01-2.095 1.15 3.75 3.75 0 00-9.564 0z"></path></svg>
+                    <svg class="w-5 h-5 inline-block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.25 1.25 0 01-2.095-1.15l.003-.003.002-.002A6.25 6.25 0 0110 10c2.817 0 5.323 1.39 6.827 3.513l.002.002.003.003a1.25 1.25 0 01-2.095 1.15 3.75 3.75 0 00-9.564 0z"></path></svg>
                     Record Audio
                 {/if}
             </button>
 
-            <select bind:value={selectedLanguage} class="p-2 border rounded-md">
+            <select bind:value={selectedLanguage} class="select select-bordered select-sm">
                 <option value="en">English</option>
                 <option value="fr">Français</option>
             </select>
         </div>
 
         {#if isTranscribing}
-            <p class="text-blue-600">Transcribing audio...</p>
+            <p class="text-info flex items-center gap-2">
+                <span class="loading loading-spinner loading-sm"></span>
+                Transcribing audio...
+            </p>
         {/if}
     </div>
 
     {#if recordingError}
-        <p class="text-red-500 mt-2">{recordingError}</p>
+        <div role="alert" class="alert alert-error mt-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>{recordingError}</span>
+        </div>
     {/if}
 </div>
 
 <style>
-    /* Add any specific styles here if needed, or rely on Tailwind CSS */
+    /* No custom styles needed, relying on DaisyUI and Tailwind CSS */
 </style>
