@@ -93,5 +93,9 @@
 	"add_another_dream_button": "Ajouter un autre Rêve",
 	"analysis_stream_failed_error": "Le flux d'analyse a échoué. Veuillez réessayer.",
 	"analysis_stream_error": "Le flux d'analyse a rencontré une erreur.",
-	"dream_analysis_instant_message": "Votre rêve est en cours d'analyse. Veuillez patienter un instant pour que l'interprétation apparaisse."
+	"dream_analysis_instant_message": "Votre rêve est en cours d'analyse. Veuillez patienter un instant pour que l'interprétation apparaisse.",
+	"edit_button": "Modifier",
+	"dream_text_too_short_error": "Le texte du rêve doit contenir au moins 10 caractères.",
+	"unknown_error_saving_dream": "Une erreur inconnue est survenue lors de l'enregistrement du rêve.",
+	"save_button": "Enregistrer"
 }

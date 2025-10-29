@@ -93,5 +93,9 @@
 	"add_another_dream_button": "Add Another Dream",
 	"analysis_stream_failed_error": "Analysis stream failed. Please try again.",
 	"analysis_stream_error": "Analysis stream encountered an error.",
-	"dream_analysis_instant_message": "Your dream is being analyzed. Please wait a moment for the interpretation to appear."
+	"dream_analysis_instant_message": "Your dream is being analyzed. Please wait a moment for the interpretation to appear.",
+	"edit_button": "Edit",
+	"dream_text_too_short_error": "Dream text must be at least 10 characters long.",
+	"unknown_error_saving_dream": "An unknown error occurred while saving the dream.",
+	"save_button": "Save"
 }
