@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
 
-let redis: Redis;
+let redis: Redis | null = null; // Initialize as null
 
 export async function getRedisClient(): Promise<Redis> {
     if (!redis) {
@@ -25,7 +25,7 @@ export async function getRedisClient(): Promise<Redis> {
 export async function closeRedisClient(): Promise<void> {
     if (redis) {
         await redis.quit();
-        redis = null as any; // Clear the instance
+        redis = null; // Clear the instance
         console.log('Redis connection closed.');
     }
 }

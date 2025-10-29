@@ -15,10 +15,11 @@ interface AnalysisState {
 }
 
 class AnalysisStore {
-    private redis: ReturnType<typeof getRedisClient>;
+    // Store the promise of the Redis client
+    private redisPromise: Promise<Redis>;
 
     constructor() {
-        this.redis = getRedisClient();
+        this.redisPromise = getRedisClient();
     }
 
     private getKey(dreamId: string): string {
@@ -37,11 +38,12 @@ class AnalysisStore {
      * @param refreshExpiration If true, refreshes the key's expiration time.
      */
     async updateAnalysis(dreamId: string, chunk: AnalysisStreamChunk, isFinal: boolean = false, refreshExpiration: boolean = false): Promise<void> {
+        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
         let currentState: AnalysisState | null = null;
 
         try {
-            const rawState = await this.redis.get(key);
+            const rawState = await redis.get(key);
             if (rawState) {
                 currentState = JSON.parse(rawState);
             }
@@ -76,10 +78,10 @@ class AnalysisStore {
 
         // Always refresh expiration if it's a final update or explicitly requested (heartbeat)
         if (isFinal || refreshExpiration) {
-            await this.redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(currentState));
+            await redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(currentState));
         } else {
             // Otherwise, just update the value without changing expiration
-            await this.redis.set(key, JSON.stringify(currentState));
+            await redis.set(key, JSON.stringify(currentState));
         }
     }
 
@@ -89,8 +91,9 @@ class AnalysisStore {
      * @returns The analysis state or null if not found.
      */
     async getAnalysis(dreamId: string): Promise<AnalysisState | null> {
+        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
-        const rawState = await this.redis.get(key);
+        const rawState = await redis.get(key);
         if (rawState) {
             try {
                 return JSON.parse(rawState);
@@ -127,6 +130,7 @@ class AnalysisStore {
      * @param dreamId The ID of the dream.
      */
     async markAnalysisStarted(dreamId: string): Promise<void> {
+        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
         const initialState: AnalysisState = {
             interpretation: '',
@@ -135,7 +139,7 @@ class AnalysisStore {
             lastUpdate: Date.now()
         };
         // Set with initial expiration
-        await this.redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(initialState));
+        await redis.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(initialState));
     }
 
     /**
@@ -143,11 +147,12 @@ class AnalysisStore {
      * @param dreamId The ID of the dream.
      */
     async clearAnalysis(dreamId: string): Promise<void> {
+        const redis = await this.redisPromise; // Await the client
         const key = this.getKey(dreamId);
         const channel = this.getChannel(dreamId);
-        await this.redis.del(key);
+        await redis.del(key);
         // Publish a final message to the channel before clearing
-        await this.redis.publish(channel, JSON.stringify({ finalStatus: 'cleared' }));
+        await redis.publish(channel, JSON.stringify({ finalStatus: 'cleared' }));
     }
 
     /**
@@ -156,8 +161,9 @@ class AnalysisStore {
      * @param chunk The analysis chunk to publish.
      */
     async publishUpdate(dreamId: string, chunk: AnalysisStreamChunk): Promise<void> {
+        const redis = await this.redisPromise; // Await the client
         const channel = this.getChannel(dreamId);
-        await this.redis.publish(channel, JSON.stringify(chunk));
+        await redis.publish(channel, JSON.stringify(chunk));
     }
 
     /**
@@ -166,8 +172,8 @@ class AnalysisStore {
      * @param callback Function to call when an update is received.
      * @returns A Redis client instance that is subscribed.
      */
-    subscribeToUpdates(dreamId: string, callback: (message: AnalysisStreamChunk) => void): Redis {
-        const subscriber = getRedisClient().duplicate(); // Use a duplicate client for subscribing
+    async subscribeToUpdates(dreamId: string, callback: (message: AnalysisStreamChunk) => void): Promise<Redis> {
+        const subscriber = (await getRedisClient()).duplicate(); // Use a duplicate client for subscribing
         const channel = this.getChannel(dreamId);
 
         subscriber.subscribe(channel, (err) => {
