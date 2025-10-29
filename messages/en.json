@@ -97,5 +97,7 @@
 	"edit_button": "Edit",
 	"dream_text_too_short_error": "Dream text must be at least 10 characters long.",
 	"unknown_error_saving_dream": "An unknown error occurred while saving the dream.",
-	"save_button": "Save"
+	"save_button": "Save",
+	"interpretation_text_too_short_error": "Interpretation must be at least 10 characters long.",
+	"unknown_error_saving_interpretation": "An unknown error occurred while saving the interpretation."
 }

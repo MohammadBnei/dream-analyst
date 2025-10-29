@@ -4,7 +4,7 @@
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
-	import { getDream, deleteDream, updateDreamStatus, resetDreamStatus, updateDream } from '$lib/remote/dream.remote';
+	import { getDream, deleteDream, updateDreamStatus, resetDreamStatus, updateDream, updateDreamInterpretation } from '$lib/remote/dream.remote';
 
 	let { params } = $props();
 	const dreamId = params.id;
@@ -28,6 +28,11 @@
 	let editedRawText = $state(dream?.rawText || '');
 	let isSavingEdit = $state(false);
 	let editError = $state<string | null>(null);
+
+	let isEditingInterpretation = $state(false);
+	let editedInterpretationText = $state(dream?.interpretation || '');
+	let isSavingInterpretationEdit = $state(false);
+	let interpretationEditError = $state<string | null>(null);
 
 	let analysisService: DreamAnalysisService | null = null;
 
@@ -56,6 +61,7 @@
 			streamedTags = dream.tags || [];
 			currentDreamStatus = dream.status;
 			editedRawText = dream.rawText; // Update edited text when dream data changes
+			editedInterpretationText = dream.interpretation || ''; // Update edited interpretation text
 			// Reset stream-related states if dream is no longer pending
 			if (dream.status !== 'pending_analysis') {
 				isLoadingStream = false;
@@ -228,6 +234,41 @@
 		editedRawText = dream?.rawText || ''; // Revert to original text
 		editError = null;
 	}
+
+	function toggleInterpretationEditMode() {
+		isEditingInterpretation = !isEditingInterpretation;
+		if (isEditingInterpretation) {
+			editedInterpretationText = dream?.interpretation || ''; // Initialize with current interpretation
+			interpretationEditError = null; // Clear any previous edit errors
+		}
+	}
+
+	async function handleSaveInterpretationEdit() {
+		if (!dream?.id || editedInterpretationText.length < 10) {
+			interpretationEditError = m.interpretation_text_too_short_error(); // New translation key needed
+			return;
+		}
+
+		isSavingInterpretationEdit = true;
+		interpretationEditError = null;
+		try {
+			await updateDreamInterpretation({ dreamId: dream.id, interpretation: editedInterpretationText });
+			await dreamQuery.refresh(); // Refresh to get the updated dream object
+			isEditingInterpretation = false; // Exit edit mode
+			console.log('Dream interpretation updated successfully!');
+		} catch (e) {
+			console.error('Error saving interpretation edit:', e);
+			interpretationEditError = e instanceof Error ? e.message : m.unknown_error_saving_interpretation(); // New translation key needed
+		} finally {
+			isSavingInterpretationEdit = false;
+		}
+	}
+
+	function handleCancelInterpretationEdit() {
+		isEditingInterpretation = false;
+		editedInterpretationText = dream?.interpretation || ''; // Revert to original text
+		interpretationEditError = null;
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -335,6 +376,14 @@
 				<div class="mb-6">
 					<div class="mb-2 flex items-center justify-between">
 						<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
+						{#if !isEditingInterpretation}
+							<button onclick={toggleInterpretationEditMode} class="btn btn-sm btn-ghost">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+								</svg>
+								{m.edit_button()}
+							</button>
+						{/if}
 						{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
 							<button
 								onclick={regenerateAnalysis}
@@ -360,7 +409,27 @@
 						{/if}
 					</div>
 
-					{#if currentDreamStatus === 'pending_analysis' && !isLoadingStream && !streamError}
+					{#if isEditingInterpretation}
+						<textarea
+							class="textarea textarea-bordered w-full h-48"
+							bind:value={editedInterpretationText}
+							minlength="10"
+						></textarea>
+						{#if interpretationEditError}
+							<div class="text-error text-sm mt-1">{interpretationEditError}</div>
+						{/if}
+						<div class="mt-2 flex justify-end gap-2">
+							<button onclick={handleCancelInterpretationEdit} class="btn btn-sm btn-ghost">{m.cancel_button()}</button>
+							<button onclick={handleSaveInterpretationEdit} class="btn btn-sm btn-primary" disabled={isSavingInterpretationEdit || editedInterpretationText.length < 10}>
+								{#if isSavingInterpretationEdit}
+									<span class="loading loading-spinner"></span>
+									{m.saving_button()}
+								{:else}
+									{m.save_button()}
+								{/if}
+							</button>
+						</div>
+					{:else if currentDreamStatus === 'pending_analysis' && !isLoadingStream && !streamError}
 						<div class="alert alert-info shadow-lg">
 							<div>
 								<svg
