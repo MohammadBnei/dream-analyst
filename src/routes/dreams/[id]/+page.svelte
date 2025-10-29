@@ -42,12 +42,27 @@
 		analysisService?.closeStream();
 	});
 
+	// Effect to update local state when the 'dream' object changes (e.g., after invalidate)
+	$effect(() => {
+		if (dream) {
+			streamedInterpretation = dream.interpretation || '';
+			streamedTags = dream.tags || [];
+			currentDreamStatus = dream.status;
+			// Reset stream-related states if dream is no longer pending
+			if (dream.status !== 'pending_analysis') {
+				isLoadingStream = false;
+				streamError = null;
+			}
+		}
+	});
+
 	function startStream() {
 		isLoadingStream = true;
 		streamError = null;
-		streamedInterpretation = ''; // Clear previous interpretation for a new stream
-		streamedTags = [];
-		currentDreamStatus = 'pending_analysis';
+		// Do not clear streamedInterpretation/Tags here if we want to show initial state from Redis
+		// streamedInterpretation = '';
+		// streamedTags = [];
+		currentDreamStatus = 'pending_analysis'; // Optimistic update for UI
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -67,7 +82,7 @@
 				isLoadingStream = false;
 				// Invalidate the page data to re-fetch the dream's final status and interpretation from the server
 				await invalidate('dreams:id'); // <--- This is crucial for getting the final persisted status
-				// The currentDreamStatus will be updated by the re-fetched data.
+				// The currentDreamStatus will be updated by the $effect reacting to the new 'dream' data.
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
