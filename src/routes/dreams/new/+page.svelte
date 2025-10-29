@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { createDream } from '$lib/remote/dream.remote';
-    import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the new component
+	import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the new component
 
 	let dreamText: string = '';
 	let isSaving: boolean = false;
@@ -37,33 +37,33 @@
 		errorMessage = null;
 	}
 
-    function handleRichTextInput(value: string) {
-        dreamText = value;
-    }
+	function handleRichTextInput(value: string) {
+		dreamText = value;
+	}
 </script>
 
-<div class="container mx-auto p-4 max-w-2xl">
-	<h1 class="text-3xl font-bold mb-6 text-center">{m.new_dream_title()}</h1>
+<div class="container mx-auto max-w-2xl p-4">
+	<h1 class="mb-6 text-center text-3xl font-bold">{m.new_dream_title()}</h1>
 
 	<form on:submit|preventDefault={handleSubmit} class="space-y-6">
 		<div class="form-control">
 			<label for="dreamText" class="label">
 				<span class="label-text">{m.what_did_you_dream_label()}</span>
 			</label>
-            <RichTextInput
-                id="dreamText"
-                placeholder={m.describe_dream_placeholder()}
-                rows={8}
-                bind:value={dreamText}
-                onInput={handleRichTextInput}
-            />
+			<RichTextInput
+				id="dreamText"
+				placeholder={m.describe_dream_placeholder()}
+				rows={8}
+				bind:value={dreamText}
+				onInput={handleRichTextInput}
+			/>
 			<label class="label">
 				<span class="label-text-alt">{m.minimum_characters_label({ count: 10 })}</span>
 			</label>
 		</div>
 
 		<div class="flex justify-center">
-			<button type="submit" class="btn btn-primary btn-lg" disabled={isSaveDisabled}>
+			<button type="submit" class="btn btn-lg btn-primary" disabled={isSaveDisabled}>
 				{#if isSaving}
 					<span class="loading loading-spinner"></span>
 					{m.saving_button()}
@@ -75,10 +75,10 @@
 	</form>
 
 	{#if errorMessage}
-		<div role="alert" class="alert alert-error mt-8" transition:fade>
+		<div role="alert" class="mt-8 alert alert-error" transition:fade>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				class="stroke-current shrink-0 h-6 w-6"
+				class="h-6 w-6 shrink-0 stroke-current"
 				fill="none"
 				viewBox="0 0 24 24"
 				><path
@@ -89,7 +89,7 @@
 				></path></svg
 			>
 			<span>{m.error_prefix()}: {errorMessage}</span>
-			<button class="btn btn-sm btn-ghost" on:click={resetForm}>{m.retry_button()}</button>
+			<button class="btn btn-ghost btn-sm" on:click={resetForm}>{m.retry_button()}</button>
 		</div>
 	{/if}
 </div>
