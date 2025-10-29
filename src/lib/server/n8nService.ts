@@ -19,6 +19,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
     const decoder = new TextDecoder();
 
     try {
+        console.log(`Dream ${dreamId}: Calling n8n webhook at ${N8N_WEBHOOK_URL}`);
         const response = await fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
             headers: {
@@ -27,10 +28,30 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
             body: JSON.stringify({ dreamId, rawText })
         });
 
-        if (!response.ok || !response.body) {
+        console.log(`Dream ${dreamId}: n8n webhook response status: ${response.status}`);
+        console.log(`Dream ${dreamId}: n8n webhook response headers:`, response.headers);
+        // Log the response body to inspect its type and content
+        // Note: response.body can only be read once. If you read it here, pipeTo will fail.
+        // So, we'll check its type and then let pipeTo consume it.
+        // If you need to inspect content, you might need to clone the response or read it fully.
+        // For now, let's just check if it's a ReadableStream.
+
+        if (!response.ok) {
             const errorText = await response.text();
             console.error(`n8n webhook call failed for dream ${dreamId}: ${response.status} - ${errorText}`);
-            throw new Error(`Failed to trigger n8n analysis: ${response.statusText}`);
+            throw new Error(`Failed to trigger n8n analysis: ${response.statusText} - ${errorText}`);
+        }
+
+        if (!response.body) {
+            console.error(`Dream ${dreamId}: n8n webhook response body is null.`);
+            throw new Error(`n8n webhook did not return a readable body.`);
+        }
+
+        // Ensure response.body is a ReadableStream before piping
+        if (!(response.body instanceof ReadableStream)) {
+            const fullResponseText = await response.text(); // Read the body as text for debugging
+            console.error(`Dream ${dreamId}: n8n webhook response body is not a ReadableStream. Actual type: ${typeof response.body}. Content: ${fullResponseText}`);
+            throw new Error(`n8n webhook did not return a streaming response. Received: ${fullResponseText.substring(0, 200)}...`);
         }
 
         const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>();
@@ -40,7 +61,9 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
 
         response.body.pipeTo(new WritableStream({
             async write(chunk) {
-                console.log({ chunk })
+                // This console.log is useful for confirming chunks are received by the WritableStream
+                // If this doesn't log, the issue is before pipeTo.
+                console.log(`Dream ${dreamId}: Received chunk from n8nResponseStream. Size: ${chunk.length}`);
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
