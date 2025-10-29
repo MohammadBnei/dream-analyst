@@ -144,7 +144,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
     }
 }
 
-export async function initiateAudioTranscription(audioFile: Blob | File): Promise<{ transcription: string }> {
+export async function initiateAudioTranscription(audioFile: Blob | File, lang: string = 'en'): Promise<{ transcription: string }> {
     if (!N8N_AUDIO_TRANSCRIBE_URL) {
         throw new Error("N8N_AUDIO_TRANSCRIBE_URL is not defined");
     }
@@ -157,8 +157,11 @@ export async function initiateAudioTranscription(audioFile: Blob | File): Promis
         headers['N8N_AUTH'] = N8N_AUTH;
     }
 
+    const url = new URL(N8N_AUDIO_TRANSCRIBE_URL);
+    url.searchParams.append('lang', lang);
+
     try {
-        const response = await fetch(N8N_AUDIO_TRANSCRIBE_URL, {
+        const response = await fetch(url.toString(), {
             method: 'POST',
             headers: headers, // FormData handles Content-Type: multipart/form-data automatically
             body: formData
@@ -172,7 +175,7 @@ export async function initiateAudioTranscription(audioFile: Blob | File): Promis
 
         const result = await response.json();
         if (typeof result.text !== 'string') {
-            console.error('n8n audio transcription response did not contain a string "transcription":', result);
+            console.error('n8n audio transcription response did not contain a string "text":', result);
             throw new Error('Invalid response from audio transcription service.');
         }
 
