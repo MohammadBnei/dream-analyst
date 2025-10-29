@@ -1,5 +1,32 @@
 # Changelog
 
+# [0.6.0](https://github.com/MohammadBnei/dream-analyst/compare/0.5.0...0.6.0) (2025-10-29)
+
+
+### Bug Fixes
+
+* Add type="button" to prevent form submission ([196bdf1](https://github.com/MohammadBnei/dream-analyst/commit/196bdf1a23210db41a31a12a3245996fb0c93dc8))
+* Change FormData key from 'audio' to 'file' for n8n endpoint ([f1de362](https://github.com/MohammadBnei/dream-analyst/commit/f1de362dac76cbd645d5ed72bf32176e2827b34c))
+* Conditionally render button text and icon based on recording state ([c9755a3](https://github.com/MohammadBnei/dream-analyst/commit/c9755a3ae721311c152f5a12c02f3c579a9a7430))
+* Correct audio file field name in n8n transcription service ([3d2b34d](https://github.com/MohammadBnei/dream-analyst/commit/3d2b34da2506a22c7207750d3a06ffec4a05ab20))
+* Correct await block syntax in dreams page ([8d42060](https://github.com/MohammadBnei/dream-analyst/commit/8d42060e39de441f4908f0c53f9672e60b4d78da))
+* Correct Svelte await block syntax for conditional rendering ([b3397c9](https://github.com/MohammadBnei/dream-analyst/commit/b3397c9f177040c36a97a25719469941556cebad))
+* Correct Svelte block closing tag from `{F}` to `{/if}` ([25a5958](https://github.com/MohammadBnei/dream-analyst/commit/25a5958f5f68320fbbaae7e1b01c272d33fa0d55))
+* Correctly extract transcription text from n8n response ([4256913](https://github.com/MohammadBnei/dream-analyst/commit/4256913f2c99c8cd7d5a0e0042eff418b2c49733))
+* Serialize audio data as Uint8Array for remote transcription ([203f62b](https://github.com/MohammadBnei/dream-analyst/commit/203f62bb96333eb6660c6193992d17ed5bca260a))
+
+
+### Features
+
+* Add audio transcription remote function and rich text input component ([0a89831](https://github.com/MohammadBnei/dream-analyst/commit/0a898314e5a8faa2a257108ae7a5cf7876ddea95))
+* Add audio transcription service using N8N_AUDIO_TRANSCRIBE_URL ([2a29a9e](https://github.com/MohammadBnei/dream-analyst/commit/2a29a9efb3919e47eeef799539c064ea7c6dd6ac))
+* Allow canceling transcription with the record button ([61f669a](https://github.com/MohammadBnei/dream-analyst/commit/61f669ae1baf22d5e9bc5da934cb1b023b33a01e))
+* Allow client-side cancellation of dream analysis ([158a58d](https://github.com/MohammadBnei/dream-analyst/commit/158a58db5dae23ebb14faa8890407c2c81f7dc17))
+* Implement audio transcription via API endpoint ([e0feb88](https://github.com/MohammadBnei/dream-analyst/commit/e0feb88bd95f65b8bc17a85381085514f2208ba2))
+* Integrate RichTextInput component into new dream page ([ea35649](https://github.com/MohammadBnei/dream-analyst/commit/ea356490705db974742f5c3191c24e6cace0d5db))
+* integrate RichTextInput for dream and interpretation editing ([5efc814](https://github.com/MohammadBnei/dream-analyst/commit/5efc814307099eae5878e061602d542410dc760b))
+* Set French as default language and improve UI with fieldset ([aecfbaf](https://github.com/MohammadBnei/dream-analyst/commit/aecfbafb09117ed9104b23d3f5a5c3f22e3436d4))
+
 # [0.5.0](https://github.com/MohammadBnei/dream-analyst/compare/0.4.3...0.5.0) (2025-10-29)
 
 
