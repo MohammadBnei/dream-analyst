@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.5.0](https://github.com/MohammadBnei/dream-analyst/compare/0.4.3...0.5.0) (2025-10-29)
+
+
+### Features
+
+* Add basic authentication to n8n webhook requests ([3952678](https://github.com/MohammadBnei/dream-analyst/commit/395267843d358feef415383372c981b07736bb7d))
+
 ## [0.4.3](https://github.com/MohammadBnei/dream-analyst/compare/0.4.2...0.4.3) (2025-10-29)
 
 
