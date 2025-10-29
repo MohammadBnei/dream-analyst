@@ -26,8 +26,6 @@
 </script>
 
 <div class="mt-8 p-6 bg-base-200 rounded-box shadow-lg">
-	<h2 class="text-2xl font-semibold mb-4">{m.dream_analysis_heading()}</h2>
-
 	{#if isLoading}
 		<div class="alert alert-info shadow-lg mb-4">
 			<div>
@@ -82,7 +80,6 @@
 
 	{#if interpretation}
 		<div class="mb-4">
-			<h3 class="text-lg font-medium mb-2">{m.interpretation_heading()}:</h3>
 			<div class="prose max-w-none">
 				<Streamdown animation={{animateOnMount: true, enabled: true, type: 'blur'}} content={interpretation} />
 			</div>
