@@ -4,8 +4,6 @@ import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/se
 import prisma from '$lib/server/db';
 import { analysisStore } from '$lib/server/analysisStore'; // Import the new analysis store
 
-// Removed: In-memory map to track ongoing analysis processes.
-
 export async function GET({ params, locals, platform }) {
     const dreamId = params.id;
     const sessionUser = locals.user;
@@ -77,8 +75,13 @@ export async function GET({ params, locals, platform }) {
                 }) + '\n'));
 
                 let intervalId: ReturnType<typeof setInterval> | null = setInterval(async () => {
-                    // Check if the controller is still active before enqueuing
-                    if (!intervalId) { // If intervalId is null, it means clearInterval was called
+                    // Safeguard: Check if the controller is still active before enqueuing
+                    if (controller.desiredSize <= 0 || !intervalId) {
+                        if (intervalId) {
+                            clearInterval(intervalId);
+                            intervalId = null;
+                        }
+                        controller.close();
                         return;
                     }
 
