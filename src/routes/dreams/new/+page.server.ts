@@ -1,6 +1,5 @@
 import { fail, redirect } from '@sveltejs/kit';
-import prisma from '$lib/server/db';
-// Removed import for triggerDreamAnalysis as it's no longer called directly here
+import { getPrismaClient } from '$lib/server/db';// Removed import for triggerDreamAnalysis as it's no longer called directly here
 
 export const actions = {
 	default: async ({ request, locals }) => {
@@ -15,6 +14,8 @@ export const actions = {
 		if (!rawText || rawText.length < 10) {
 			return fail(400, { message: 'Dream text must be at least 10 characters long.' });
 		}
+
+    const prisma = await getPrismaClient();
 
 		try {
 			// 1. Persist dream with pending status

@@ -1,5 +1,5 @@
 import { json, error } from '@sveltejs/kit';
-import prisma from '$lib/server/db';
+import { getPrismaClient } from '$lib/server/db';
 
 export async function POST({ request, params, locals }) {
     const dreamId = params.id;
@@ -12,6 +12,8 @@ export async function POST({ request, params, locals }) {
     if (!dreamId) {
         throw error(400, 'Dream ID is required.');
     }
+
+    const prisma = await getPrismaClient();
 
     const { status } = await request.json();
 

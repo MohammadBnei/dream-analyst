@@ -1,12 +1,12 @@
 import { error, redirect } from '@sveltejs/kit';
-import prisma from '$lib/server/db';
-
+import { getPrismaClient } from '$lib/server/db';
 export async function load({ params, locals }) {
     const sessionUser = locals.user;
     if (!sessionUser) {
         throw redirect(302, '/login');
     }
 
+    const prisma = await getPrismaClient();
     const dreamId = params.id;
 
     const dream = await prisma.dream.findUnique({

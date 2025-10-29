@@ -1,13 +1,14 @@
 // src/routes/api/dreams/[id]/stream-analysis/+server.ts
 import { error } from '@sveltejs/kit';
 import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/n8nService';
-import prisma from '$lib/server/db';
-import { analysisStore, REDIS_HEARTBEAT_INTERVAL_SECONDS } from '$lib/server/analysisStore'; // Import REDIS_HEARTBEAT_INTERVAL_SECONDS
+import { getPrismaClient } from '$lib/server/db';
+import { getAnalysisStore, REDIS_HEARTBEAT_INTERVAL_SECONDS } from '$lib/server/analysisStore'; // Import REDIS_HEARTBEAT_INTERVAL_SECONDS
 import Redis from 'ioredis'; // Import Redis for the subscriber client
 
 export async function GET({ params, locals, platform }) {
     const dreamId = params.id;
     const sessionUser = locals.user;
+
 
     if (!sessionUser) {
         throw error(401, 'Unauthorized');
@@ -16,6 +17,9 @@ export async function GET({ params, locals, platform }) {
     if (!dreamId) {
         throw error(400, 'Dream ID is required.');
     }
+
+    const analysisStore = await getAnalysisStore();
+    const prisma = await getPrismaClient();
 
     const dream = await prisma.dream.findUnique({
         where: { id: dreamId }
@@ -150,6 +154,10 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
     let accumulatedInterpretation = '';
     let accumulatedTags: string[] = [];
     let lastHeartbeat = Date.now(); // Track last heartbeat time
+
+    const analysisStore = await getAnalysisStore();
+    const prisma = await getPrismaClient();
+
 
     try {
         const n8nStream = await initiateStreamedDreamAnalysis(dreamId, rawText);

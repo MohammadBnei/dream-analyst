@@ -2,8 +2,7 @@ import { sequence } from '@sveltejs/kit/hooks';
 import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
-import prisma from '$lib/server/db';
-
+import { getPrismaClient } from '$lib/server/db';
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
 		event.request = request;

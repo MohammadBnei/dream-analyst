@@ -1,6 +1,5 @@
 import { query, command, getRequestEvent } from '$app/server';
-import prisma from '$lib/server/db';
-import * as v from 'valibot';
+import { getPrismaClient } from '$lib/server/db';import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
 
 // Helper to get the current user from the request event

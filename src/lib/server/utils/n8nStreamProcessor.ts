@@ -1,6 +1,5 @@
 // src/lib/server/utils/n8nStreamProcessor.ts
-import prisma from '$lib/server/db';
-
+import { getPrismaClient } from '$lib/server/db';
 interface N8nStreamChunk {
     content?: string;
     tags?: string[];

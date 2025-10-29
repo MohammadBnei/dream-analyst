@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword, generateToken, setAuthTokenCookie } from '$lib/server/auth';
-import prisma from '$lib/server/db'; 
+import { getPrismaClient } from '$lib/server/db';
 
 export const actions = {
 	default: async ({ request, cookies }) => {
@@ -33,6 +33,9 @@ export const actions = {
 				message: 'Password must be at least 6 characters long'
 			});
 		}
+
+		const prisma = await getPrismaClient();
+
 
 		const existingUser = await prisma.user.findUnique({
 			where: { username }

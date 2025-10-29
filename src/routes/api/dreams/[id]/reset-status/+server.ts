@@ -1,9 +1,11 @@
 import { json, error } from '@sveltejs/kit';
-import prisma from '$lib/server/db';
+import { getPrismaClient } from '$lib/server/db';
 
 export async function POST({ params, locals }) {
     const dreamId = params.id;
     const sessionUser = locals.user;
+
+    const prisma = await getPrismaClient();
 
     if (!sessionUser) {
         throw error(401, 'Unauthorized');

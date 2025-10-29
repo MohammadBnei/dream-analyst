@@ -532,8 +532,3 @@
 	{/if}
 </div>
 
-<style lang="postcss">
-	/* The prose class from @tailwindcss/typography will handle most markdown styling. */
-	/* You can add custom styles here if needed, but generally, Streamdown handles its own styling */
-	/* or relies on the prose class. */
-</style>

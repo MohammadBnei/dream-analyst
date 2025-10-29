@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { comparePassword, generateToken, setAuthTokenCookie } from '$lib/server/auth';
-import prisma from '$lib/server/db'; 
+import { getPrismaClient } from '$lib/server/db';
 
 export const actions = {
 	default: async ({ request, cookies }) => {
@@ -14,6 +14,9 @@ export const actions = {
 				message: 'Missing identity or password'
 			});
 		}
+
+		const prisma = await getPrismaClient();
+
 
 		const existingUser = await prisma.user.findFirst({
 			where: {

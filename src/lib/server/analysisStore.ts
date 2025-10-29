@@ -216,7 +216,11 @@ class AnalysisStore {
     }
 }
 
-// Export the instance directly. This will cause the constructor to run
-// when the module is imported, potentially leading to the REDIS_URL error
-// if not properly handled in the build environment.
-export const analysisStore = new AnalysisStore();
+let analysisStore: AnalysisStore;
+
+export const getAnalysisStore = async () => {
+    if (!analysisStore) {
+        analysisStore = new AnalysisStore();
+    }
+    return analysisStore;
+};

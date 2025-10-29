@@ -1,5 +1,5 @@
+import { getPrismaClient } from '$lib/server/db';
 import { json } from '@sveltejs/kit';
-import prisma from '$lib/server/db';
 
 export async function POST({ request, params }) {
     const dreamId = params.id;
@@ -11,6 +11,9 @@ export async function POST({ request, params }) {
     if (!tags || !Array.isArray(tags) || !interpretation) {
         return json({ message: 'Tags (array) and interpretation (string) are required.' }, { status: 400 });
     }
+
+    const prisma = await getPrismaClient();
+
 
     try {
         const updatedDream = await prisma.dream.update({
