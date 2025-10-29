@@ -5,6 +5,7 @@
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import { getDream, deleteDream, updateDreamStatus, resetDreamStatus, updateDream, updateDreamInterpretation } from '$lib/remote/dream.remote';
+    import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the RichTextInput component
 
 	let { params } = $props();
 	const dreamId = params.id;
@@ -269,6 +270,14 @@
 		editedInterpretationText = dream?.interpretation || ''; // Revert to original text
 		interpretationEditError = null;
 	}
+
+    function handleRawTextInput(value: string) {
+        editedRawText = value;
+    }
+
+    function handleInterpretationInput(value: string) {
+        editedInterpretationText = value;
+    }
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -347,11 +356,12 @@
 						{/if}
 					</div>
 					{#if isEditing}
-						<textarea
-							class="input textarea textarea-bordered w-full h-48"
-							bind:value={editedRawText}
-							minlength="10"
-						></textarea>
+						<RichTextInput
+                            placeholder={m.raw_dream_text_heading()}
+                            rows={8}
+                            bind:value={editedRawText}
+                            onInput={handleRawTextInput}
+                        />
 						{#if editError}
 							<div class="text-error text-sm mt-1">{editError}</div>
 						{/if}
@@ -410,11 +420,12 @@
 					</div>
 
 					{#if isEditingInterpretation}
-						<textarea
-							class="textarea textarea-bordered w-full h-48"
-							bind:value={editedInterpretationText}
-							minlength="10"
-						></textarea>
+						<RichTextInput
+                            placeholder={m.interpretation_heading()}
+                            rows={8}
+                            bind:value={editedInterpretationText}
+                            onInput={handleInterpretationInput}
+                        />
 						{#if interpretationEditError}
 							<div class="text-error text-sm mt-1">{interpretationEditError}</div>
 						{/if}
