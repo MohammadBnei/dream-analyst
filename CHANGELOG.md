@@ -1,5 +1,20 @@
 # Changelog
 
+# [0.3.0](https://github.com/MohammadBnei/dream-analyst/compare/0.2.0...0.3.0) (2025-10-29)
+
+
+### Bug Fixes
+
+* Handle nullish currentDreamStatus in badge display ([752eb0f](https://github.com/MohammadBnei/dream-analyst/commit/752eb0fbcc694af3fddbe2bc67ca2903e9b51828))
+
+
+### Features
+
+* Add dream editing capabilities ([6cb2cff](https://github.com/MohammadBnei/dream-analyst/commit/6cb2cff94f2ee0924dffe9364303a4a40a84d158))
+* Add editing capabilities for dream interpretation ([49164c9](https://github.com/MohammadBnei/dream-analyst/commit/49164c9d6e8398e4c5adeb480eb2da74a20f67ed))
+* Add new translation keys for dream editing and saving ([b0b1809](https://github.com/MohammadBnei/dream-analyst/commit/b0b180975e269cc0fa2170ec2c0ef358571356fd))
+* migrate dream CRUD to remote functions ([1b30ba1](https://github.com/MohammadBnei/dream-analyst/commit/1b30ba1da9862cb002e524b3bc224df0eb5223f8)), closes [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#each](https://github.com/MohammadBnei/dream-analyst/issues/each) [#each](https://github.com/MohammadBnei/dream-analyst/issues/each) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if) [#if](https://github.com/MohammadBnei/dream-analyst/issues/if)
+
 # [0.2.0](https://github.com/MohammadBnei/dream-analyst/compare/0.1.12...0.2.0) (2025-10-29)
 
 
