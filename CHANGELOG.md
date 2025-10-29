@@ -1,5 +1,43 @@
 # Changelog
 
+# [0.2.0](https://github.com/MohammadBnei/dream-analyst/compare/0.1.12...0.2.0) (2025-10-29)
+
+
+### Bug Fixes
+
+* Correctly type PageData to PageServerData ([b117cff](https://github.com/MohammadBnei/dream-analyst/commit/b117cffa263faf36719bf0f1f40b9b7df64a1ee7))
+* Ensure stream controller closes correctly on client disconnect or no desired size ([bf6ed7f](https://github.com/MohammadBnei/dream-analyst/commit/bf6ed7fbc01fed5b22b0bf1a9f308709c448c17a))
+* Handle client disconnects and save partial analysis results ([7d8dee5](https://github.com/MohammadBnei/dream-analyst/commit/7d8dee573be5ab9260d4de7fdfd8cbc18614cbee))
+* Implement stalled analysis detection and recovery using Redis heartbeats ([3c61374](https://github.com/MohammadBnei/dream-analyst/commit/3c613740571563c7e71b6bc44a79941f07a9c5d8))
+* Improve n8n service error handling and logging for stream issues ([fc35e2a](https://github.com/MohammadBnei/dream-analyst/commit/fc35e2a26b39425e4dbb035bc1bd075ac13dd615))
+* Improve stream error handling and ensure dream status updates on abort ([7a2a6a1](https://github.com/MohammadBnei/dream-analyst/commit/7a2a6a1ae2695d5720d463a65287215dc9e6ab5e))
+* Log messages from Redis Pub/Sub and n8n stream for debugging ([d59b9ec](https://github.com/MohammadBnei/dream-analyst/commit/d59b9ec971e730dbddfddd697b9768132aa57906))
+* Prevent enqueuing to a closed stream controller ([f0db8f8](https://github.com/MohammadBnei/dream-analyst/commit/f0db8f8c7edbec6573702dfe287085ce1357525f))
+* Prevent ReadableStream controller enqueue after close race condition ([68886b3](https://github.com/MohammadBnei/dream-analyst/commit/68886b38aae24cad48078e09f917738bc0889639))
+* Prevent stream from closing prematurely when desiredSize is null ([51f0753](https://github.com/MohammadBnei/dream-analyst/commit/51f07539fb0fec9940317f2cfdf6e28542536406))
+* Prevent writing to closed stream in dream analysis endpoint ([88beee4](https://github.com/MohammadBnei/dream-analyst/commit/88beee4e7d147aac418c29b6788ef2e92db54f2c))
+* Re-add missing translation keys for dream analysis and tags ([6958f7d](https://github.com/MohammadBnei/dream-analyst/commit/6958f7d4ab7ff77508dbe3937136b214b00de6ae))
+* Remove console log from streamed dream analysis ([92c33a3](https://github.com/MohammadBnei/dream-analyst/commit/92c33a3f7eea1b42adaa60f1a25d91c948037172))
+* Replace client-side polling with Redis Pub/Sub for real-time analysis streaming ([e214142](https://github.com/MohammadBnei/dream-analyst/commit/e214142656667c2349254ac64bf36a137928ab05))
+* Revert Redis client to synchronous initialization ([ff5a6db](https://github.com/MohammadBnei/dream-analyst/commit/ff5a6dbf19383cc81c1d99361c41bb4566b49bb2))
+* Update dream page state on data invalidation ([022ff58](https://github.com/MohammadBnei/dream-analyst/commit/022ff585958cbefb9568bd46f073288433ef321a))
+* Update reset analysis option text ([d82c12d](https://github.com/MohammadBnei/dream-analyst/commit/d82c12db04423fa7dace86c3750c96f849655e90))
+* Wrap readable stream in Response object for SvelteKit handler ([20e94de](https://github.com/MohammadBnei/dream-analyst/commit/20e94dea952643d22ac97f151d1ba1aab314234c))
+
+
+### Features
+
+* Add dream analysis instant message ([477e233](https://github.com/MohammadBnei/dream-analyst/commit/477e2333d24c526fec13b782fa99cf3e003ef15a))
+* Add manual dream status update for failed analyses ([39bd75e](https://github.com/MohammadBnei/dream-analyst/commit/39bd75ea9604fec7b0436ae8f1ba4c3c76586833))
+* Add Redis service to compose.yml ([de00d24](https://github.com/MohammadBnei/dream-analyst/commit/de00d246d54e2460ebd3b606d75090b3c273e373))
+* Add translations for dream status change options ([736e065](https://github.com/MohammadBnei/dream-analyst/commit/736e06525708546528c9b6333d60e4036f6b0f63))
+* Auto-start analysis stream on dream page load if pending ([9f6c30e](https://github.com/MohammadBnei/dream-analyst/commit/9f6c30e08d4e940b2afa4afcce2a6a70612cc8fe))
+* Configure Prisma for migrations on start and custom client output ([26b9913](https://github.com/MohammadBnei/dream-analyst/commit/26b991389ecc5778b4b2462b19e398a69cadaace))
+* create .dockerignore file to exclude unnecessary files from Docker image ([ff51387](https://github.com/MohammadBnei/dream-analyst/commit/ff51387edd69a5e7301d804f972e41ba3345fc02))
+* Implement Redis for scalable dream analysis state management ([5ce27ea](https://github.com/MohammadBnei/dream-analyst/commit/5ce27eaa4d6fc145bfb580ea8298bf8568f796b5))
+* implement user logout functionality ([14c7e54](https://github.com/MohammadBnei/dream-analyst/commit/14c7e54bb6546967529adab53cfd5cb189b682d7))
+* Redirect to dream details after saving new dream ([27d5927](https://github.com/MohammadBnei/dream-analyst/commit/27d5927dd3b28c4b6ceccd3c64fc867e088155bb))
+
 ## [0.1.12](https://github.com/MohammadBnei/dream-analyst/compare/0.1.11...0.1.12) (2025-10-27)
 
 ## [0.1.11](https://github.com/MohammadBnei/dream-analyst/compare/0.1.10...0.1.11) (2025-10-27)
