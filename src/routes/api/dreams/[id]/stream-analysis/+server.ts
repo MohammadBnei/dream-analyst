@@ -76,7 +76,8 @@ export async function GET({ params, locals, platform }) {
 
                 let intervalId: ReturnType<typeof setInterval> | null = setInterval(async () => {
                     // Safeguard: Check if the controller is still active before enqueuing
-                    if (controller.desiredSize <= 0 || !intervalId) {
+                    // If desiredSize is 0 or less, the consumer is no longer reading, so close the stream.
+                    if (controller.desiredSize <= 0) {
                         if (intervalId) {
                             clearInterval(intervalId);
                             intervalId = null;
