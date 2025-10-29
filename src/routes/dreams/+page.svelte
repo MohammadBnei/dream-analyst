@@ -27,8 +27,8 @@
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
-	{#await dreams then resolvedDreams}
-		{#if resolvedDreams.length === 0}
+	{#await dreams}
+		{#if dreams.length === 0}
 			<div class="hero rounded-box bg-base-200 p-8">
 				<div class="hero-content text-center">
 					<div class="max-w-md">
@@ -40,7 +40,7 @@
 			</div>
 		{:else}
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{#each resolvedDreams as dream (dream.id)}
+				{#each dreams as dream (dream.id)}
 					<div class="card bg-base-100 shadow-xl" transition:fade>
 						<div class="card-body">
 							<div class="mb-2 flex items-start justify-between">
