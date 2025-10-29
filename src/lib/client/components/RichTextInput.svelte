@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { transcribeAudio } from '$lib/remote/audio.remote';
+    // Removed import { transcribeAudio } from '$lib/remote/audio.remote';
 
     export let value: string = '';
     export let placeholder: string = 'Start typing or record your thoughts...';
@@ -57,16 +57,21 @@
     async function transcribeAndAppend(audioBlob: Blob) {
         isTranscribing = true;
         try {
-            // Convert Blob to ArrayBuffer for serialization
-            const arrayBuffer = await audioBlob.arrayBuffer();
-            const audioData = new Uint8Array(arrayBuffer);
+            const formData = new FormData();
+            formData.append('audio', audioBlob, `audio-${Date.now()}.webm`);
 
-            const transcription = await transcribeAudio({
-                audioData: Array.from(audioData), // Convert Uint8Array to a plain array for serialization
-                fileName: `audio-${Date.now()}.webm`,
-                fileType: audioBlob.type,
-                lang: selectedLanguage
+            const response = await fetch(`/api/transcribe?lang=${selectedLanguage}`, {
+                method: 'POST',
+                body: formData
             });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to transcribe audio');
+            }
+
+            const result = await response.json();
+            const transcription = result.transcription;
 
             if (transcription) {
                 value = (value ? value + '\n' : '') + transcription;
