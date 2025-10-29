@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { t } from '@inlang/sdk-js';
 
 	export let value: string = '';
 	export let placeholder: string = 'Start typing or record your thoughts...';
