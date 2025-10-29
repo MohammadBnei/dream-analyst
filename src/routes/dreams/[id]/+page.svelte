@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	import type { PageServerData } from './$types';
 	import { goto } from '$app/navigation';
 	import { onDestroy } from 'svelte';
 	import * as m from '$lib/paraglide/messages';
@@ -7,7 +7,7 @@
 	import { invalidate } from '$app/navigation';
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 
-	let { data }: PageData = $props();
+	let { data }: PageServerData = $props();
 
 	let dream = $derived(data.dream);
 
