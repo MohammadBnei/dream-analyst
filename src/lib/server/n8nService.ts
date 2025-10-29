@@ -40,6 +40,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
 
         response.body.pipeTo(new WritableStream({
             async write(chunk) {
+                console.log({ chunk })
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
