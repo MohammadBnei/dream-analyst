@@ -1,5 +1,5 @@
 import { env } from '$env/dynamic/private';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from '$lib/server/prisma'; // Updated import path
 import { withAccelerate } from '@prisma/extension-accelerate';
 
 const prisma = new PrismaClient({

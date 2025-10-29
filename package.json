@@ -14,7 +14,8 @@
 		"lint": "prettier --check . && eslint .",
 		"prisma": "prisma",
 		"machine-translate": "inlang machine translate --project project.inlang",
-		"release": "release-it"
+		"release": "release-it",
+		"start": "bun run prisma migrate deploy && bun ./build/index.js"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.4.0",
