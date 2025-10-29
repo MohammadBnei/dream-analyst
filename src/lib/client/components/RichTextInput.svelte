@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '@inlang/sdk-js';
+	import * as m from '$lib/paraglide/messages';
 
 	export let value: string = '';
 	export let placeholder: string = 'Start typing or record your thoughts...';
@@ -35,7 +35,7 @@
 
 			mediaRecorder.onerror = (event) => {
 				console.error('MediaRecorder error:', event);
-				recordingError = t('recording_failed_error', {
+				recordingError = m.recording_failed_error({
 					message: event.error?.message || 'Unknown error'
 				});
 				isRecording = false;
@@ -46,7 +46,7 @@
 			isRecording = true;
 		} catch (err) {
 			console.error('Error accessing microphone:', err);
-			recordingError = t('microphone_access_error');
+			recordingError = m.microphone_access_error();
 			isRecording = false;
 		}
 	}
@@ -58,7 +58,7 @@
 			// If not recording but transcribing, cancel the transcription
 			abortController.abort();
 			console.log('Transcription cancelled by user.');
-			recordingError = t('transcription_cancelled_message');
+			recordingError = m.transcription_cancelled_message();
 			isTranscribing = false;
 			abortController = null;
 		}
@@ -95,10 +95,10 @@
 		} catch (error: any) {
 			if (error.name === 'AbortError') {
 				console.log('Fetch aborted by user.');
-				recordingError = t('transcription_cancelled_message');
+				recordingError = m.transcription_cancelled_message();
 			} else {
 				console.error('Transcription error:', error);
-				recordingError = t('transcription_failed_message', {
+				recordingError = m.transcription_failed_message({
 					message: error.message || 'Unknown error'
 				});
 			}
@@ -117,7 +117,7 @@
 <div class="">
 	<div class="mt-2 w-full">
 		<fieldset class="fieldset rounded-box border border-base-300 bg-base-200 p-4">
-			<legend class="fieldset-legend">{t('audio_input_fieldset_legend')}</legend>
+			<legend class="fieldset-legend">{m.audio_input_fieldset_legend()}</legend>
 			<textarea
 				{placeholder}
 				{rows}
@@ -143,7 +143,7 @@
 								clip-rule="evenodd"
 							></path></svg
 						>
-						{t('stop_recording_button')}
+						{m.stop_recording_button()}
 					{:else if isTranscribing}
 						<svg
 							class="inline-block h-5 w-5"
@@ -156,7 +156,7 @@
 								clip-rule="evenodd"
 							></path></svg
 						>
-						{t('cancel_transcription_button')}
+						{m.cancel_transcription_button()}
 					{:else}
 						<svg
 							class="inline-block h-5 w-5"
@@ -167,7 +167,7 @@
 								d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.25 1.25 0 01-2.095-1.15l.003-.003.002-.002A6.25 6.25 0 0110 10c2.817 0 5.323 1.39 6.827 3.513l.002.002.003.003a1.25 1.25 0 01-2.095 1.15 3.75 3.75 0 00-9.564 0z"
 							></path></svg
 						>
-						{t('record_audio_button')}
+						{m.record_audio_button()}
 					{/if}
 				</button>
 
@@ -176,8 +176,8 @@
 					class="select-bordered select select-sm w-30"
 					disabled={isRecording || isTranscribing}
 				>
-					<option value="en">{t('language_english_option')}</option>
-					<option value="fr">{t('language_french_option')}</option>
+					<option value="en">{m.language_english_option()}</option>
+					<option value="fr">{m.language_french_option()}</option>
 				</select>
 			</div>
 		</fieldset>
@@ -185,7 +185,7 @@
 		{#if isTranscribing}
 			<p class="flex items-center gap-2 text-info">
 				<span class="loading loading-sm loading-spinner"></span>
-				{t('transcribing_audio_message')}
+				{m.transcribing_audio_message()}
 			</p>
 		{/if}
 	</div>
