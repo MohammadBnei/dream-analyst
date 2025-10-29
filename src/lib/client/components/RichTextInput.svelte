@@ -147,7 +147,7 @@
                 <span class="loading loading-spinner loading-sm"></span>
                 Transcribing audio...
             </p>
-        {F}
+        {/if}
     </div>
 
     {#if recordingError}
