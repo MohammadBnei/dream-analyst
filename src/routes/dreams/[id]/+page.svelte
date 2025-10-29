@@ -56,7 +56,20 @@
 		}
 	});
 
+	// Effect to start stream when component mounts if dream is pending analysis
+	$effect(() => {
+		if ($effect.active && dream && dream.status === 'pending_analysis') {
+			console.log('Dream is pending analysis on mount, attempting to start stream...');
+			startStream();
+		}
+	});
+
 	function startStream() {
+		if (!dream?.id) {
+			console.warn('Cannot start stream: dream ID is not available.');
+			return;
+		}
+
 		isLoadingStream = true;
 		streamError = null;
 		// Do not clear streamedInterpretation/Tags here if we want to show initial state from Redis
