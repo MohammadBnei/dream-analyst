@@ -99,5 +99,16 @@
 	"unknown_error_saving_dream": "Une erreur inconnue est survenue lors de l'enregistrement du rêve.",
 	"save_button": "Enregistrer",
 	"interpretation_text_too_short_error": "L'interprétation doit contenir au moins 10 caractères.",
-	"unknown_error_saving_interpretation": "Une erreur inconnue est survenue lors de l'enregistrement de l'interprétation."
+	"unknown_error_saving_interpretation": "Une erreur inconnue est survenue lors de l'enregistrement de l'interprétation.",
+	"audio_input_fieldset_legend": "Saisie Audio",
+	"stop_recording_button": "Arrêter l'enregistrement",
+	"cancel_transcription_button": "Annuler la transcription",
+	"record_audio_button": "Enregistrer l'audio",
+	"language_english_option": "Anglais",
+	"language_french_option": "Français",
+	"transcribing_audio_message": "Transcription audio...",
+	"transcription_cancelled_message": "Transcription annulée.",
+	"transcription_failed_message": "Échec de la transcription : {message}",
+	"microphone_access_error": "Impossible d'accéder au microphone. Veuillez vous assurer qu'il est connecté et que les autorisations sont accordées.",
+	"recording_failed_error": "Échec de l'enregistrement : {message}"
 }

@@ -99,5 +99,16 @@
 	"unknown_error_saving_dream": "An unknown error occurred while saving the dream.",
 	"save_button": "Save",
 	"interpretation_text_too_short_error": "Interpretation must be at least 10 characters long.",
-	"unknown_error_saving_interpretation": "An unknown error occurred while saving the interpretation."
+	"unknown_error_saving_interpretation": "An unknown error occurred while saving the interpretation.",
+	"audio_input_fieldset_legend": "Audio Input",
+	"stop_recording_button": "Stop Recording",
+	"cancel_transcription_button": "Cancel Transcription",
+	"record_audio_button": "Record Audio",
+	"language_english_option": "English",
+	"language_french_option": "Français",
+	"transcribing_audio_message": "Transcribing audio...",
+	"transcription_cancelled_message": "Transcription cancelled.",
+	"transcription_failed_message": "Transcription failed: {message}",
+	"microphone_access_error": "Could not access microphone. Please ensure it is connected and permissions are granted.",
+	"recording_failed_error": "Recording failed: {message}"
 }
