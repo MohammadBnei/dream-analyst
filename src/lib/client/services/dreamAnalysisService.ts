@@ -74,7 +74,14 @@ export class DreamAnalysisService {
 
                             if (line) {
                                 try {
-                                    const parsed = JSON.parse(line);
+                                    const parsed: AnalysisStreamChunk = JSON.parse(line);
+                                    // Check for finalStatus from the server
+                                    if (parsed.finalStatus) {
+                                        this.callbacks.onEnd({ status: parsed.finalStatus, message: parsed.message });
+                                        clearInterval(intervalId); // If polling, stop it
+                                        controller.close(); // Close the client stream
+                                        return; // Exit readStream
+                                    }
                                     this.callbacks.onMessage(parsed);
                                 } catch (e) {
                                     console.warn('Failed to parse stream message as JSON:', line, e);
