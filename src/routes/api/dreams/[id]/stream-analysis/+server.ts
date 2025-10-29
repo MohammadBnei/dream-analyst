@@ -5,9 +5,10 @@ import { getPrismaClient } from '$lib/server/db';
 import { getAnalysisStore, REDIS_HEARTBEAT_INTERVAL_SECONDS } from '$lib/server/analysisStore'; // Import REDIS_HEARTBEAT_INTERVAL_SECONDS
 import Redis from 'ioredis'; // Import Redis for the subscriber client
 
-export async function GET({ params, locals, platform }) {
+export async function GET({ params, locals, platform, request }) {
     const dreamId = params.id;
     const sessionUser = locals.user;
+    const signal = request.signal; // Get the AbortSignal from the request
 
 
     if (!sessionUser) {
@@ -112,17 +113,14 @@ export async function GET({ params, locals, platform }) {
                 });
 
                 // Cleanup on client disconnect (HTTP connection aborts)
-                platform?.context?.waitUntil(new Promise<void>(resolve => {
-                    signal.addEventListener('abort', () => {
-                        console.log(`Dream ${dreamId}: Client disconnected from stream (HTTP abort).`);
-                        if (subscriberClient) {
-                            analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-                            subscriberClient = null;
-                        }
-                        controller.close(); // Ensure controller is closed
-                        resolve();
-                    });
-                }));
+                signal.addEventListener('abort', () => {
+                    console.log(`Dream ${dreamId}: Client disconnected from stream (HTTP abort).`);
+                    if (subscriberClient) {
+                        analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
+                        subscriberClient = null;
+                    }
+                    controller.close(); // Ensure controller is closed
+                });
             },
             async cancel() {
                 console.log(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
@@ -154,16 +152,31 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
     let accumulatedInterpretation = '';
     let accumulatedTags: string[] = [];
     let lastHeartbeat = Date.now(); // Track last heartbeat time
+    let isCancelled = false; // Flag to track if analysis was cancelled
 
     const analysisStore = await getAnalysisStore();
     const prisma = await getPrismaClient();
 
+    // Subscribe to the dream's channel to listen for cancellation signals
+    const cancellationSubscriber = analysisStore.subscribeToUpdates(dreamId, (message) => {
+        if (message.finalStatus === 'analysis_failed' && message.message === 'Analysis cancelled by user.') {
+            console.log(`Dream ${dreamId}: Background process received cancellation signal.`);
+            isCancelled = true;
+            // No need to unsubscribe here, the pipeTo will handle aborting the stream
+        }
+    });
 
     try {
         const n8nStream = await initiateStreamedDreamAnalysis(dreamId, rawText);
 
         const backgroundProcessingPromise = n8nStream.pipeTo(new WritableStream({
             async write(chunk) {
+                if (isCancelled) {
+                    console.log(`Dream ${dreamId}: Background process stopping write due to cancellation.`);
+                    // Throw an error to abort the WritableStream
+                    throw new Error('Analysis cancelled by user.');
+                }
+
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
@@ -235,6 +248,17 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                 }
             },
             async close() {
+                // Unsubscribe from cancellation channel
+                await analysisStore.unsubscribeFromUpdates(cancellationSubscriber, dreamId);
+
+                // If cancelled, the status should already be analysis_failed
+                if (isCancelled) {
+                    console.log(`Dream ${dreamId}: Background process closed after cancellation.`);
+                    // The DB status should have been updated by the DELETE endpoint or the abort handler
+                    await analysisStore.clearAnalysis(dreamId); // Clear from Redis
+                    return;
+                }
+
                 // Process any remaining content in the buffer
                 if (jsonBuffer.trim()) {
                     try {
@@ -275,6 +299,9 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                 await analysisStore.clearAnalysis(dreamId); // Clear from Redis once fully processed
             },
             async abort(reason) {
+                // Unsubscribe from cancellation channel
+                await analysisStore.unsubscribeFromUpdates(cancellationSubscriber, dreamId);
+
                 const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
                 console.error(`Dream ${dreamId}: Background process aborted:`, errorMessage);
                 if (!dreamStatusUpdatedInDb) {
@@ -306,6 +333,9 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
         }
 
     } catch (e) {
+        // Unsubscribe from cancellation channel in case of initiation error
+        await analysisStore.unsubscribeFromUpdates(cancellationSubscriber, dreamId);
+
         console.error(`Dream ${dreamId}: Error initiating background n8n stream:`, e);
         if (!dreamStatusUpdatedInDb) {
             await prisma.dream.update({

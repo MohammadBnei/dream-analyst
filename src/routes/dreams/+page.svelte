@@ -2,6 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
 	import { getDreams } from '$lib/remote/dream.remote';
+	import { invalidateAll } from '$app/navigation';
 
 	// Fetch dreams using the remote query
 	let dreamsPromise = getDreams(); // getDreams() returns a promise-like object
@@ -17,6 +18,30 @@
 				return 'badge-error';
 			default:
 				return 'badge-neutral';
+		}
+	}
+
+	async function cancelAnalysis(dreamId: string) {
+		if (!confirm('Are you sure you want to cancel the analysis for this dream?')) {
+			return;
+		}
+
+		try {
+			const response = await fetch(`/api/dreams/${dreamId}/cancel-analysis`, {
+				method: 'DELETE'
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to cancel analysis');
+			}
+
+			alert('Analysis cancelled successfully!');
+			// Invalidate all data to refetch dreams and update UI
+			await invalidateAll();
+		} catch (error) {
+			console.error('Error cancelling analysis:', error);
+			alert(`Error cancelling analysis: ${error.message}`);
 		}
 	}
 </script>
@@ -42,7 +67,7 @@
 					</div>
 				</div>
 			</div>
-		{:else}
+		{#else}
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each resolvedDreams as dream (dream.id)}
 					<div class="card bg-base-100 shadow-xl" transition:fade>
@@ -79,6 +104,14 @@
 							{/if}
 
 							<div class="mt-4 card-actions justify-end">
+								{#if dream.status === 'pending_analysis'}
+									<button
+										on:click={() => cancelAnalysis(dream.id)}
+										class="btn btn-sm btn-warning"
+									>
+										{m.cancel_analysis_button()}
+									</button>
+								{/if}
 								<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary">{m.view_details_button()}</a>
 							</div>
 						</div>
