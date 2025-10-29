@@ -120,8 +120,8 @@
     <div class="flex items-center justify-between mt-2">
         <div class="flex items-center space-x-2">
             <button
-                on:click={stopRecording}
-                disabled={!isRecording && !isTranscribing}
+                on:click={isRecording || isTranscribing ? stopRecording : startRecording}
+                disabled={false}
                 class="btn {isRecording || isTranscribing ? 'btn-error' : 'btn-primary'} btn-sm"
             >
                 {#if isRecording}
@@ -147,7 +147,7 @@
                 <span class="loading loading-spinner loading-sm"></span>
                 Transcribing audio...
             </p>
-        {/if}
+        {F}
     </div>
 
     {#if recordingError}
