@@ -92,7 +92,8 @@ export async function GET({ params, locals }) {
                         } catch (e) {
                             console.warn(`Dream ${dreamId}: Failed to parse stream line from n8nService or process chunk: ${line}`, e);
                             // Forward parsing error to client
-                            await writer.write(encoder.encode(JSON.stringify({ message: `Error processing stream data: ${line}` }) + '\n'));
+                            await writer.write(encoder.encode(JSON.stringify({ message: `Error processing stream data: ${line}` }) + '\n'))
+                                .catch(writeError => console.error(`Failed to write error message to client for ${dreamId}:`, writeError));
                         }
                     }
                     boundary = jsonBuffer.indexOf('\n');
@@ -138,7 +139,9 @@ export async function GET({ params, locals }) {
                         }
                     } catch (e) {
                         console.warn(`Dream ${dreamId}: Failed to parse final stream buffer from n8nService as JSON: ${jsonBuffer.trim()}`, e);
-                        await writer.write(encoder.encode(JSON.stringify({ message: `Error processing final stream data: ${jsonBuffer.trim()}` }) + '\n'));
+                        if (!writer.closed) {
+                            await writer.write(encoder.encode(JSON.stringify({ message: `Error processing final stream data: ${jsonBuffer.trim()}` }) + '\n'));
+                        }
                     }
                 }
 
