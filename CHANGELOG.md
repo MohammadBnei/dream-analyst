@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.4.0](https://github.com/MohammadBnei/dream-analyst/compare/0.3.5...0.4.0) (2025-10-29)
+
+
+### Features
+
+* Add healthz endpoint ([55511eb](https://github.com/MohammadBnei/dream-analyst/commit/55511eb9eac6fc499e29c564ee74436501aa910f))
+
 ## [0.3.5](https://github.com/MohammadBnei/dream-analyst/compare/0.3.4...0.3.5) (2025-10-29)
 
 
