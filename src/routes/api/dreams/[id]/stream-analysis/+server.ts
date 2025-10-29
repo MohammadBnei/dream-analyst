@@ -76,8 +76,12 @@ export async function GET({ params, locals, platform }) {
                     status: lastStatus
                 }) + '\n'));
 
-                // Poll Redis for updates
-                const intervalId = setInterval(async () => {
+                let intervalId: ReturnType<typeof setInterval> | null = setInterval(async () => {
+                    // Check if the controller is still active before enqueuing
+                    if (!intervalId) { // If intervalId is null, it means clearInterval was called
+                        return;
+                    }
+
                     const currentRedisState = await analysisStore.getAnalysis(dreamId);
                     const currentDbDream = await prisma.dream.findUnique({
                         where: { id: dreamId },
@@ -116,16 +120,18 @@ export async function GET({ params, locals, platform }) {
                         console.log(`Dream ${dreamId}: Client stream ending due to final status: ${effectiveStatus}`);
                         controller.enqueue(encoder.encode(JSON.stringify({ finalStatus: effectiveStatus }) + '\n'));
                         clearInterval(intervalId);
+                        intervalId = null; // Mark interval as cleared
                         controller.close();
                     }
                 }, 1000); // Poll every 1 second
 
                 // Cleanup on client disconnect
-                // The `platform.context.waitUntil` is for ensuring background tasks complete.
-                // For client stream cleanup, `signal.addEventListener('abort')` is sufficient.
                 signal.addEventListener('abort', () => {
                     console.log(`Dream ${dreamId}: Client disconnected from stream.`);
-                    clearInterval(intervalId);
+                    if (intervalId) {
+                        clearInterval(intervalId);
+                        intervalId = null; // Mark interval as cleared
+                    }
                     controller.close(); // Ensure controller is closed
                 });
             },
