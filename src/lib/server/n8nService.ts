@@ -1,6 +1,7 @@
 import { env } from '$env/dynamic/private';
 
 const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL;
+const N8N_AUDIO_TRANSCRIBE_URL = env.N8N_AUDIO_TRANSCRIBE_URL; // New environment variable for audio transcription
 const N8N_AUTH = env.N8N_AUTH;
 
 // Define the custom type for the processed stream chunks
@@ -140,5 +141,45 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
                 controller.close();
             }
         });
+    }
+}
+
+export async function initiateAudioTranscription(audioFile: Blob | File): Promise<{ transcription: string }> {
+    if (!N8N_AUDIO_TRANSCRIBE_URL) {
+        throw new Error("N8N_AUDIO_TRANSCRIBE_URL is not defined");
+    }
+
+    const formData = new FormData();
+    formData.append('audio', audioFile);
+
+    const headers: HeadersInit = {};
+    if (N8N_AUTH) {
+        headers['N8N_AUTH'] = N8N_AUTH;
+    }
+
+    try {
+        const response = await fetch(N8N_AUDIO_TRANSCRIBE_URL, {
+            method: 'POST',
+            headers: headers, // FormData handles Content-Type: multipart/form-data automatically
+            body: formData
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`n8n audio transcription call failed: ${response.status} - ${errorText}`);
+            throw new Error(`Failed to transcribe audio: ${response.statusText} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        if (typeof result.transcription !== 'string') {
+            console.error('n8n audio transcription response did not contain a string "transcription":', result);
+            throw new Error('Invalid response from audio transcription service.');
+        }
+
+        return { transcription: result.transcription };
+
+    } catch (error) {
+        console.error('Error initiating n8n audio transcription:', error);
+        throw new Error(`Failed to initiate audio transcription service: ${(error as Error).message}`);
     }
 }
