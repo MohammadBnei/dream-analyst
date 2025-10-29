@@ -85,7 +85,7 @@
         {rows}
         bind:value
         on:input={handleInput}
-        class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        class="text-input w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
     ></textarea>
 
     <div class="flex items-center justify-between mt-2">
