@@ -11,11 +11,12 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(uuid()) @map("id")
-  username     String    @unique
-  email        String    @unique
-  passwordHash String    @map("password_hash")
-  dreams       Dream[]
+  id               String            @id @default(uuid()) @map("id")
+  username         String            @unique
+  email            String            @unique
+  passwordHash     String            @map("password_hash")
+  dreams           Dream[]
+  dailyDreamCounts DailyDreamCount[]
 
   @@map("user")
 }
@@ -33,4 +34,15 @@ model Dream {
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
 
   @@map("dreams")
+}
+
+model DailyDreamCount {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  date      DateTime @map("count_date") @db.Date // Store only the date part
+  count     Int      @default(0)
+
+  @@unique([userId, date]) // Ensure only one entry per user per day
+  @@map("daily_dream_count")
 }
