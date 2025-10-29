@@ -67,7 +67,7 @@
 					</div>
 				</div>
 			</div>
-		{#else}
+		{:else}
 			<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each resolvedDreams as dream (dream.id)}
 					<div class="card bg-base-100 shadow-xl" transition:fade>
