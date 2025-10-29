@@ -10,7 +10,7 @@
 
 	$: isSaveDisabled = dreamText.length < 10 || isSaving;
 
-	const submitForm = createDream.enhance(async ({ data, submit }) => {
+	const submitForm = createDream(async ({ data, submit }) => {
 		isSaving = true;
 		errorMessage = null;
 
