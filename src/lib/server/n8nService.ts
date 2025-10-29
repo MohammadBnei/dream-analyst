@@ -1,6 +1,8 @@
 import { env } from '$env/dynamic/private';
 
 const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL;
+const N8N_USERNAME = env.N8N_USERNAME;
+const N8N_PASSWORD = env.N8N_PASSWORD;
 
 // Define the custom type for the processed stream chunks
 export interface AnalysisStreamChunk {
@@ -15,15 +17,25 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
     if (!N8N_WEBHOOK_URL) {
         throw new Error("N8N_WEBHOOK_URL is not defined");
     }
+
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json'
+    };
+
+    if (N8N_USERNAME && N8N_PASSWORD) {
+        const credentials = btoa(`${N8N_USERNAME}:${N8N_PASSWORD}`);
+        headers['Authorization'] = `Basic ${credentials}`;
+    } else if (N8N_USERNAME || N8N_PASSWORD) {
+        console.warn("N8N_USERNAME or N8N_PASSWORD is set, but not both. Basic authentication will not be used.");
+    }
+
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
 
     try {
         const response = await fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: headers,
             body: JSON.stringify({ dreamId, rawText })
         });
         
