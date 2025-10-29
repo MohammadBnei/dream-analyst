@@ -10,6 +10,7 @@
     let recordingError: string | null = null;
     let isTranscribing = false;
     let selectedLanguage: 'en' | 'fr' = 'en';
+    let abortController: AbortController | null = null; // To manage transcription cancellation
 
     async function startRecording() {
         recordingError = null;
@@ -47,20 +48,32 @@
     }
 
     function stopRecording() {
-        if (mediaRecorder && isRecording) {
+        if (isRecording && mediaRecorder) {
             mediaRecorder.stop();
+        } else if (isTranscribing && abortController) {
+            // If not recording but transcribing, cancel the transcription
+            abortController.abort();
+            console.log('Transcription cancelled by user.');
+            recordingError = 'Transcription cancelled.';
+            isTranscribing = false;
+            abortController = null;
         }
     }
 
     async function transcribeAndAppend(audioBlob: Blob) {
         isTranscribing = true;
+        recordingError = null; // Clear previous errors
+        abortController = new AbortController(); // Create a new AbortController for this transcription
+        const { signal } = abortController;
+
         try {
             const formData = new FormData();
             formData.append('audio', audioBlob, `audio-${Date.now()}.webm`);
 
             const response = await fetch(`/api/transcribe?lang=${selectedLanguage}`, {
                 method: 'POST',
-                body: formData
+                body: formData,
+                signal // Pass the abort signal to the fetch request
             });
 
             if (!response.ok) {
@@ -75,11 +88,17 @@
                 value = (value ? value + '\n' : '') + transcription;
                 onInput(value); // Call the callback prop
             }
-        } catch (error) {
-            console.error('Transcription error:', error);
-            recordingError = 'Transcription failed: ' + (error as Error).message;
+        } catch (error: any) {
+            if (error.name === 'AbortError') {
+                console.log('Fetch aborted by user.');
+                recordingError = 'Transcription cancelled.';
+            } else {
+                console.error('Transcription error:', error);
+                recordingError = 'Transcription failed: ' + (error.message || 'Unknown error');
+            }
         } finally {
             isTranscribing = false;
+            abortController = null; // Clear the controller
         }
     }
 
@@ -101,20 +120,23 @@
     <div class="flex items-center justify-between mt-2">
         <div class="flex items-center space-x-2">
             <button
-                on:click={isRecording ? stopRecording : startRecording}
-                disabled={isTranscribing}
-                class="btn {isRecording ? 'btn-error' : 'btn-primary'} btn-sm"
+                on:click={stopRecording}
+                disabled={!isRecording && !isTranscribing}
+                class="btn {isRecording || isTranscribing ? 'btn-error' : 'btn-primary'} btn-sm"
             >
                 {#if isRecording}
                     <svg class="w-5 h-5 inline-block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.75 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM12.25 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5z" clip-rule="evenodd"></path></svg>
                     Stop Recording
+                {:else if isTranscribing}
+                    <svg class="w-5 h-5 inline-block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.75 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5zM12.25 7.75a.75.75 0 00-1.5 0v4.5a.75.75 0 001.5 0v-4.5z" clip-rule="evenodd"></path></svg>
+                    Cancel Transcription
                 {:else}
                     <svg class="w-5 h-5 inline-block" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.25 1.25 0 01-2.095-1.15l.003-.003.002-.002A6.25 6.25 0 0110 10c2.817 0 5.323 1.39 6.827 3.513l.002.002.003.003a1.25 1.25 0 01-2.095 1.15 3.75 3.75 0 00-9.564 0z"></path></svg>
                     Record Audio
                 {/if}
             </button>
 
-            <select bind:value={selectedLanguage} class="select select-bordered select-sm">
+            <select bind:value={selectedLanguage} class="select select-bordered select-sm" disabled={isRecording || isTranscribing}>
                 <option value="en">English</option>
                 <option value="fr">Français</option>
             </select>
