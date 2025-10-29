@@ -19,7 +19,6 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
     const decoder = new TextDecoder();
 
     try {
-        console.log(`Dream ${dreamId}: Calling n8n webhook at ${N8N_WEBHOOK_URL}`);
         const response = await fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
             headers: {
@@ -27,9 +26,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
             },
             body: JSON.stringify({ dreamId, rawText })
         });
-
-        console.log(`Dream ${dreamId}: n8n webhook response status: ${response.status}`);
-        console.log(`Dream ${dreamId}: n8n webhook response headers:`, response.headers);
+        
         // Log the response body to inspect its type and content
         // Note: response.body can only be read once. If you read it here, pipeTo will fail.
         // So, we'll check its type and then let pipeTo consume it.

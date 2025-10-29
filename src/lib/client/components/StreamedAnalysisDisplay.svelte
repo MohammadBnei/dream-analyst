@@ -1,4 +1,3 @@
-<!-- src/lib/client/components/StreamedAnalysisDisplay.svelte -->
 <script lang="ts">
 	import { Streamdown } from 'svelte-streamdown';
 	import * as m from '$lib/paraglide/messages';

@@ -81,7 +81,7 @@ export async function GET({ params, locals, platform }) {
 
                 // Subscribe to Redis Pub/Sub for real-time updates
                 subscriberClient = analysisStore.subscribeToUpdates(dreamId, (message) => {
-                    if (controller.desiredSize <= 0) {
+                    if (!controller.desiredSize || controller.desiredSize <= 0) {
                         // If client is no longer consuming, close the stream and unsubscribe
                         console.log(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
                         if (subscriberClient) {

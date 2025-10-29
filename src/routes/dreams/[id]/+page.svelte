@@ -58,7 +58,7 @@
 
 	// Effect to start stream when component mounts if dream is pending analysis
 	$effect(() => {
-		if ($effect.active && dream && dream.status === 'pending_analysis') {
+		if ($effect.tracking() && dream && dream.status === 'pending_analysis') {
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			startStream();
 		}

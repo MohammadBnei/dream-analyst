@@ -29,22 +29,14 @@ export async function POST({ request, params, locals }) {
             throw error(403, 'Forbidden: You do not own this dream or it does not exist.');
         }
 
-        // Only allow changing from 'analysis_failed' to 'pending_analysis'
-        if (existingDream.status === 'analysis_failed' && status === 'pending_analysis') {
-            const updatedDream = await prisma.dream.update({
-                where: { id: dreamId },
-                data: {
-                    status: status as App.Dream['status'],
-                    updatedAt: new Date()
-                }
-            });
-            return json({ message: 'Dream status updated successfully', dream: updatedDream });
-        } else if (existingDream.status !== 'analysis_failed') {
-            throw error(400, `Cannot change status from '${existingDream.status}' manually.`);
-        } else {
-            // This case handles if existingDream.status is 'analysis_failed' but new status is not 'pending_analysis'
-            throw error(400, `Invalid status change from '${existingDream.status}' to '${status}'.`);
-        }
+        const updatedDream = await prisma.dream.update({
+            where: { id: dreamId },
+            data: {
+                status: status as App.Dream['status'],
+                updatedAt: new Date()
+            }
+        });
+        return json({ message: 'Dream status updated successfully', dream: updatedDream });
 
     } catch (e) {
         console.error('Error updating dream status:', e);

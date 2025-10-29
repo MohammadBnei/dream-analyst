@@ -4,7 +4,7 @@ import Redis from 'ioredis'; // Import Redis for subscriber client
 
 const REDIS_PREFIX = 'dream_analysis:';
 const REDIS_EXPIRATION_SECONDS = 60 * 60 * 2; // Store analysis state for 2 hours (longer than expected analysis)
-const REDIS_HEARTBEAT_INTERVAL_SECONDS = 30; // How often the background process refreshes the key expiration
+export const REDIS_HEARTBEAT_INTERVAL_SECONDS = 30; // How often the background process refreshes the key expiration
 const REDIS_STALL_THRESHOLD_SECONDS = REDIS_HEARTBEAT_INTERVAL_SECONDS * 2; // If lastUpdate is older than this, consider stalled
 
 interface AnalysisState {
