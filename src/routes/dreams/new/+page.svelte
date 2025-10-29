@@ -10,30 +10,25 @@
 
 	$: isSaveDisabled = dreamText.length < 10 || isSaving;
 
-	const submitForm = createDream(async ({ data, submit }) => {
+	async function handleSubmit() {
 		isSaving = true;
 		errorMessage = null;
 
 		try {
-			const result = await submit();
-			if (result.type === 'success') {
-				const dreamId = result.data?.dreamId;
-				if (dreamId) {
-					await goto(`/dreams/${dreamId}`);
-				} else {
-					errorMessage = m.dream_saved_no_id_error();
-				}
-			} else if (result.type === 'error') {
-				errorMessage = result.error?.message || m.unknown_error_occurred();
-			} else if (result.type === 'failure') {
-				errorMessage = result.data?.message || m.failed_to_save_dream();
+			const result = await createDream({ rawText: dreamText });
+			if (result && result.dreamId) {
+				await goto(`/dreams/${result.dreamId}`);
+			} else {
+				errorMessage = m.dream_saved_no_id_error();
 			}
-		} catch (e) {
-			errorMessage = (e instanceof Error ? e.message : String(e)) || m.unknown_error_occurred();
+		} catch (e: any) {
+			// The remote function throws an error on failure, so catch it here.
+			// The error object from SvelteKit's remote functions might have a 'message' property.
+			errorMessage = e.body?.message || e.message || m.unknown_error_occurred();
 		} finally {
 			isSaving = false;
 		}
-	});
+	}
 
 	function resetForm() {
 		dreamText = '';
@@ -45,7 +40,7 @@
 <div class="container mx-auto p-4 max-w-2xl">
 	<h1 class="text-3xl font-bold mb-6 text-center">{m.new_dream_title()}</h1>
 
-	<form method="POST" {...submitForm} class="space-y-6">
+	<form on:submit|preventDefault={handleSubmit} class="space-y-6">
 		<div class="form-control">
 			<label for="dreamText" class="label">
 				<span class="label-text">{m.what_did_you_dream_label()}</span>
