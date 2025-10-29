@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { createDream } from '$lib/remote/dream.remote';
+    import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the new component
 
 	let dreamText: string = '';
 	let isSaving: boolean = false;
@@ -35,6 +36,10 @@
 		isSaving = false;
 		errorMessage = null;
 	}
+
+    function handleRichTextInput(value: string) {
+        dreamText = value;
+    }
 </script>
 
 <div class="container mx-auto p-4 max-w-2xl">
@@ -45,15 +50,13 @@
 			<label for="dreamText" class="label">
 				<span class="label-text">{m.what_did_you_dream_label()}</span>
 			</label>
-			<textarea
-				id="dreamText"
-				name="rawText"
-				class="textarea textarea-bordered h-48 w-full"
-				placeholder={m.describe_dream_placeholder()}
-				bind:value={dreamText}
-				required
-				minlength="10"
-			></textarea>
+            <RichTextInput
+                id="dreamText"
+                placeholder={m.describe_dream_placeholder()}
+                rows={8}
+                bind:value={dreamText}
+                onInput={handleRichTextInput}
+            />
 			<label class="label">
 				<span class="label-text-alt">{m.minimum_characters_label({ count: 10 })}</span>
 			</label>
