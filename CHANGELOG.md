@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.11.0](https://github.com/MohammadBnei/dream-analyst/compare/0.10.0...0.11.0) (2025-10-30)
+
+
+### Features
+
+* Make site name a home button and remove home link ([ed62f8b](https://github.com/MohammadBnei/dream-analyst/commit/ed62f8b2fe7f4d4d2c6638bcf3a69e47b7598175))
+
 # [0.10.0](https://github.com/MohammadBnei/dream-analyst/compare/0.9.2...0.10.0) (2025-10-30)
 
 
