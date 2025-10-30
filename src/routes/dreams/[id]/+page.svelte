@@ -378,7 +378,7 @@
 				></path></svg
 			>
 			<span>Error loading dream: {dreamError}</span>
-			<button class="btn btn-sm btn-ghost" on:click={fetchDream}>Retry</button>
+			<button class="btn btn-sm btn-ghost" onclick={fetchDream}>Retry</button>
 		</div>
 	{:else if dream}
 		<div class="card bg-base-100 p-6 shadow-xl">
@@ -582,10 +582,10 @@
 						</div>
 					{/if}
 					<div class="modal-action">
-						<button class="btn btn-ghost" onclick={handleCancelDelete} disabled={isDeleting}
+						<button onclick={handleCancelDelete} class="btn btn-ghost" disabled={isDeleting}
 							>{m.cancel_button()}</button
 						>
-						<button class="btn btn-error" onclick={handleDeleteDream} disabled={isDeleting}>
+						<button onclick={handleDeleteDream} class="btn btn-error" disabled={isDeleting}>
 							{#if isDeleting}
 								<span class="loading loading-spinner"></span>
 								{m.deleting_button()}
