@@ -22,10 +22,8 @@
 	let isSavingInterpretationEdit = $state(false);
 	let interpretationEditError = $state<string | null>(null);
 
-	let selectedPromptType: DreamPromptType = promptType || 'jungian';
+	let selectedPromptType: DreamPromptType = $state(promptType || 'jungian');
 	const availablePromptTypes: DreamPromptType[] = promptService.getAvailablePromptTypes();
-
-	let cancelAnalysisForm: HTMLFormElement;
 
 	$effect(() => {
 		editedInterpretationText = interpretation || '';
@@ -69,12 +67,6 @@
 		}
 	}
 
-	function handleCancelStream() {
-		onCancelAnalysis();
-		if (cancelAnalysisForm) {
-			cancelAnalysisForm.requestSubmit();
-		}
-	}
 </script>
 
 <div class="mb-6">
@@ -141,7 +133,7 @@
 					</button>
 				</form>
 			{:else if status === 'PENDING_ANALYSIS' && isLoadingStream}
-				<button onclick={handleCancelStream} class="btn btn-sm btn-warning">
+				<button onclick={onCancelAnalysis} class="btn btn-sm btn-warning">
 					<span class="loading loading-spinner"></span>
 					{m.cancel_analysis_button()}
 				</button>

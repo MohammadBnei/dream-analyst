@@ -166,7 +166,6 @@
 				<DreamRawTextSection rawText={dream.rawText} onUpdate={handleDreamUpdate} />
 
 				<DreamInterpretationSection
-					dreamId={dream.id}
 					interpretation={streamedInterpretation}
 					tags={streamedTags}
 					status={dream.status}
