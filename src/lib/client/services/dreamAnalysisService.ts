@@ -135,13 +135,29 @@ export class DreamAnalysisService {
 		}
 	}
 
-	public closeStream(silent: boolean = false): void {
+	public async closeStream(silent: boolean = false): Promise<void> {
 		if (this.abortController) {
 			this.abortController.abort();
 			this.abortController = null; // Clear the controller reference immediately
 			console.debug('Stream manually closed for dream:', this.dreamId);
 			if (!silent) {
 				this.callbacks.onClose?.();
+				// Make an API call to the server to cancel the background stream
+				try {
+					const response = await fetch(`/api/dreams/${this.dreamId}/cancel-analysis`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						}
+					});
+					if (!response.ok) {
+						console.error('Failed to send cancel signal to server:', response.statusText);
+					} else {
+						console.log('Cancel signal sent to server successfully.');
+					}
+				} catch (error) {
+					console.error('Error sending cancel signal to server:', error);
+				}
 			}
 		}
 		if (this.intervalId) {
