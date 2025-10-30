@@ -5,7 +5,7 @@
 
 	// Data loaded from +page.server.ts
 	let { data } = $props();
-	let dreams: App.Dream[] = data.dreams;
+	let dreams = $derived(data.dreams);
 
 	let error: string | null = null; // For errors during client-side actions like cancelAnalysis
 
@@ -24,10 +24,6 @@
 	}
 
 	async function cancelAnalysis(dreamId: string) {
-		if (!confirm('Are you sure you want to cancel the analysis for this dream?')) {
-			return;
-		}
-
 		try {
 			const response = await fetch(`/api/dreams/${dreamId}/cancel-analysis`, {
 				method: 'DELETE'
