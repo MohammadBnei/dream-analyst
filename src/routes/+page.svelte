@@ -1,5 +1,8 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
+
+	// Assuming data will be passed from +page.server.ts, including user login status
+	let { data } = $props();
 </script>
 
 <div class="container mx-auto p-4">
@@ -10,7 +13,11 @@
 				<p class="py-6">
 					{m.home_page_intro()}
 				</p>
-				<a href="/register" class="btn btn-primary">{m.register_button()}</a>
+				{#if data.user}
+					<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
+				{:else}
+					<a href="/register" class="btn btn-primary">{m.register_button()}</a>
+				{/if}
 			</div>
 		</div>
 	</div>
