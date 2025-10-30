@@ -3,11 +3,13 @@
 	import { onDestroy, onMount } from 'svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
+	import { ClientChatService } from '$lib/client/services/chatService'; // Import the new client chat service
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import { enhance } from '$app/forms';
-	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst.js'; // Import DreamPromptType
-	import { promptService } from '$lib/prompts/promptService.js'; // Import promptService to get available types
+	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+	import { promptService } from '$lib/prompts/promptService';
+	import type { ChatMessage } from '$lib/server/chatService'; // Re-use server-side ChatMessage type
 
 	let { data, form } = $props();
 
@@ -15,11 +17,10 @@
 	let nextDreamId = $state(data.nextDreamId);
 	let prevDreamId = $state(data.prevDreamId);
 
-	// Define DreamStatus locally based on the dream object's status type
 	type DreamStatus = typeof dream.status;
 
 	let streamedInterpretation = $state(dream.interpretation || '');
-	let streamedTags = $state<string[]>(dream.tags as string[] || []); // Cast tags to string[]
+	let streamedTags = $state<string[]>(dream.tags as string[] || []);
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -43,24 +44,26 @@
 	let dreamDateEditError = $state<string | null>(null);
 
 	let analysisService: DreamAnalysisService | null = null;
+	let clientChatService: ClientChatService | null = null; // New client chat service instance
 
-	// State for prompt type selection
 	let selectedPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 	const availablePromptTypes: DreamPromptType[] = promptService.getAvailablePromptTypes();
 
-	// Reference to the hidden form for cancelling analysis
 	let cancelAnalysisForm: HTMLFormElement;
+
+	// Chat specific states
+	let chatMessages = $state<ChatMessage[]>([]);
+	let chatInput = $state('');
+	let isSendingChatMessage = $state(false);
+	let chatError = $state<string | null>(null);
+	let chatContainer: HTMLElement; // Reference to the chat scroll container
 
 	// Update dream state when data from load function changes (e.g., after form action)
 	$effect(() => {
-		// Only update if the incoming dream data is different from the current state
-		// This prevents an infinite loop if `dream` is updated and then `data.dream` is still the same
-		// We compare `updatedAt` as a simple way to check if the dream object itself has changed.
 		if (data.dream && dream.updatedAt !== data.dream.updatedAt) {
 			dream = data.dream;
 			nextDreamId = data.nextDreamId;
 			prevDreamId = data.prevDreamId;
-			// Only update streamed content if it's not actively streaming
 			if (!isLoadingStream) {
 				streamedInterpretation = dream.interpretation || '';
 				streamedTags = dream.tags as string[] || [];
@@ -68,7 +71,7 @@
 			editedRawText = dream.rawText;
 			editedInterpretationText = dream.interpretation || '';
 			editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
-			selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian'; // Update selected prompt type
+			selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 		}
 	});
 
@@ -76,8 +79,6 @@
 	$effect(() => {
 		if (form?.success) {
 			if (form.dream) {
-				// When a form action successfully updates the dream, update the local state
-				// This will then trigger the $effect above to synchronize other related states
 				dream = form.dream;
 			}
 			if (form.message) {
@@ -86,7 +87,6 @@
 		}
 		if (form?.error) {
 			console.error('Form action error:', form.error);
-			// Specific error handling for different actions
 			if (form.rawText !== undefined) {
 				editError = form.error;
 			} else if (form.interpretation !== undefined) {
@@ -96,29 +96,65 @@
 			} else if (form.error && form.error.includes('delete')) {
 				deleteError = form.error;
 			} else {
-				streamError = form.error; // Generic error for other actions
+				streamError = form.error;
 			}
 		}
 
-		// Reset saving states
 		isSavingEdit = false;
 		isSavingInterpretationEdit = false;
 		isSavingDreamDate = false;
 		isDeleting = false;
 	});
 
-	onMount(() => {
+	onMount(async () => {
 		if (dream.status === 'PENDING_ANALYSIS') {
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			startStream(selectedPromptType);
+		}
+
+		// Initialize chat service and load history if interpretation exists
+		if (dream.interpretation && dream.id) {
+			clientChatService = new ClientChatService(dream.id, {
+				onMessage: (data) => {
+					// Update the last message if it's from the assistant and still streaming
+					if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1].role === 'assistant' && !data.final) {
+						chatMessages[chatMessages.length - 1].content += data.content || '';
+						chatMessages = [...chatMessages]; // Trigger reactivity
+					} else if (data.content) {
+						// Add new assistant message if it's the first chunk or previous was final
+						chatMessages = [...chatMessages, { role: 'assistant', content: data.content }];
+					}
+					scrollToBottom();
+				},
+				onEnd: async (data) => {
+					isSendingChatMessage = false;
+					if (data.message) {
+						chatError = data.message;
+					}
+					await invalidate('dream'); // Invalidate to ensure latest DB state (including chat history) is fetched
+					await loadChatHistory(); // Reload history to get the saved messages
+					scrollToBottom();
+				},
+				onError: (errorMsg) => {
+					console.error('Chat stream error:', errorMsg);
+					isSendingChatMessage = false;
+					chatError = errorMsg;
+					scrollToBottom();
+				},
+				onClose: () => {
+					console.log('Chat service stream closed.');
+					isSendingChatMessage = false;
+				}
+			});
+			await loadChatHistory();
 		}
 	});
 
 	onDestroy(() => {
 		analysisService?.closeStream();
+		clientChatService?.closeStream();
 	});
 
-	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: DreamStatus) {
 		switch (status) {
 			case 'COMPLETED':
@@ -161,7 +197,7 @@
 				if (data.message) {
 					streamError = data.message;
 				}
-				await invalidate('dream'); // Invalidate to ensure latest DB state is fetched
+				await invalidate('dream');
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
@@ -174,7 +210,7 @@
 				isLoadingStream = false;
 			}
 		});
-		analysisService.startStream(promptType); // Pass the selected prompt type
+		analysisService.startStream(promptType);
 	}
 
 	async function cancelStream() {
@@ -249,6 +285,44 @@
 
 	function handlePromptTypeChange(event: Event) {
 		selectedPromptType = (event.target as HTMLSelectElement).value as DreamPromptType;
+	}
+
+	async function loadChatHistory() {
+		if (clientChatService) {
+			chatMessages = await clientChatService.loadHistory();
+			scrollToBottom();
+		}
+	}
+
+	async function sendChatMessage() {
+		if (!chatInput.trim() || !clientChatService || isSendingChatMessage) return;
+
+		const messageToSend = chatInput;
+		chatInput = ''; // Clear input immediately
+		isSendingChatMessage = true;
+		chatError = null;
+
+		// Add user message to display
+		chatMessages = [...chatMessages, { role: 'user', content: messageToSend }];
+		scrollToBottom();
+
+		try {
+			await clientChatService.sendMessage(messageToSend);
+			// The onEnd callback will handle setting isSendingChatMessage to false and reloading history
+		} catch (error) {
+			console.error('Error sending chat message:', error);
+			chatError = `Failed to send message: ${(error as Error).message}`;
+			isSendingChatMessage = false;
+		}
+	}
+
+	function scrollToBottom() {
+		// Use a timeout to ensure DOM has updated before scrolling
+		setTimeout(() => {
+			if (chatContainer) {
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+			}
+		}, 0);
 	}
 </script>
 
@@ -625,6 +699,61 @@
 						/>
 					{/if}
 				</div>
+
+				<!-- Chat Interface Section -->
+				{#if dream.interpretation}
+					<div class="mb-6">
+						<h3 class="text-lg font-semibold mb-4">{m.chat_with_ai_heading()}</h3>
+						<div
+							bind:this={chatContainer}
+							class="chat-container h-96 overflow-y-auto rounded-box bg-base-200 p-4"
+						>
+							{#each chatMessages as msg (msg.content)}
+								<div class="chat {msg.role === 'user' ? 'chat-end' : 'chat-start'}">
+									<div class="chat-bubble {msg.role === 'user' ? 'chat-bubble-primary' : ''}">
+										{msg.content}
+									</div>
+								</div>
+							{/each}
+							{#if isSendingChatMessage}
+								<div class="chat chat-start">
+									<div class="chat-bubble">
+										<span class="loading loading-dots"></span>
+									</div>
+								</div>
+							{/if}
+							{#if chatError}
+								<div class="chat chat-start">
+									<div class="chat-bubble chat-bubble-error">
+										{chatError}
+									</div>
+								</div>
+							{/if}
+						</div>
+						<div class="mt-4 flex gap-2">
+							<input
+								type="text"
+								placeholder={m.type_your_message_placeholder()}
+								class="input input-bordered flex-grow"
+								bind:value={chatInput}
+								onkeydown={(e) => {
+									if (e.key === 'Enter' && !e.shiftKey) {
+										e.preventDefault();
+										sendChatMessage();
+									}
+								}}
+								disabled={isSendingChatMessage}
+							/>
+							<button class="btn btn-primary" onclick={sendChatMessage} disabled={!chatInput.trim() || isSendingChatMessage}>
+								{#if isSendingChatMessage}
+									<span class="loading loading-spinner"></span>
+								{:else}
+									{m.send_button()}
+								{/if}
+							</button>
+						</div>
+					</div>
+				{/if}
 
 				<div class="mt-6 text-sm text-base-content/60">
 					<p>{m.created_at_label({ date: new Date(dream.createdAt).toLocaleString() })}</p>
