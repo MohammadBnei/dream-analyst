@@ -2,7 +2,6 @@
 	import * as m from '$lib/paraglide/messages';
 	import dreamerLogo from '$lib/assets/dreamer-logo.png';
 	import darkDreamerLogo from '$lib/assets/dark-dreamer-logo.png';
-	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 
 	// Assuming data will be passed from +page.server.ts, including user login status
@@ -59,12 +58,12 @@
 			<img
 				src={dreamerLogo}
 				alt={m.app_name()}
-				class="max-w-sm rounded-lg shadow-2xl dark:hidden"
+				class="w-full rounded-lg shadow-2xl dark:hidden"
 			/>
 			<img
 				src={darkDreamerLogo}
 				alt={m.app_name()}
-				class="hidden max-w-sm rounded-lg shadow-2xl dark:block"
+				class="hidden w-full rounded-lg shadow-2xl dark:block"
 			/>
 			<!-- Adjusted icon size -->
 			<div>
