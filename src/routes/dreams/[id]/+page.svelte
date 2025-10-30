@@ -7,12 +7,11 @@
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import { enhance } from '$app/forms';
 
-	export let data; // Data from +page.server.ts load function
-	export let form; // Data from form actions
+	let { data, form } = $props();
 
 	const dreamId = data.dream.id;
 
-	let dream: App.Dream = $state(data.dream);
+	let dream = $state(data.dream);
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>(dream.tags || []);
@@ -223,7 +222,7 @@
 		</button>
 		<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
 		<div class="w-24 text-right">
-			<button onclick={handleShowDeleteModal} class="btn btn-error btn-sm">
+			<button onclick={handleShowDeleteModal} class="btn btn-sm btn-error">
 				{m.delete_dream_button()}
 			</button>
 		</div>
@@ -244,8 +243,7 @@
 							<form method="POST" action="?/updateStatus" use:enhance>
 								<select
 									name="status"
-									class="select select-bordered select-sm"
-									onchange="this.form.submit()"
+									class="select-bordered select select-sm"
 								>
 									<option value="" disabled selected>{m.change_status_option()}</option>
 									<option value="analysis_failed">{m.reset_to_failed_analysis_option()}</option>
@@ -259,7 +257,7 @@
 					<div class="mb-2 flex items-center justify-between">
 						<h3 class="text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
 						{#if !isEditing}
-							<button onclick={toggleEditMode} class="btn btn-sm btn-ghost">
+							<button onclick={toggleEditMode} class="btn btn-ghost btn-sm">
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
 									class="h-5 w-5"
@@ -301,7 +299,7 @@
 								<div class="mt-1 text-sm text-error">{editError}</div>
 							{/if}
 							<div class="mt-2 flex justify-end gap-2">
-								<button onclick={handleCancelEdit} type="button" class="btn btn-sm btn-ghost"
+								<button onclick={handleCancelEdit} type="button" class="btn btn-ghost btn-sm"
 									>{m.cancel_button()}</button
 								>
 								<button
@@ -319,7 +317,7 @@
 							</div>
 						</form>
 					{:else}
-						<p class="whitespace-pre-wrap leading-relaxed text-base-content/80">
+						<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
 							{dream.rawText}
 						</p>
 					{/if}
@@ -330,7 +328,7 @@
 						<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
 						<div class="flex items-center gap-2">
 							{#if !isEditingInterpretation}
-								<button onclick={toggleInterpretationEditMode} class="btn btn-sm btn-ghost">
+								<button onclick={toggleInterpretationEditMode} class="btn btn-ghost btn-sm">
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										class="h-5 w-5"
@@ -398,8 +396,7 @@
 								<button
 									onclick={handleCancelInterpretationEdit}
 									type="button"
-									class="btn btn-sm btn-ghost"
-									>{m.cancel_button()}</button
+									class="btn btn-ghost btn-sm">{m.cancel_button()}</button
 								>
 								<button
 									type="submit"
@@ -451,7 +448,9 @@
 								<span>{m.analysis_failed_message()}</span>
 							</div>
 						</div>
-						<button onclick={startStream} class="btn mt-4 btn-primary">{m.retry_analysis_button()}</button>
+						<button onclick={startStream} class="btn mt-4 btn-primary"
+							>{m.retry_analysis_button()}</button
+						>
 					{:else if !streamedInterpretation && !streamedTags.length && !isLoadingStream && !streamError}
 						<p>{m.no_interpretation_available_message()}</p>
 					{/if}
@@ -478,10 +477,10 @@
 		{#if showDeleteModal}
 			<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick}>
 				<div class="modal-box">
-					<h3 class="font-bold text-lg">{m.confirm_deletion_title()}</h3>
+					<h3 class="text-lg font-bold">{m.confirm_deletion_title()}</h3>
 					<p class="py-4">{m.confirm_deletion_message()}</p>
 					{#if deleteError}
-						<div class="alert alert-error shadow-lg mb-4">
+						<div class="mb-4 alert alert-error shadow-lg">
 							<div>
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
@@ -500,8 +499,11 @@
 						</div>
 					{/if}
 					<div class="modal-action">
-						<button onclick={handleCancelDelete} type="button" class="btn btn-ghost" disabled={isDeleting}
-							>{m.cancel_button()}</button
+						<button
+							onclick={handleCancelDelete}
+							type="button"
+							class="btn btn-ghost"
+							disabled={isDeleting}>{m.cancel_button()}</button
 						>
 						<form
 							method="POST"
@@ -532,7 +534,7 @@
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				class="stroke-current shrink-0 h-6 w-6"
+				class="h-6 w-6 shrink-0 stroke-current"
 				fill="none"
 				viewBox="0 0 24 24"
 				><path
