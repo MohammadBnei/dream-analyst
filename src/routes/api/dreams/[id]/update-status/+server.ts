@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
+import * as v from 'valibot'; // Import valibot for validation
 
 export async function POST({ request, params, locals }) {
     const dreamId = params.id;
@@ -13,13 +14,20 @@ export async function POST({ request, params, locals }) {
         throw error(400, 'Dream ID is required.');
     }
 
-    const prisma = await getPrismaClient();
+    const UpdateStatusSchema = v.object({
+        status: v.picklist(['pending_analysis', 'completed', 'analysis_failed'])
+    });
 
-    const { status } = await request.json();
-
-    if (!status || !['pending_analysis', 'completed', 'analysis_failed'].includes(status)) {
-        throw error(400, 'Invalid status provided.');
+    let validatedData;
+    try {
+        const body = await request.json();
+        validatedData = v.parse(UpdateStatusSchema, body);
+    } catch (e) {
+        console.error('Validation error:', e);
+        throw error(400, 'Invalid request body.');
     }
+
+    const prisma = await getPrismaClient();
 
     try {
         // Verify the dream belongs to the authenticated user
@@ -34,7 +42,7 @@ export async function POST({ request, params, locals }) {
         const updatedDream = await prisma.dream.update({
             where: { id: dreamId },
             data: {
-                status: status as App.Dream['status'],
+                status: validatedData.status as App.Dream['status'], // Use validated status
                 updatedAt: new Date()
             }
         });
