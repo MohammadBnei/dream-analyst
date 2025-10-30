@@ -1,14 +1,14 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
-	import dreamerLogo from '$lib/assets/dreamer-logo.png'; 
-	import darkDreamerLogo from '$lib/assets/dark-dreamer-logo.png'; 
+	import dreamerLogo from '$lib/assets/dreamer-logo.png';
+	import darkDreamerLogo from '$lib/assets/dark-dreamer-logo.png';
 	import { onMount } from 'svelte';
 
 	// Assuming data will be passed from +page.server.ts, including user login status
 	let { data } = $props();
 
 	let deferredPrompt: Event | null = null;
-	let showInstallButton = false;
+	let showInstallButton = $state(false);
 
 	onMount(() => {
 		window.addEventListener('beforeinstallprompt', (e) => {
@@ -57,8 +57,16 @@
 <div class="container mx-auto p-4">
 	<div class="hero mb-8 rounded-lg bg-base-200 shadow-xl">
 		<div class="hero-content flex-col lg:flex-row">
-			<img src={dreamerLogo} alt={m.app_name()} class="max-w-sm rounded-lg shadow-2xl dark:hidden" />
-			<img src={darkDreamerLogo} alt={m.app_name()} class="max-w-sm rounded-lg shadow-2xl hidden dark:block" />
+			<img
+				src={dreamerLogo}
+				alt={m.app_name()}
+				class="max-w-sm rounded-lg shadow-2xl dark:hidden"
+			/>
+			<img
+				src={darkDreamerLogo}
+				alt={m.app_name()}
+				class="hidden max-w-sm rounded-lg shadow-2xl dark:block"
+			/>
 			<!-- Adjusted icon size -->
 			<div>
 				<h1 class="text-5xl font-bold">{m.home_page_title()}</h1>
@@ -76,9 +84,7 @@
 
 	{#if showInstallButton}
 		<section class="mb-8 text-center">
-			<button on:click={installPWA} class="btn btn-secondary btn-lg">
-				Install App
-			</button>
+			<button onclick={installPWA} class="btn btn-lg btn-secondary"> Install App </button>
 		</section>
 	{/if}
 
