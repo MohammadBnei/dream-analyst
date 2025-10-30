@@ -14,6 +14,7 @@
 	let isSendingChatMessage = $state(false);
 	let chatError = $state<string | null>(null);
 	let chatContainer: HTMLElement; // Reference to the chat scroll container
+	let abortController: AbortController | null = null; // To manage stream cancellation
 
 	onMount(async () => {
 		chatService = new ClientChatService(dreamId, {
@@ -34,6 +35,7 @@
 			},
 			onEnd: async (data) => {
 				isSendingChatMessage = false;
+				abortController = null; // Reset controller
 				if (data.message) {
 					chatError = data.message;
 				}
@@ -44,12 +46,14 @@
 			onError: (errorMsg) => {
 				console.error('Chat stream error:', errorMsg);
 				isSendingChatMessage = false;
+				abortController = null; // Reset controller
 				chatError = errorMsg;
 				scrollToBottom();
 			},
 			onClose: () => {
 				console.log('Chat service stream closed.');
 				isSendingChatMessage = false;
+				abortController = null; // Reset controller
 			}
 		});
 
@@ -57,6 +61,7 @@
 
 		return () => {
 			chatService?.closeStream();
+			abortController?.abort(); // Abort any pending requests on component unmount
 		};
 	});
 
@@ -74,18 +79,35 @@
 		chatInput = ''; // Clear input immediately
 		isSendingChatMessage = true;
 		chatError = null;
+		abortController = new AbortController(); // Create a new AbortController for this request
 
 		// Add user message to display
 		chatMessages = [...chatMessages, { role: 'user', content: messageToSend }];
 		scrollToBottom();
 
 		try {
-			await chatService.sendMessage(messageToSend);
+			await chatService.sendMessage(messageToSend, abortController.signal);
 			// The onEnd callback will handle setting isSendingChatMessage to false and reloading history
 		} catch (error) {
-			console.error('Error sending chat message:', error);
-			chatError = `Failed to send message: ${(error as Error).message}`;
+			if ((error as Error).name === 'AbortError') {
+				console.log('Chat message sending aborted by user.');
+				chatError = 'Chat message sending aborted.';
+			} else {
+				console.error('Error sending chat message:', error);
+				chatError = `Failed to send message: ${(error as Error).message}`;
+			}
 			isSendingChatMessage = false;
+			abortController = null; // Reset controller on error or abort
+		}
+	}
+
+	function cancelChatMessage() {
+		if (abortController) {
+			abortController.abort();
+			console.log('Attempting to cancel chat message...');
+			isSendingChatMessage = false; // Immediately update UI
+			chatError = 'Chat generation cancelled.';
+			abortController = null; // Clear the controller
 		}
 	}
 
@@ -173,16 +195,19 @@
 			}}
 			disabled={isSendingChatMessage}
 		/>
-		<button
-			class="btn btn-primary"
-			onclick={sendChatMessage}
-			disabled={!chatInput.trim() || isSendingChatMessage}
-		>
-			{#if isSendingChatMessage}
+		{#if isSendingChatMessage}
+			<button class="btn btn-warning" onclick={cancelChatMessage}>
 				<span class="loading loading-spinner"></span>
-			{:else}
+				{m.cancel_button()}
+			</button>
+		{:else}
+			<button
+				class="btn btn-primary"
+				onclick={sendChatMessage}
+				disabled={!chatInput.trim() || isSendingChatMessage}
+			>
 				{m.send_button()}
-			{/if}
-		</button>
+			</button>
+		{/if}
 	</div>
 </div>

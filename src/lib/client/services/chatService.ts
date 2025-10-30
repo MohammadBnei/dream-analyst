@@ -17,8 +17,9 @@ interface ChatCallbacks {
 export class ClientChatService {
     private dreamId: string;
     private callbacks: ChatCallbacks;
-    private abortController: AbortController | null = null;
-    private jsonBuffer: string = '';
+    // Removed abortController and jsonBuffer from here, as they are now managed per-request in Svelte component
+    // private abortController: AbortController | null = null;
+    // private jsonBuffer: string = '';
 
     constructor(dreamId: string, callbacks: ChatCallbacks) {
         this.dreamId = dreamId;
@@ -56,21 +57,19 @@ export class ClientChatService {
     /**
      * Sends a user message to the AI and streams the response.
      * @param message The user's message.
+     * @param signal An AbortSignal to cancel the request.
      */
-    public async sendMessage(message: string): Promise<void> {
+    public async sendMessage(message: string, signal?: AbortSignal): Promise<void> {
         if (!browser) {
             console.warn('ClientChatService can only run in the browser.');
             this.callbacks.onError('ClientChatService can only run in the browser.');
             return;
         }
 
-        if (this.abortController) {
-            this.closeStream(); // Ensure any existing stream is closed before starting a new one
-        }
-
-        this.abortController = new AbortController();
-        const signal = this.abortController.signal;
-        this.jsonBuffer = ''; // Reset buffer for new stream
+        // The abortController and jsonBuffer are now managed by the calling component
+        // this.abortController = new AbortController();
+        // const signal = this.abortController.signal;
+        let jsonBuffer = ''; // Use a local buffer for this stream
 
         try {
             const response = await fetch(`/api/dreams/${this.dreamId}/chat-interpretation`, {
@@ -80,7 +79,7 @@ export class ClientChatService {
                     'Accept': 'application/x-ndjson'
                 },
                 body: JSON.stringify({ message }),
-                signal: signal
+                signal: signal // Pass the provided signal
             });
 
             if (!response.ok || !response.body) {
@@ -103,12 +102,12 @@ export class ClientChatService {
                             break;
                         }
 
-                        this.jsonBuffer += decoder.decode(value, { stream: true });
+                        jsonBuffer += decoder.decode(value, { stream: true });
 
-                        let boundary = this.jsonBuffer.indexOf('\n');
+                        let boundary = jsonBuffer.indexOf('\n');
                         while (boundary !== -1) {
-                            const line = this.jsonBuffer.substring(0, boundary).trim();
-                            this.jsonBuffer = this.jsonBuffer.substring(boundary + 1);
+                            const line = jsonBuffer.substring(0, boundary).trim();
+                            jsonBuffer = jsonBuffer.substring(boundary + 1);
 
                             if (line) {
                                 try {
@@ -117,7 +116,8 @@ export class ClientChatService {
 
                                     if (parsed.final) {
                                         this.callbacks.onEnd({ message: parsed.message });
-                                        this.closeStream(); // Close the client stream
+                                        // No need to call closeStream here, as the component manages the abortController
+                                        // this.closeStream();
                                         return; // Exit readStream
                                     }
                                 } catch (e) {
@@ -125,11 +125,11 @@ export class ClientChatService {
                                     this.callbacks.onError(`Failed to parse chat data: ${line}`);
                                 }
                             }
-                            boundary = this.jsonBuffer.indexOf('\n');
+                            boundary = jsonBuffer.indexOf('\n');
                         }
                     }
                 } catch (error) {
-                    if (signal.aborted) {
+                    if (signal?.aborted) { // Check if the signal was aborted
                         console.debug('Chat stream aborted by user for dream:', this.dreamId);
                         this.callbacks.onClose?.();
                     } else {
@@ -138,20 +138,20 @@ export class ClientChatService {
                     }
                 } finally {
                     reader.releaseLock();
-                    this.abortController = null;
+                    // this.abortController = null; // Managed by component
                 }
             };
 
             readStream();
 
         } catch (error) {
-            if (signal.aborted) {
+            if (signal?.aborted) { // Check if the signal was aborted
                 console.debug('Chat fetch aborted by user for dream:', this.dreamId);
                 this.callbacks.onClose?.();
             } else {
                 console.error('Chat fetch initiation error for dream:', this.dreamId, error);
                 this.callbacks.onError(`Failed to connect to chat stream: ${(error as Error).message}`);
-                this.abortController = null;
+                // this.abortController = null; // Managed by component
             }
         }
     }
@@ -184,11 +184,11 @@ export class ClientChatService {
     }
 
     public closeStream(): void {
-        if (this.abortController) {
-            this.abortController.abort();
-            this.abortController = null;
-            console.debug('Chat stream manually closed for dream:', this.dreamId);
-            this.callbacks.onClose?.();
-        }
+        // This method is now primarily for cleanup if the component needs to explicitly close something
+        // The abortController is managed by the component for individual requests.
+        // If there was a persistent EventSource or WebSocket, this would be used to close it.
+        // For fetch streams, the signal handles cancellation.
+        console.debug('ClientChatService closeStream called. No active persistent stream to close.');
+        this.callbacks.onClose?.();
     }
 }
