@@ -4,9 +4,9 @@ kind: Kustomization
 namespace: dream-analyst
 
 resources:
-  - deployment.yml
-  - service.yml
+- deployment.yml
+- service.yml
 
 images:
 - name: mohammaddocker/dream-analyst
-  newTag: 0.15.0
+  newTag: 0.16.0
