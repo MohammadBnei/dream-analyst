@@ -15,7 +15,7 @@
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>(dream.tags || []);
-	let currentDreamStatus = $derived<App.Dream['status']>(dream.status);
+	let currentDreamStatus = $state<App.Dream['status']>(dream.status);
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -377,7 +377,25 @@
 								</button>
 							{/if}
 							{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
-								<form method="POST" action="?/resetAnalysis" use:enhance>
+								<form
+									method="POST"
+									action="?/resetAnalysis"
+									use:enhance={() => {
+										isLoadingStream = true; // Optimistically set loading state
+										streamedInterpretation = ''; // Clear previous interpretation
+										streamedTags = []; // Clear previous tags
+										streamError = null; // Clear previous error
+										currentDreamStatus = 'pending_analysis'; // Optimistically set status
+										return async ({ update, result }) => {
+											await update(); // Update page data from server response
+											if (result.type === 'success') {
+												startStream(); // Start the stream if reset was successful
+											} else {
+												isLoadingStream = false; // Reset loading on error
+											}
+										};
+									}}
+								>
 									<button type="submit" class="btn btn-sm btn-primary" disabled={isLoadingStream}>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
