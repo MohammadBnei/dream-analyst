@@ -6,10 +6,11 @@ const N8N_AUDIO_TRANSCRIBE_URL = env.N8N_AUDIO_TRANSCRIBE_URL; // New environmen
 const N8N_AUTH = env.N8N_AUTH;
 
 // Define the custom type for the processed stream chunks
-export interface AnalysisStreamChunk {
+// Renamed to N8nStreamChunk to reflect its origin, as it's not fully generic yet
+export interface AnalysisStreamChunk { // Keeping this name for now to avoid cascading changes, but it's effectively N8nStreamChunk
     content?: string;
     tags?: string[];
-    status?: Dream['status'];
+    status?: Dream['status']; // This is still specific to DreamStatus
     message?: string; // For error messages or other info
     finalStatus?: 'COMPLETED' | 'ANALYSIS_FAILED'; // New field to signal final status
 }
@@ -33,12 +34,6 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
             headers: headers,
             body: JSON.stringify({ dreamId, rawText })
         });
-
-        // Log the response body to inspect its type and content
-        // Note: response.body can only be read once. If you read it here, pipeTo will fail.
-        // So, we'll check its type and then let pipeTo consume it.
-        // If you need to inspect content, you might need to clone the response or read it fully.
-        // For now, let's just check if it's a ReadableStream.
 
         if (!response.ok) {
             const errorText = await response.text();
@@ -65,8 +60,6 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
 
         response.body.pipeTo(new WritableStream({
             async write(chunk) {
-                // This console.log is useful for confirming chunks are received by the WritableStream
-                // If this doesn't log, the issue is before pipeTo.
                 console.log(`Dream ${dreamId}: Received chunk from n8nResponseStream. Size: ${chunk.length}`);
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
@@ -119,7 +112,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
                 }
                 console.log(`Dream ${dreamId}: n8n stream finished.`);
                 // Signal completion to the consumer
-                await writer.write(encoder.encode(JSON.stringify({ finalStatus: 'completed' }) + '\n'));
+                await writer.write(encoder.encode(JSON.stringify({ finalStatus: 'COMPLETED' }) + '\n')); // Changed to DreamStatus.COMPLETED
                 await writer.close();
             },
             async abort(reason) {
