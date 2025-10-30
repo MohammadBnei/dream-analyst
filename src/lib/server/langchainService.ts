@@ -20,9 +20,7 @@ export interface AnalysisStreamChunk {
 }
 
 export async function initiateStreamedDreamAnalysis(
-	dreamId: string,
-	userId: string, // Added userId to deduct credits
-	rawText: string,
+	dream: Dream,
 	promptType: DreamPromptType = 'jungian', // Add promptType parameter with a default
 	signal?: AbortSignal
 ): Promise<ReadableStream<Uint8Array>> {
@@ -40,17 +38,17 @@ export async function initiateStreamedDreamAnalysis(
 
 	try {
 		// Check if user has enough credits before starting the LLM call
-		const hasCredits = await creditService.checkCredits(userId, cost);
+		const hasCredits = await creditService.checkCredits(dream.userId, cost);
 		if (!hasCredits) {
 			throw new Error('Insufficient credits for dream analysis or daily limit exceeded.');
 		}
 		// Deduct credits and get the new balance (transaction is recorded internally)
-		await creditService.deductCredits(userId, cost, 'DREAM_ANALYSIS', dreamId);
+		await creditService.deductCredits(dream.userId, cost, 'DREAM_ANALYSIS', dream.id);
 		// Note: The deductCredits method records the transaction. We don't need its ID here directly
 		// unless we wanted to link it to the stream itself, which is more complex.
 		// For now, linking to dreamId is sufficient.
 	} catch (creditError) {
-		console.error(`Credit deduction failed for dream ${dreamId}, user ${userId}:`, creditError);
+		console.error(`Credit deduction failed for dream ${dream.id}, user ${dream.userId}:`, creditError);
 		return new ReadableStream({
 			start(controller) {
 				controller.enqueue(
@@ -82,7 +80,7 @@ export async function initiateStreamedDreamAnalysis(
 
 		// Use the PromptService to get the system prompt, which now handles Jungian knowledge
 		const systemPrompt = promptService.getSystemPrompt(promptType);
-		const messages = [new SystemMessage(systemPrompt), new HumanMessage(`My dream: ${rawText}`)];
+		const messages = [new SystemMessage(systemPrompt), new HumanMessage(`My dream: ${dream.rawText}`)];
 
 		const stream = await chat.stream(messages, {
 			signal: signal // Pass the abort signal directly to the stream method
@@ -93,7 +91,7 @@ export async function initiateStreamedDreamAnalysis(
 				try {
 					for await (const chunk of stream) {
 						if (signal?.aborted) {
-							console.debug(`Dream ${dreamId}: LangChain stream aborted by signal.`);
+							console.debug(`Dream ${dream.id}: LangChain stream aborted by signal.`);
 							break; // Exit the loop if aborted
 						}
 
@@ -131,7 +129,7 @@ export async function initiateStreamedDreamAnalysis(
 						controller.enqueue(encoder.encode(JSON.stringify({ finalStatus: 'COMPLETED' }) + '\n'));
 					}
 				} catch (error) {
-					console.error(`Dream ${dreamId}: Error during LangChain stream processing:`, error);
+					console.error(`Dream ${dream.id}: Error during LangChain stream processing:`, error);
 					controller.enqueue(
 						encoder.encode(
 							JSON.stringify({
@@ -146,7 +144,7 @@ export async function initiateStreamedDreamAnalysis(
 			},
 			cancel(reason) {
 				console.debug(
-					`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel). Reason:`,
+					`Dream ${dream.id}: Client stream cancelled (ReadableStream cancel). Reason:`,
 					reason
 				);
 			}

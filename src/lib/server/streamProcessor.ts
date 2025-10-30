@@ -1,4 +1,4 @@
-import { DreamStatus } from '@prisma/client';
+import { DreamStatus, type Dream } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import {
@@ -234,29 +234,33 @@ const activeStreamProcessors = new Map<string, StreamProcessor>();
  * @returns The StreamProcessor instance.
  */
 export async function getOrCreateStreamProcessor(
-	streamId: string,
-	rawText: string,
+	dream: Dream,
 	platform: App.Platform | undefined,
-	promptType: DreamPromptType // Added promptType parameter
+	promptType: DreamPromptType, // Added promptType parameter
+	signal?: AbortSignal
 ): Promise<StreamProcessor> {
-	if (activeStreamProcessors.has(streamId)) {
-		return activeStreamProcessors.get(streamId)!;
+	if (activeStreamProcessors.has(dream.id)) {
+		return activeStreamProcessors.get(dream.id)!;
 	}
 
-	const processor = new StreamProcessor(streamId, platform);
+	const processor = new StreamProcessor(dream.id, platform);
 	await processor.init();
 	processor.setPromptType(promptType); // Set the prompt type on the processor
-	activeStreamProcessors.set(streamId, processor);
+	activeStreamProcessors.set(dream.id, processor);
+
+	if (!signal) {
+		signal = new AbortController().signal;
+	}
 
 	// Create the LangChain stream here
-	const llmStream = await initiateStreamedDreamAnalysis(streamId, rawText, promptType);
+	const llmStream = await initiateStreamedDreamAnalysis(dream, promptType, signal);
 
 	// Start the processing in the background.
 	// The processor itself will handle its lifecycle and removal from the map
 	// once the processing is truly complete or failed.
 	processor.startProcessing(llmStream).finally(() => {
 		// Remove from map once the processing process (including DB updates and Redis cleanup) is done
-		activeStreamProcessors.delete(streamId);
+		activeStreamProcessors.delete(dream.id);
 	});
 
 	return processor;

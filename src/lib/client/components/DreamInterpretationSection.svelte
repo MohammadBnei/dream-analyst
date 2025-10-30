@@ -6,10 +6,7 @@
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 	import { promptService } from '$lib/prompts/promptService';
 
-	type DreamStatus = 'COMPLETED' | 'PENDING_ANALYSIS' | 'ANALYSIS_FAILED' | 'STALLED';
-
 	let {
-		dreamId,
 		interpretation,
 		tags,
 		status,
@@ -235,16 +232,3 @@
 		/>
 	{/if}
 </div>
-
-<!-- Hidden form for cancelling analysis -->
-<form
-	bind:this={cancelAnalysisForm}
-	method="POST"
-	action="?/cancelAnalysis"
-	style="display: none;"
-	use:enhance={() => {
-		return async ({ update }) => {
-			await update();
-		};
-	}}
-></form>

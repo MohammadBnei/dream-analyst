@@ -30,8 +30,8 @@
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
 
-	let analysisService: DreamAnalysisService | null = null;
-	let clientChatService: ClientChatService | null = null;
+	let analysisService: DreamAnalysisService | null = $state(null);
+	let clientChatService: ClientChatService | null = $state(null);
 
 	let selectedPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 

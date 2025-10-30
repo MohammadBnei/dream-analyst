@@ -19,7 +19,7 @@ export interface ChatMessage {
 }
 
 class ChatService {
-	private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
+	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
 
 	constructor() {
 		// Initialize prisma client here, or ensure it's initialized before use
