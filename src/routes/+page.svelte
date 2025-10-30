@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
-	import icon512 from '$lib/assets/icon-512x512.png'; // Import the icon
+	import dreamerLogo from '$lib/assets/dreamer-logo.png'; 
+	import darkDreamerLogo from '$lib/assets/dark-dreamer-logo.png'; 
 
 	// Assuming data will be passed from +page.server.ts, including user login status
 	let { data } = $props();
@@ -18,13 +19,13 @@
 </svelte:head>
 
 <div class="container mx-auto p-4">
-	<div class="hero bg-base-200 rounded-lg shadow-xl mb-8">
-		<div class="hero-content text-center">
-			<div class="max-w-md">
-				<div class="flex items-center justify-center gap-4 mb-4"> <!-- Flex container for icon and title -->
-					<img src={icon512} alt={m.app_name()} class="w-16 h-16" /> <!-- Adjusted icon size -->
-					<h1 class="text-5xl font-bold">{m.home_page_title()}</h1>
-				</div>
+	<div class="hero mb-8 rounded-lg bg-base-200 shadow-xl">
+		<div class="hero-content flex-col lg:flex-row">
+			<img src={dreamerLogo} alt={m.app_name()} class="max-w-sm rounded-lg shadow-2xl dark:hidden" />
+			<img src={darkDreamerLogo} alt={m.app_name()} class="max-w-sm rounded-lg shadow-2xl hidden dark:block" />
+			<!-- Adjusted icon size -->
+			<div>
+				<h1 class="text-5xl font-bold">{m.home_page_title()}</h1>
 				<p class="py-6">
 					{m.home_page_intro()}
 				</p>
@@ -38,8 +39,8 @@
 	</div>
 
 	<section class="py-8">
-		<h2 class="text-4xl font-bold text-center mb-8">{m.how_it_works_title()}</h2>
-		<ul class="steps steps-vertical lg:steps-horizontal w-full">
+		<h2 class="mb-8 text-center text-4xl font-bold">{m.how_it_works_title()}</h2>
+		<ul class="steps steps-vertical w-full lg:steps-horizontal">
 			<li class="step step-primary">
 				<div class="text-lg font-semibold">{m.how_it_works_step_1()}</div>
 			</li>
@@ -62,8 +63,8 @@
 	</section>
 
 	<section class="py-8">
-		<h2 class="text-4xl font-bold text-center mb-8">Features</h2>
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+		<h2 class="mb-8 text-center text-4xl font-bold">Features</h2>
+		<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
 			<div class="card bg-base-100 shadow-xl">
 				<div class="card-body">
 					<h3 class="card-title">{m.feature_dream_capture_title()}</h3>
