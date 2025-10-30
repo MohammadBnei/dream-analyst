@@ -179,11 +179,9 @@
 					onCancelAnalysis={handleCancelAnalysis}
 				/>
 
-				{#if dream.interpretation}
+				{#if !isLoadingStream}
 					<DreamChatSection
 						dreamId={dream.id}
-						initialChatMessages={chatMessages}
-						chatServiceInstance={clientChatService}
 					/>
 				{/if}
 
