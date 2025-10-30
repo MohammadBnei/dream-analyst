@@ -129,5 +129,7 @@
 	"update_failed": "Update failed.",
 	"role_label": "Role",
 	"credits_label": "Credits",
-	"daily_usage_label": "Daily Usage"
+	"daily_usage_label": "Daily Usage",
+	"profile_link": "Profile",
+	"admin_link": "Admin"
 }
