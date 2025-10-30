@@ -18,7 +18,7 @@
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
 
-	let showDeleteModal = $state(false);
+	// Removed showDeleteModal state as it's replaced by checkbox
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 
@@ -182,17 +182,7 @@
 		goto('/dreams');
 	}
 
-	function handleShowDeleteModal() {
-		showDeleteModal = true;
-	}
-
-	function handleCancelDelete() {
-		showDeleteModal = false;
-	}
-
-	function handleModalSelfClick() {
-		showDeleteModal = false;
-	}
+	// Removed handleShowDeleteModal, handleCancelDelete, handleModalSelfClick
 
 	function toggleEditMode() {
 		isEditing = !isEditing;
@@ -247,9 +237,10 @@
 		</button>
 		<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
 		<div class="w-24 text-right">
-			<button onclick={handleShowDeleteModal} class="btn btn-sm btn-error">
+			<!-- Button to open modal -->
+			<label for="delete_dream_modal" class="btn btn-sm btn-error">
 				{m.delete_dream_button()}
-			</button>
+			</label>
 		</div>
 	</div>
 
@@ -515,57 +506,6 @@
 				</div>
 			</div>
 		</div>
-
-		<!-- Delete Confirmation Modal -->
-		{#if showDeleteModal}
-			<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick} >
-				<div class="modal-box">
-					<h3 class="text-lg font-bold">{m.confirm_deletion_title()}</h3>
-					<p class="py-4">{m.confirm_deletion_message()}</p>
-					{#if deleteError}
-						<div class="mb-4 alert alert-error shadow-lg">
-							<div>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-6 w-6 flex-shrink-0 stroke-current"
-									fill="none"
-									viewBox="0 0 24 24"
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-									></path></svg
-								>
-								<span>{deleteError}</span>
-							</div>
-						</div>
-					{/if}
-					<div class="modal-action">
-						<button
-							onclick={handleCancelDelete}
-							type="button"
-							class="btn btn-ghost"
-							disabled={isDeleting}>{m.cancel_button()}</button
-						>
-						<form
-							method="POST"
-							action="?/deleteDream"
-							use:enhance
-						>
-							<button type="submit" class="btn btn-error" disabled={isDeleting}>
-								{#if isDeleting}
-									<span class="loading loading-spinner"></span>
-									{m.deleting_button()}
-								{:else}
-									{m.delete_button()}
-								{/if}
-							</button>
-						</form>
-					</div>
-				</div>
-			</dialog>
-		{/if}
 	{:else}
 		<!-- This block handles the case where data.dream is null, e.g., if the load function threw an error -->
 		<div role="alert" class="alert alert-error">
@@ -600,3 +540,59 @@
 		};
 	}}
 ></form>
+
+<!-- Delete Confirmation Checkbox Modal -->
+<input type="checkbox" id="delete_dream_modal" class="modal-toggle" />
+<div class="modal" role="dialog">
+	<div class="modal-box">
+		<h3 class="text-lg font-bold">{m.confirm_deletion_title()}</h3>
+		<p class="py-4">{m.confirm_deletion_message()}</p>
+		{#if deleteError}
+			<div class="mb-4 alert alert-error shadow-lg">
+				<div>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6 flex-shrink-0 stroke-current"
+						fill="none"
+						viewBox="0 0 24 24"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+						></path></svg
+					>
+					<span>{deleteError}</span>
+				</div>
+			</div>
+		{/if}
+		<div class="modal-action">
+			<label for="delete_dream_modal" class="btn btn-ghost" disabled={isDeleting}
+				>{m.cancel_button()}</label
+			>
+			<form
+				method="POST"
+				action="?/deleteDream"
+				use:enhance={() => {
+					isDeleting = true;
+					return async ({ update }) => {
+						await update();
+						// Redirection is handled by the action, so no need to set isDeleting to false here
+						// Close the modal after successful deletion (before redirect)
+						const checkbox = document.getElementById('delete_dream_modal') as HTMLInputElement;
+						if (checkbox) checkbox.checked = false;
+					};
+				}}
+			>
+				<button type="submit" class="btn btn-error" disabled={isDeleting}>
+					{#if isDeleting}
+						<span class="loading loading-spinner"></span>
+						{m.deleting_button()}
+					{:else}
+						{m.delete_button()}
+					{/if}
+				</button>
+			</form>
+		</div>
+	</div>
+</div>
