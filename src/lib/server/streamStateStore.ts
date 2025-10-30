@@ -181,7 +181,7 @@ class StreamStateStore {
 
     /**
      * Checks if a stream is currently ongoing and not stalled.
-     * If stalled, it will return false.
+     * If stalled, it will return false and also clear the stalled state from Redis.
      * @param streamId The ID of the stream.
      * @returns True if stream is ongoing, false otherwise.
      */
@@ -190,8 +190,18 @@ class StreamStateStore {
         if (state && (state.status === StreamStatus.PENDING || state.status === StreamStatus.IN_PROGRESS)) {
             const now = Date.now();
             if ((now - state.lastUpdate) / 1000 > REDIS_STALL_THRESHOLD_SECONDS) {
-                console.warn(`Stream ${streamId}: Detected stalled stream (last update ${state.lastUpdate}).`);
-                return false; // Simply return false if stalled, don't update state or publish
+                console.warn(`Stream ${streamId}: Detected stalled stream (last update ${state.lastUpdate}). Marking as FAILED and clearing state.`);
+                // Mark as failed and publish a final update
+                await this.updateStreamState(streamId, {
+                    finalStatus: 'ANALYSIS_FAILED', // Use n8nService's finalStatus type
+                    message: 'Stream stalled and automatically cleared.'
+                }, true);
+                await this.publishUpdate(streamId, {
+                    finalStatus: 'ANALYSIS_FAILED',
+                    message: 'Stream stalled and automatically cleared.'
+                });
+                await this.clearStreamState(streamId); // Clear the stalled state
+                return false;
             }
             return true;
         }
