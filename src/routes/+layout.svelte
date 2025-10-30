@@ -77,11 +77,12 @@
 					>
 				</label>
 			</div>
-			<div class="mx-2 flex-1 px-2 text-xl font-bold">{m.app_name()}</div>
+			<div class="mx-2 flex-1 px-2 text-xl font-bold">
+				<a href="/" class="btn btn-ghost text-xl">{m.app_name()}</a>
+			</div>
 			<div class="hidden flex-none lg:block">
 				<ul class="menu menu-horizontal">
 					<!-- Navbar menu content here -->
-					<li><a href="/">{m.home_link()}</a></li>
 					{#if isLoggedIn}
 						<li><a href="/dreams">{m.dreams_link()}</a></li>
 						<li>
