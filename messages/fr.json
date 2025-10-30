@@ -132,5 +132,9 @@
 	"credits_label": "Crédits",
 	"daily_usage_label": "Utilisation quotidienne",
 	"profile_link": "Profil",
-	"admin_link": "Admin"
+	"admin_link": "Admin",
+	"admin_dashboard_title": "Tableau de bord administrateur",
+	"actions_label": "Actions",
+	"grant_button": "Accorder",
+	"deduct_button": "Déduire"
 }
