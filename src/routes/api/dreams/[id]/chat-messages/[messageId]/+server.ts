@@ -1,11 +1,10 @@
+import { getPrismaClient } from '$lib/server/db/index.js';
 import { error, json } from '@sveltejs/kit';
-import { getPrismaClient } from '$lib/server/prisma';
-import { getCurrentUser } from '$lib/remote/dream.remote'; // Assuming this is the correct path for getCurrentUser
 
 export async function DELETE({ params, locals }) {
     const dreamId = params.id;
     const messageId = params.messageId;
-    const sessionUser = await getCurrentUser(locals); // Use await as getCurrentUser is async
+    const sessionUser = locals.user; // Use await as getCurrentUser is async
     const prisma = await getPrismaClient();
 
     if (!sessionUser) {
@@ -18,7 +17,7 @@ export async function DELETE({ params, locals }) {
 
     try {
         // Verify the message belongs to the dream and the dream belongs to the user
-        const message = await prisma.chatMessage.findFirst({
+        const message = await prisma.dreamChat.findFirst({
             where: {
                 id: messageId,
                 dreamId: dreamId,
@@ -32,7 +31,7 @@ export async function DELETE({ params, locals }) {
             throw error(404, 'Chat message not found or not authorized to delete.');
         }
 
-        await prisma.chatMessage.delete({
+        await prisma.dreamChat.delete({
             where: {
                 id: messageId
             }

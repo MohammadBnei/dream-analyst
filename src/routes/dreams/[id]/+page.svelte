@@ -25,7 +25,7 @@
 	type DreamStatus = typeof dream.status;
 
 	let streamedInterpretation = $state(dream.interpretation || '');
-	let streamedTags = $state<string[]>(dream.tags as string[] || []);
+	let streamedTags = $state<string[]>((dream.tags as string[]) || []);
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -46,7 +46,7 @@
 			prevDreamId = data.prevDreamId;
 			if (!isLoadingStream) {
 				streamedInterpretation = dream.interpretation || '';
-				streamedTags = dream.tags as string[] || [];
+				streamedTags = (dream.tags as string[]) || [];
 			}
 			selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 		}
@@ -78,30 +78,10 @@
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			startStream(selectedPromptType);
 		}
-
-		// Initialize chat service if interpretation exists
-		if (dream.interpretation && dream.id) {
-			clientChatService = new ClientChatService(dream.id, {
-				onMessage: (data) => {
-					// This will be handled by DreamChatSection's internal state
-				},
-				onEnd: async (data) => {
-					// This will be handled by DreamChatSection's internal state
-				},
-				onError: (errorMsg) => {
-					// This will be handled by DreamChatSection's internal state
-				},
-				onClose: () => {
-					// This will be handled by DreamChatSection's internal state
-				}
-			});
-			chatMessages = await clientChatService.loadHistory();
-		}
 	});
 
 	onDestroy(() => {
 		analysisService?.closeStream();
-		clientChatService?.closeStream();
 	});
 
 	function startStream(promptType: DreamPromptType) {
@@ -177,11 +157,7 @@
 
 		<div class="card bg-base-100 p-6 shadow-xl">
 			<div class="card-body p-0">
-				<DreamNavigation
-					dreamDate={dream.dreamDate}
-					prevDreamId={prevDreamId}
-					nextDreamId={nextDreamId}
-				>
+				<DreamNavigation dreamDate={dream.dreamDate} {prevDreamId} {nextDreamId}>
 					<svelte:fragment slot="status-badge">
 						<DreamStatusBadge status={dream.status} />
 					</svelte:fragment>
@@ -197,8 +173,8 @@
 					tags={streamedTags}
 					status={dream.status}
 					promptType={selectedPromptType}
-					isLoadingStream={isLoadingStream}
-					streamError={streamError}
+					{isLoadingStream}
+					{streamError}
 					onRegenerateAnalysis={startStream}
 					onCancelAnalysis={handleCancelAnalysis}
 				/>

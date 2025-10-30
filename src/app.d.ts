@@ -1,6 +1,6 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 
-import type { Dream } from "@prisma/client";
+import type { Dream, DreamChat } from "@prisma/client";
 
 // for information about these interfaces
 declare global {
@@ -19,6 +19,7 @@ declare global {
 		// interface PageData {}
 		// interface Platform {}
 
+		interface ChatMessage extends DreamChat { }
 	}
 }
 

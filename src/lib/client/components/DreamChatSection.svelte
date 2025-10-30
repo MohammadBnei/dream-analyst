@@ -15,10 +15,6 @@
 	let chatError = $state<string | null>(null);
 	let chatContainer: HTMLElement; // Reference to the chat scroll container
 
-	$effect(() => {
-		chatMessages && scrollToBottom();
-	});
-
 	onMount(async () => {
 		chatService = new ClientChatService(dreamId, {
 			onMessage: (data) => {
@@ -58,6 +54,10 @@
 		});
 
 		chatMessages = await chatService.loadHistory();
+
+		return () => {
+			chatService?.closeStream();
+		};
 	});
 
 	async function loadChatHistory() {
@@ -91,10 +91,6 @@
 
 	async function deleteChatMessage(messageId: string) {
 		if (!chatService) return;
-
-		if (!confirm(m.confirm_delete_chat_message())) {
-			return;
-		}
 
 		try {
 			await chatService.deleteMessage(messageId);
@@ -132,7 +128,7 @@
 					/>
 					{#if msg.id}
 						<button
-							class="btn btn-xs btn-ghost ml-2"
+							class="btn ml-2 btn-ghost btn-xs"
 							onclick={() => deleteChatMessage(msg.id as string)}
 							title={m.delete_chat_message_button()}
 						>
@@ -155,13 +151,6 @@
 				</div>
 			</div>
 		{/each}
-		{#if isSendingChatMessage}
-			<div class="chat-start chat">
-				<div class="chat-bubble">
-					<span class="loading loading-dots"></span>
-				</div>
-			</div>
-		{/if}
 		{#if chatError}
 			<div class="chat-start chat">
 				<div class="chat-bubble chat-bubble-error">

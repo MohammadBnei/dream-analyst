@@ -81,7 +81,7 @@
 	{#if interpretation}
 		<div class="mb-4">
 			<div class="prose max-w-none">
-				<Streamdown animation={{animateOnMount: true, enabled: true, type: 'blur'}} content={interpretation} />
+				<Streamdown animation={{animateOnMount: true, enabled: isLoading, type: 'blur'}}  content={interpretation} />
 			</div>
 		</div>
 	{/if}
