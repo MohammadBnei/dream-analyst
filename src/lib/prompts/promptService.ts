@@ -2,9 +2,11 @@ import {
     DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN,
     DREAM_INTERPRETATION_SYSTEM_PROMPT_FREUDIAN,
     DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
+    DREAM_INTERPRETATION_SYSTEM_PROMPT_ISLAMIC, // Import the new Islamic prompt
     type DreamPromptType
 } from './dreamAnalyst';
 import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // Import Jungian knowledge here
+import { ISLAMIC_KNOWLEDGE } from './knowledge/islamic'; // Import the Islamic knowledge base
 
 /**
  * A service for managing and retrieving various system prompts.
@@ -20,7 +22,8 @@ export class PromptService {
         this.prompts = {
             jungian: DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN,
             freudian: DREAM_INTERPRETATION_SYSTEM_PROMPT_FREUDIAN,
-            simple: DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE
+            simple: DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
+            islamic: DREAM_INTERPRETATION_SYSTEM_PROMPT_ISLAMIC // Initialize Islamic prompt without knowledge yet
         };
     }
 
@@ -51,6 +54,9 @@ export class PromptService {
         if (promptType === 'jungian' && JUNGIAN_KNOWLEDGE) {
             // Prepend or append the knowledge. Prepending might be better for context.
             prompt = JUNGIAN_KNOWLEDGE + '\n\n' + prompt;
+        } else if (promptType === 'islamic' && ISLAMIC_KNOWLEDGE) {
+            // Conditionally add Islamic knowledge if the prompt type is Islamic
+            prompt = ISLAMIC_KNOWLEDGE + '\n\n' + prompt;
         }
 
         return prompt;
