@@ -14,11 +14,7 @@ function getCurrentUser(locals: App.Locals) {
 export async function POST({ params, locals, platform }) {
 	const dreamId = params.id;
 	const sessionUser = getCurrentUser(locals);
-
-	if (!sessionUser) {
-		throw error(401, 'Unauthorized');
-	}
-
+	
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');
 	}
