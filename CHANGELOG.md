@@ -1,5 +1,13 @@
 # Changelog
 
+# [0.8.0](https://github.com/MohammadBnei/dream-analyst/compare/0.7.0...0.8.0) (2025-10-30)
+
+
+### Features
+
+* Add DailyDreamCount model and link to User ([858f16b](https://github.com/MohammadBnei/dream-analyst/commit/858f16b4ffc392f0381ae1359d291db3bdcea066))
+* Add DreamVersion model for interpretation versioning ([d83b3fd](https://github.com/MohammadBnei/dream-analyst/commit/d83b3fd80a73a5f140189d6f1b3a26a2830f211b))
+
 # [0.7.0](https://github.com/MohammadBnei/dream-analyst/compare/0.6.0...0.7.0) (2025-10-29)
 
 
