@@ -18,7 +18,7 @@
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>(dream.tags || []);
-	let currentDreamStatus = $derived<DreamStatus>(dream.status); // Use DreamStatus enum
+	let currentDreamStatus = $state<DreamStatus>(dream.status); // Use DreamStatus enum
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -123,7 +123,6 @@
 
 		isLoadingStream = true;
 		streamError = null;
-		// currentDreamStatus is derived, so no direct assignment needed here
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
