@@ -20,17 +20,6 @@
 	let formMessage = $state<string | null>(null);
 	let formMessageType: 'success' | 'error' | null = null;
 
-	// Effect to update local state when data from load function changes
-	$effect(() => {
-		if (data.user) {
-			user = data.user;
-			dailyLimit = data.dailyLimit;
-			dailyUsage = data.dailyUsage;
-			editedUsername = user.username;
-			editedEmail = user.email;
-		}
-	});
-
 	// Effect to handle form submission responses
 	$effect(() => {
 		if (form) {
@@ -150,6 +139,7 @@
 							formMessage = null; // Clear previous messages
 							usernameEditError = null;
 							return async ({ update }) => {
+								user.username = editedUsername;
 								await update();
 							};
 						}}
@@ -208,6 +198,7 @@
 							formMessage = null; // Clear previous messages
 							emailEditError = null;
 							return async ({ update }) => {
+								user.email = editedEmail;
 								await update();
 							};
 						}}

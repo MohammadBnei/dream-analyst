@@ -11,7 +11,7 @@ const UpdateProfileSchema = z.object({
 		.min(3, 'Username must be at least 3 characters long')
 		.max(50, 'Username cannot exceed 50 characters')
 		.optional(),
-	email: z.string().email('Invalid email address').optional()
+	email: z.email('Invalid email address').optional()
 });
 
 export const load = async ({ locals }) => {
@@ -111,7 +111,6 @@ export const actions = {
 				updatedUser.username,
 				updatedUser.email,
 				updatedUser.role,
-				updatedUser.credits
 			);
 			setAuthTokenCookie(cookies, newToken);
 

@@ -303,8 +303,6 @@ class CreditService {
             this.prisma = await getPrismaClient();
         }
 
-        console.log('when')
-
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
             select: { role: true, credits: true }
