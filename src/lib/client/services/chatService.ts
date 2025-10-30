@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import type { ChatMessage } from '$lib/server/chatService'; // Re-use the server-side ChatMessage interface
+import type { ChatMessage } from '$lib/chatService'; // Re-use the server-side ChatMessage interface
 
 interface ChatStreamChunk {
     content?: string;

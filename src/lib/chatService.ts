@@ -1,7 +1,7 @@
 import { env } from '$env/dynamic/private';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
-import { promptService } from '$lib/server/prompts/promptService';
+import { promptService } from '$lib/prompts/promptService';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 
@@ -11,6 +11,7 @@ const YOUR_SITE_URL = env.ORIGIN;
 
 // Define a type for chat messages
 export interface ChatMessage {
+    id: string;
     role: 'user' | 'assistant' | 'system';
     content: string;
     promptType?: DreamPromptType; // Added promptType to ChatMessage interface
@@ -46,6 +47,7 @@ class ChatService {
             },
         });
         return dbMessages.map(msg => ({
+            id: msg.id,
             role: msg.role as 'user' | 'assistant', // Assuming role is always 'user' or 'assistant'
             content: msg.content,
             promptType: msg.promptType as DreamPromptType,
@@ -169,6 +171,8 @@ class ChatService {
 
             let assistantResponse = '';
 
+            const saveChatMessage = this.saveChatMessage.bind(this);
+
             const readableStream = new ReadableStream<Uint8Array>({
                 async start(controller) {
                     try {
@@ -188,7 +192,7 @@ class ChatService {
                             controller.enqueue(encoder.encode(JSON.stringify({ final: true, message: 'Chat aborted.' }) + '\n'));
                         } else {
                             // Save AI response to DB
-                            await ChatService.getInstance().saveChatMessage(dreamId, userId, 'assistant', assistantResponse, promptType);
+                            await saveChatMessage(dreamId, userId, 'assistant', assistantResponse, promptType);
                             controller.enqueue(encoder.encode(JSON.stringify({ final: true }) + '\n'));
                         }
                     } catch (error) {

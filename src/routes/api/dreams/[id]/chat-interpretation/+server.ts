@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import { getChatService } from '$lib/server/chatService';
+import { getChatService } from '$lib/chatService';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 
 const encoder = new TextEncoder();
