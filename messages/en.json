@@ -118,5 +118,6 @@
 	"previous_dream_button": "Previous Dream",
 	"next_dream_button": "Next Dream",
 	"dream_date_label": "Dream Date:",
-	"chat_with_ai_heading": "Chat with AI"
+	"chat_with_ai_heading": "Chat with AI",
+	"type_your_message_placeholder": "Type your message..."
 }

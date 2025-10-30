@@ -118,5 +118,6 @@
 	"previous_dream_button": "Rêve Précédent",
 	"next_dream_button": "Rêve Suivant",
 	"dream_date_label": "Date du Rêve :",
-	"chat_with_ai_heading": "Discuter avec l'IA"
+	"chat_with_ai_heading": "Discuter avec l'IA",
+	"type_your_message_placeholder": "Tapez votre message..."
 }
