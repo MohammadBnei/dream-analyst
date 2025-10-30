@@ -42,7 +42,7 @@ export class DreamAnalysisService {
                 throw new Error(`Failed to start analysis stream: ${response.status} - ${errorText}`);
             }
 
-            console.log('Stream started for dream:', this.dreamId);
+            console.debug('Stream started for dream:', this.dreamId);
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
@@ -52,7 +52,7 @@ export class DreamAnalysisService {
                     while (true) {
                         const { done, value } = await reader.read();
                         if (done) {
-                            console.log('Stream finished for dream:', this.dreamId);
+                            console.debug('Stream finished for dream:', this.dreamId);
                             // Process any remaining content in the buffer
                             if (this.jsonBuffer.trim()) {
                                 try {
@@ -93,7 +93,7 @@ export class DreamAnalysisService {
                     }
                 } catch (error) {
                     if (signal.aborted) {
-                        console.log('Stream aborted by user for dream:', this.dreamId);
+                        console.debug('Stream aborted by user for dream:', this.dreamId);
                         this.callbacks.onClose?.();
                     } else {
                         console.error('Stream reading error for dream:', this.dreamId, error);
@@ -109,7 +109,7 @@ export class DreamAnalysisService {
 
         } catch (error) {
             if (signal.aborted) {
-                console.log('Fetch aborted by user for dream:', this.dreamId);
+                console.debug('Fetch aborted by user for dream:', this.dreamId);
                 this.callbacks.onClose?.();
             } else {
                 console.error('Fetch initiation error for dream:', this.dreamId, error);
@@ -123,7 +123,7 @@ export class DreamAnalysisService {
         if (this.abortController) {
             this.abortController.abort();
             this.abortController = null;
-            console.log('Stream manually closed for dream:', this.dreamId);
+            console.debug('Stream manually closed for dream:', this.dreamId);
             this.callbacks.onClose?.();
         }
         if (this.intervalId) { // Clear any polling interval if it was set

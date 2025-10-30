@@ -128,13 +128,13 @@ export class StreamProcessor { // Renamed class
         if (parsedChunk.finalStatus && !this.resultUpdatedInDb) { // Renamed property
             await this.updateResultInDb(parsedChunk.finalStatus); // Renamed method
             this.resultUpdatedInDb = true;
-            console.log(`Stream ${this.streamId}: Processor updated final status to ${parsedChunk.finalStatus} in DB.`);
+            console.debug(`Stream ${this.streamId}: Processor updated final status to ${parsedChunk.finalStatus} in DB.`);
             await this.streamStateStore.updateStreamState(this.streamId, { finalStatus: parsedChunk.finalStatus }, true); // Update Redis with final status
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: parsedChunk.finalStatus }); // Publish final status
         } else if (parsedChunk.status === DreamStatus.ANALYSIS_FAILED && !this.resultUpdatedInDb) { // Still specific to DreamStatus
             await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED); // Renamed method
             this.resultUpdatedInDb = true;
-            console.log(`Stream ${this.streamId}: Processor updated final status to ANALYSIS_FAILED (from chunk status) in DB.`);
+            console.debug(`Stream ${this.streamId}: Processor updated final status to ANALYSIS_FAILED (from chunk status) in DB.`);
             await this.streamStateStore.updateStreamState(this.streamId, { finalStatus: DreamStatus.ANALYSIS_FAILED }, true); // Update Redis with final status
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.ANALYSIS_FAILED }); // Publish final status
         }
@@ -147,7 +147,7 @@ export class StreamProcessor { // Renamed class
         if (!this.resultUpdatedInDb) { // Renamed property
             // If the stream closed without an explicit finalStatus and no error was reported, assume completion
             await this.updateResultInDb(DreamStatus.COMPLETED); // Renamed method, still specific to DreamStatus
-            console.log(`Stream ${this.streamId}: Processor finished, status set to COMPLETED in DB.`);
+            console.debug(`Stream ${this.streamId}: Processor finished, status set to COMPLETED in DB.`);
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.COMPLETED, message: 'Processing completed.' }); // Publish final status
         }
         await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on close
@@ -161,7 +161,7 @@ export class StreamProcessor { // Renamed class
 
         if (!this.resultUpdatedInDb) { // Renamed property
             await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED); // Renamed method, still specific to DreamStatus
-            console.log(`Stream ${this.streamId}: Processor aborted, status set to ANALYSIS_FAILED in DB.`);
+            console.debug(`Stream ${this.streamId}: Processor aborted, status set to ANALYSIS_FAILED in DB.`);
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: `Processing aborted: ${errorMessage}` }); // Publish final status
         }
         await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on abort

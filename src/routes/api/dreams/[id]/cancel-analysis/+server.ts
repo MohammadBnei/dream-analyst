@@ -45,7 +45,7 @@ export async function DELETE({ params, locals }) {
             }
         });
 
-        console.log(`Dream ${dreamId}: Analysis cancelled by user ${sessionUser.id}.`);
+        console.debug(`Dream ${dreamId}: Analysis cancelled by user ${sessionUser.id}.`);
         return json({ message: 'Analysis cancelled successfully.' }, { status: 200 });
 
     } catch (e) {

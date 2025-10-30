@@ -54,7 +54,7 @@ export class AnalysisStreamManager {
         // Subscribe to the dream's channel to listen for cancellation signals
         this.cancellationSubscriber = this.analysisStore.subscribeToUpdates(this.dreamId, (message) => {
             if (message.finalStatus === DreamStatus.ANALYSIS_FAILED && message.message === 'Analysis cancelled by user.') {
-                console.log(`Dream ${this.dreamId}: Manager received cancellation signal.`);
+                console.debug(`Dream ${this.dreamId}: Manager received cancellation signal.`);
                 this.isCancelled = true;
             }
         });
@@ -69,7 +69,7 @@ export class AnalysisStreamManager {
             const backgroundProcessingPromise = n8nStream.pipeTo(new WritableStream({
                 async write(chunk) {
                     if (canceled) {
-                        console.log(`Dream ${dreamId}: Manager stopping write due to cancellation.`);
+                        console.debug(`Dream ${dreamId}: Manager stopping write due to cancellation.`);
                         // Throwing here will cause the pipeTo to abort
                         throw new Error('Analysis cancelled by user.');
                     }
@@ -109,7 +109,7 @@ export class AnalysisStreamManager {
                     if (e.message !== 'Analysis cancelled by user.') {
                         console.error(`Dream ${this.dreamId}: Unhandled error in background analysis pipeTo:`, e);
                     } else {
-                        console.log(`Dream ${this.dreamId}: Background analysis pipeTo aborted by user cancellation.`);
+                        console.debug(`Dream ${this.dreamId}: Background analysis pipeTo aborted by user cancellation.`);
                     }
                 });
             }
@@ -142,13 +142,13 @@ export class AnalysisStreamManager {
         if (parsedChunk.finalStatus && !this.dreamStatusUpdatedInDb) {
             await this.updateDreamInDb(parsedChunk.finalStatus);
             this.dreamStatusUpdatedInDb = true;
-            console.log(`Dream ${this.dreamId}: Manager updated final status to ${parsedChunk.finalStatus} in DB.`);
+            console.debug(`Dream ${this.dreamId}: Manager updated final status to ${parsedChunk.finalStatus} in DB.`);
             await this.analysisStore.updateAnalysis(this.dreamId, { finalStatus: parsedChunk.finalStatus }, true); // Update Redis with final status
             await this.analysisStore.publishUpdate(this.dreamId, { finalStatus: parsedChunk.finalStatus }); // Publish final status
         } else if (parsedChunk.status === DreamStatus.ANALYSIS_FAILED && !this.dreamStatusUpdatedInDb) {
             await this.updateDreamInDb(DreamStatus.ANALYSIS_FAILED);
             this.dreamStatusUpdatedInDb = true;
-            console.log(`Dream ${this.dreamId}: Manager updated final status to ANALYSIS_FAILED (from chunk status) in DB.`);
+            console.debug(`Dream ${this.dreamId}: Manager updated final status to ANALYSIS_FAILED (from chunk status) in DB.`);
             await this.analysisStore.updateAnalysis(this.dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED }, true); // Update Redis with final status
             await this.analysisStore.publishUpdate(this.dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED }); // Publish final status
         }
@@ -160,12 +160,12 @@ export class AnalysisStreamManager {
         }
 
         if (this.isCancelled) {
-            console.log(`Dream ${this.dreamId}: Manager closed after cancellation.`);
+            console.debug(`Dream ${this.dreamId}: Manager closed after cancellation.`);
             // The DB status should have been updated by the DELETE endpoint or the abort handler
         } else if (!this.dreamStatusUpdatedInDb) {
             // If the stream closed without an explicit finalStatus and no error was reported, assume completion
             await this.updateDreamInDb(DreamStatus.COMPLETED);
-            console.log(`Dream ${this.dreamId}: Manager finished, status set to COMPLETED in DB.`);
+            console.debug(`Dream ${this.dreamId}: Manager finished, status set to COMPLETED in DB.`);
             await this.analysisStore.publishUpdate(this.dreamId, { finalStatus: DreamStatus.COMPLETED, message: 'Analysis completed.' }); // Publish final status
         }
         await this.analysisStore.clearAnalysis(this.dreamId); // Clear from Redis once fully processed
@@ -181,7 +181,7 @@ export class AnalysisStreamManager {
 
         if (!this.dreamStatusUpdatedInDb) {
             await this.updateDreamInDb(DreamStatus.ANALYSIS_FAILED);
-            console.log(`Dream ${this.dreamId}: Manager aborted, status set to ANALYSIS_FAILED in DB.`);
+            console.debug(`Dream ${this.dreamId}: Manager aborted, status set to ANALYSIS_FAILED in DB.`);
             await this.analysisStore.publishUpdate(this.dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: `Analysis aborted: ${errorMessage}` }); // Publish final status
         }
         await this.analysisStore.clearAnalysis(this.dreamId); // Clear from Redis on abort

@@ -55,13 +55,13 @@ export async function GET({ params, locals, platform, request }) {
         const isOngoing = await streamStateStore.isStreamOngoing(dreamId); // Renamed method
 
         if (!isOngoing) {
-            console.log(`Dream ${dreamId}: Initiating new background stream processing via StreamProcessor.`);
+            console.debug(`Dream ${dreamId}: Initiating new background stream processing via StreamProcessor.`);
             await streamStateStore.markStreamStarted(dreamId); // Renamed method // Mark as started in Redis
             // Get or create the processor. It will start the processing in the background.
             // The rawText is passed here because this is where the n8n-specific stream is initiated.
             getOrCreateStreamProcessor(dreamId, dream.rawText, platform); // Renamed function call
         } else {
-            console.log(`Dream ${dreamId}: Background stream processing already running (tracked by Redis).`);
+            console.debug(`Dream ${dreamId}: Background stream processing already running (tracked by Redis).`);
         }
 
         // Now, create a stream that subscribes to Redis Pub/Sub for updates
@@ -94,7 +94,7 @@ export async function GET({ params, locals, platform, request }) {
                     // Check if controller is still readable before enqueueing
                     // desiredSize can be null (unlimited) or > 0 for space
                     if (controller.desiredSize !== null && controller.desiredSize <= 0) {
-                        console.log(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
+                        console.debug(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
                         if (subscriberClient) {
                             streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                             subscriberClient = null;
@@ -109,7 +109,7 @@ export async function GET({ params, locals, platform, request }) {
                     // If the message contains a finalStatus, signal end of stream
                     if (message.finalStatus) {
                         controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
-                        console.log(`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`);
+                        console.debug(`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`);
                         if (subscriberClient) {
                             streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                             subscriberClient = null;
@@ -127,7 +127,7 @@ export async function GET({ params, locals, platform, request }) {
                 // Removed signal.addEventListener('abort')
             },
             async cancel() {
-                console.log(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
+                console.debug(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
                 if (subscriberClient) {
                     await streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                     subscriberClient = null;
