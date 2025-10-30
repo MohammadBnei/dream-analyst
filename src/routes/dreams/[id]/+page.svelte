@@ -516,21 +516,6 @@
 			</div>
 		</div>
 
-		<!-- Hidden form for cancelling analysis -->
-		<form
-			bind:this={cancelAnalysisForm}
-			method="POST"
-			action="?/cancelAnalysis"
-			style="display: none;"
-			use:enhance={() => {
-				return async ({ update }) => {
-					await update();
-					// Invalidate 'dream' to ensure the UI reflects the updated status from the server
-					await invalidate('dream');
-				};
-			}}
-		></form>
-
 		<!-- Delete Confirmation Modal -->
 		{#if showDeleteModal}
 			<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick}>
@@ -606,3 +591,18 @@
 		</div>
 	{/if}
 </div>
+
+<!-- Hidden form for cancelling analysis - moved outside the #if data.dream block -->
+<form
+	bind:this={cancelAnalysisForm}
+	method="POST"
+	action="?/cancelAnalysis"
+	style="display: none;"
+	use:enhance={() => {
+		return async ({ update }) => {
+			await update();
+			// Invalidate 'dream' to ensure the UI reflects the updated status from the server
+			await invalidate('dream');
+		};
+	}}
+></form>
