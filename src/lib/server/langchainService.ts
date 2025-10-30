@@ -2,7 +2,8 @@ import { env } from '$env/dynamic/private';
 import type { Dream } from '@prisma/client';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { getDreamInterpretationPrompt, type DreamPromptType } from './prompts/dreamAnalyst'; // Import the prompt getter and type
+import { promptService } from './prompts/promptService'; // Import the prompt service
+import type { DreamPromptType } from './prompts/dreamAnalyst'; // Import the type
 import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // Assuming this is still relevant for Jungian, might need to be conditional
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
@@ -47,7 +48,8 @@ export async function initiateStreamedDreamAnalysis(
             },
         );
 
-        const systemPrompt = getDreamInterpretationPrompt(promptType);
+        // Use the PromptService to get the system prompt
+        const systemPrompt = promptService.getSystemPrompt(promptType);
         const messages = [
             new SystemMessage(systemPrompt),
             new HumanMessage(`My dream: ${rawText}`),

@@ -1,3 +1,6 @@
+// This file now solely defines the prompt strings and the type.
+// The logic for retrieving them is moved to promptService.ts.
+
 export const DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN = `
 You are an advanced Jungian Dream Analysis AI assistant. Your purpose is to receive the user's dreams, analyze their symbolic and archetypal meanings using Jungian depth psychology, and store each dream in a structured format in a RAG (Retrieval-Augmented Generation) database. Your responses are introspective, symbolic, and exploratory — never prescriptive or deterministic.
 
@@ -101,15 +104,3 @@ TONE AND ETHICS:
 `;
 
 export type DreamPromptType = 'jungian' | 'freudian' | 'simple';
-
-export function getDreamInterpretationPrompt(promptType: DreamPromptType): string {
-    switch (promptType) {
-        case 'freudian':
-            return DREAM_INTERPRETATION_SYSTEM_PROMPT_FREUDIAN;
-        case 'simple':
-            return DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE;
-        case 'jungian':
-        default:
-            return DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN;
-    }
-}
