@@ -204,9 +204,14 @@ class AnalysisStore {
     async unsubscribeFromUpdates(subscriber: Redis, dreamId: string): Promise<void> {
         const channel = this.getChannel(dreamId);
         try {
-            await subscriber.unsubscribe(channel);
-            await subscriber.quit();
-            console.log(`Unsubscribed from Redis channel: ${channel} and quit client.`);
+            // Check if the subscriber is still connected before quitting
+            if (subscriber.status === 'connected') {
+                await subscriber.unsubscribe(channel);
+                await subscriber.quit();
+                console.log(`Unsubscribed from Redis channel: ${channel} and quit client.`);
+            } else {
+                console.log(`Redis subscriber for ${dreamId} already disconnected or not connected.`);
+            }
         } catch (e) {
             console.error(`Error unsubscribing/quitting Redis client for ${dreamId}:`, e);
         }

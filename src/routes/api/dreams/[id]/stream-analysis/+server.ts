@@ -178,12 +178,6 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
         if (message.finalStatus === DreamStatus.ANALYSIS_FAILED && message.message === 'Analysis cancelled by user.') {
             console.log(`Dream ${dreamId}: Background process received cancellation signal.`);
             isCancelled = true;
-            // Throw an error here to immediately abort the WritableStream pipeTo
-            // This will trigger the abort() method of the WritableStream
-            // This is a more direct way to stop the stream than just setting a flag.
-            // However, we need to be careful not to throw from an async callback directly
-            // if it's not caught by the pipeTo. Let's rely on the flag for now and
-            // ensure the write method checks it.
         }
     });
 
@@ -320,7 +314,14 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
         } else {
             // For Node.js environments, just await it or let it run in the background.
             // If not awaited, ensure proper error logging for unhandled rejections.
-            backgroundProcessingPromise.catch(e => console.error(`Dream ${dreamId}: Unhandled error in background analysis pipeTo:`, e));
+            backgroundProcessingPromise.catch(e => {
+                // Only log if it's not the expected cancellation error
+                if (e.message !== 'Analysis cancelled by user.') {
+                    console.error(`Dream ${dreamId}: Unhandled error in background analysis pipeTo:`, e);
+                } else {
+                    console.log(`Dream ${dreamId}: Background analysis pipeTo aborted by user cancellation.`);
+                }
+            });
         }
 
     } catch (e) {
