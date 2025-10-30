@@ -120,8 +120,6 @@ class CreditService {
     async adminGrantCredits(
         userId: string,
         amount: number,
-        adminId: string,
-        reason?: string
     ): Promise<number> {
         if (!this.prisma) {
             this.prisma = await getPrismaClient();
@@ -153,8 +151,6 @@ class CreditService {
                         userId: userId,
                         amount: amount,
                         actionType: 'ADMIN_GRANT',
-                        adminId: adminId,
-                        notes: reason,
                     }
                 });
                 return newBalance.credits;
@@ -179,8 +175,6 @@ class CreditService {
     async adminDeductCredits(
         userId: string,
         amount: number,
-        adminId: string,
-        reason?: string
     ): Promise<number> {
         if (!this.prisma) {
             this.prisma = await getPrismaClient();
@@ -212,8 +206,6 @@ class CreditService {
                         userId: userId,
                         amount: -amount, // Store as negative for deduction
                         actionType: 'ADMIN_DEDUCT',
-                        adminId: adminId,
-                        notes: reason,
                     }
                 });
                 return newBalance.credits;
