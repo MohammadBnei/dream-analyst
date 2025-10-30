@@ -1,17 +1,29 @@
 import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
-import type { AnalysisStreamChunk } from '$lib/server/n8nService'; // Keeping this for now, but ideally would be a generic StreamChunk
-import { DreamStatus } from '@prisma/client';
+import type { AnalysisStreamChunk } from '$lib/server/n8nService';
+import { DreamStatus } from '@prisma/client'; // Keep for now, but will be replaced by generic StreamStatus
 
-const REDIS_PREFIX = 'stream_state:'; // Changed prefix
+const REDIS_PREFIX = 'stream_state:';
 const REDIS_EXPIRATION_SECONDS = 60 * 60; // 1 hour
 const REDIS_STALL_THRESHOLD_SECONDS = 60 * 5; // 5 minutes
 
-interface StreamState { // Renamed interface
-    interpretation: string; // These fields are still specific to 'analysis', will need to be generalized if truly generic
+// NEW: Define a generic StreamStatus enum
+export enum StreamStatus {
+    PENDING = 'PENDING',
+    IN_PROGRESS = 'IN_PROGRESS',
+    COMPLETED = 'COMPLETED',
+    FAILED = 'FAILED',
+    CANCELLED = 'CANCELLED',
+    STALLED = 'STALLED', // New status for detected stalled streams
+}
+
+// NEW: Update StreamState interface to use generic StreamStatus
+interface StreamState {
+    interpretation: string;
     tags: string[];
-    status: DreamStatus; // This status is specific to Dream, will need to be generalized
-    lastUpdate: number; // Timestamp of last update (milliseconds)
+    status: StreamStatus; // Use generic StreamStatus
+    lastUpdate: number;
+    finalMessage?: string; // Optional message for final states
 }
 
 // Dedicated client for publishing (and general commands like GET/SET/DEL)
@@ -69,18 +81,18 @@ export function getRedisSubscriber(): Redis {
 export type AisRedis = ReturnType<typeof getRedisSubscriber>;
 
 
-class StreamStateStore { // Renamed class
+class StreamStateStore {
     private publisher: Redis;
 
     constructor() {
         this.publisher = getRedisPublisher();
     }
 
-    private getKey(streamId: string): string { // Renamed parameter
+    private getKey(streamId: string): string {
         return `${REDIS_PREFIX}${streamId}`;
     }
 
-    private getChannel(streamId: string): string { // Renamed parameter
+    private getChannel(streamId: string): string {
         return `${REDIS_PREFIX}channel:${streamId}`;
     }
 
@@ -91,7 +103,7 @@ class StreamStateStore { // Renamed class
      * @param isFinal If true, this is the final update.
      * @param refreshExpiration If true, the key's expiration will be refreshed.
      */
-    async updateStreamState(streamId: string, chunk: AnalysisStreamChunk, isFinal: boolean = false, refreshExpiration: boolean = true): Promise<void> { // Renamed method
+    async updateStreamState(streamId: string, chunk: AnalysisStreamChunk, isFinal: boolean = false, refreshExpiration: boolean = true): Promise<void> {
         const key = this.getKey(streamId);
         let currentState: StreamState | null = null;
 
@@ -109,7 +121,7 @@ class StreamStateStore { // Renamed class
             currentState = {
                 interpretation: '',
                 tags: [],
-                status: DreamStatus.PENDING_ANALYSIS, // Still specific to DreamStatus
+                status: StreamStatus.PENDING, // Use generic StreamStatus
                 lastUpdate: Date.now()
             };
         }
@@ -122,13 +134,19 @@ class StreamStateStore { // Renamed class
         if (chunk.tags && chunk.tags.length > 0) {
             currentState.tags = chunk.tags;
         }
-        // Update status
+
+        // NEW: Handle status updates more generically
         if (chunk.status) {
-            currentState.status = chunk.status;
+            // Map DreamStatus to generic StreamStatus if necessary, or assume direct compatibility for now
+            currentState.status = chunk.status === DreamStatus.PENDING_ANALYSIS ? StreamStatus.IN_PROGRESS : StreamStatus.IN_PROGRESS; // Simplified mapping
         }
         if (chunk.finalStatus) {
-            // This assumes chunk.finalStatus maps directly to DreamStatus
-            currentState.status = chunk.finalStatus as DreamStatus;
+            // Map n8n's finalStatus to generic StreamStatus
+            currentState.status = chunk.finalStatus === 'COMPLETED' ? StreamStatus.COMPLETED : StreamStatus.FAILED;
+            currentState.finalMessage = chunk.message; // Store final message
+        } else if (isFinal && !chunk.status && !chunk.finalStatus) {
+            // If it's marked as final but no specific status is provided, assume completed
+            currentState.status = StreamStatus.COMPLETED;
         }
 
         currentState.lastUpdate = Date.now();
@@ -147,7 +165,7 @@ class StreamStateStore { // Renamed class
      * @param streamId The ID of the stream.
      * @returns The stream state or null if not found.
      */
-    async getStreamState(streamId: string): Promise<StreamState | null> { // Renamed method
+    async getStreamState(streamId: string): Promise<StreamState | null> {
         const key = this.getKey(streamId);
         const rawState = await this.publisher.get(key);
         if (rawState) {
@@ -163,16 +181,25 @@ class StreamStateStore { // Renamed class
 
     /**
      * Checks if a stream is currently ongoing and not stalled.
+     * If stalled, it will update the state to FAILED and publish a message.
      * @param streamId The ID of the stream.
      * @returns True if stream is ongoing, false otherwise.
      */
-    async isStreamOngoing(streamId: string): Promise<boolean> { // Renamed method
+    async isStreamOngoing(streamId: string): Promise<boolean> {
         const state = await this.getStreamState(streamId);
-        if (state?.status === DreamStatus.PENDING_ANALYSIS) { // Still specific to DreamStatus
+        if (state && (state.status === StreamStatus.PENDING || state.status === StreamStatus.IN_PROGRESS)) {
             const now = Date.now();
             if ((now - state.lastUpdate) / 1000 > REDIS_STALL_THRESHOLD_SECONDS) {
-                console.warn(`Stream ${streamId}: Detected stalled stream (last update ${state.lastUpdate}). Clearing state.`);
-                await this.clearStreamState(streamId); // Renamed method
+                console.warn(`Stream ${streamId}: Detected stalled stream (last update ${state.lastUpdate}). Marking as FAILED.`);
+                // NEW: Mark as FAILED and publish
+                await this.updateStreamState(streamId, {
+                    finalStatus: 'ANALYSIS_FAILED', // Using n8nService's finalStatus type for consistency
+                    message: 'Stream stalled due to inactivity.'
+                }, true);
+                await this.publishUpdate(streamId, {
+                    finalStatus: 'ANALYSIS_FAILED',
+                    message: 'Stream stalled due to inactivity.'
+                });
                 return false;
             }
             return true;
@@ -184,27 +211,26 @@ class StreamStateStore { // Renamed class
      * Marks a stream as started in Redis.
      * @param streamId The ID of the stream.
      */
-    async markStreamStarted(streamId: string): Promise<void> { // Renamed method
+    async markStreamStarted(streamId: string): Promise<void> {
         const key = this.getKey(streamId);
         const initialState: StreamState = {
             interpretation: '',
             tags: [],
-            status: DreamStatus.PENDING_ANALYSIS, // Still specific to DreamStatus
+            status: StreamStatus.PENDING, // Use generic StreamStatus
             lastUpdate: Date.now()
         };
         await this.publisher.setex(key, REDIS_EXPIRATION_SECONDS, JSON.stringify(initialState));
     }
 
     /**
-     * Clears the stream state from Redis and publishes a final message.
+     * Clears the stream state from Redis.
+     * This method only deletes the key, it does not publish a final message.
+     * Final messages should be published by the entity that determines the final state (e.g., StreamProcessor or publishCancellation).
      * @param streamId The ID of the stream.
      */
-    async clearStreamState(streamId: string): Promise<void> { // Renamed method
+    async clearStreamState(streamId: string): Promise<void> {
         const key = this.getKey(streamId);
-        const channel = this.getChannel(streamId);
         await this.publisher.del(key);
-        // Publish a final message indicating the state has been cleared
-        await this.publisher.publish(channel, JSON.stringify({ finalStatus: DreamStatus.COMPLETED, message: 'Stream state cleared from Redis.' })); // Still specific to DreamStatus
         console.log(`Stream ${streamId}: Stream state cleared from Redis.`);
     }
 
@@ -213,24 +239,32 @@ class StreamStateStore { // Renamed class
      * @param streamId The ID of the stream.
      * @param chunk The stream chunk to publish.
      */
-    async publishUpdate(streamId: string, chunk: AnalysisStreamChunk): Promise<void> { // Renamed parameter
+    async publishUpdate(streamId: string, chunk: AnalysisStreamChunk): Promise<void> {
         const channel = this.getChannel(streamId);
         await this.publisher.publish(channel, JSON.stringify(chunk));
     }
 
     /**
      * Publishes a cancellation signal to the Redis Pub/Sub channel for a specific stream.
-     * Also clears the stream state from Redis immediately.
+     * Also updates the stream state to CANCELLED and clears it from Redis immediately.
+     * This is the primary method for external cancellation.
      * @param streamId The ID of the stream to cancel.
      */
     async publishCancellation(streamId: string): Promise<void> {
         const channel = this.getChannel(streamId);
         const cancellationMessage: AnalysisStreamChunk = {
-            finalStatus: DreamStatus.ANALYSIS_FAILED, // Using ANALYSIS_FAILED to indicate a non-successful termination
-            message: 'Analysis cancelled by user.'
+            finalStatus: 'ANALYSIS_FAILED', // Use n8nService's finalStatus type
+            message: 'Stream cancelled by user.'
         };
+
+        // NEW: Update the Redis state to CANCELLED before publishing and clearing
+        await this.updateStreamState(streamId, {
+            finalStatus: 'ANALYSIS_FAILED',
+            message: 'Stream cancelled by user.'
+        }, true); // Mark as final
+
         await this.publisher.publish(channel, JSON.stringify(cancellationMessage));
-        console.log(`Stream ${streamId}: Published cancellation signal.`);
+        console.log(`Stream ${streamId}: Published cancellation signal and updated state to CANCELLED.`);
         // Immediately clear the Redis state upon cancellation
         await this.clearStreamState(streamId);
     }
@@ -242,7 +276,7 @@ class StreamStateStore { // Renamed class
      * @param callback The function to call with each parsed message.
      * @returns A dedicated Redis subscriber client.
      */
-    subscribeToUpdates(streamId: string, callback: (message: AnalysisStreamChunk) => void): AisRedis { // Renamed parameter
+    subscribeToUpdates(streamId: string, callback: (message: AnalysisStreamChunk) => void): AisRedis {
         const subscriber = getRedisSubscriber(); // Get a new subscriber client
         const channel = this.getChannel(streamId);
 
@@ -274,15 +308,16 @@ class StreamStateStore { // Renamed class
      * @param subscriber The Redis client instance returned by `subscribeToUpdates`.
      * @param streamId The ID of the stream.
      */
-    async unsubscribeFromUpdates(subscriber: AisRedis, streamId: string): Promise<void> { // Renamed parameter
+    async unsubscribeFromUpdates(subscriber: AisRedis, streamId: string): Promise<void> {
         const channel = this.getChannel(streamId);
         try {
-            if (subscriber.status === 'connect') { // Changed from 'connected' to 'connect' to match ioredis status
+            // Check if the subscriber is still active before attempting to unsubscribe/quit
+            if (subscriber.status === 'connect' || subscriber.status === 'connecting') {
                 await subscriber.unsubscribe(channel);
                 await subscriber.quit();
                 console.log(`Unsubscribed from Redis channel: ${channel} and quit client.`);
             } else {
-                console.log(`Redis subscriber for ${streamId} already disconnected or not connected.`);
+                console.log(`Redis subscriber for ${streamId} already disconnected or not connected. Status: ${subscriber.status}`);
             }
         } catch (e) {
             console.error(`Error unsubscribing/quitting Redis client for ${streamId}:`, e);
@@ -290,9 +325,9 @@ class StreamStateStore { // Renamed class
     }
 }
 
-let streamStateStoreInstance: StreamStateStore; // Renamed instance
+let streamStateStoreInstance: StreamStateStore;
 
-export async function getStreamStateStore(): Promise<StreamStateStore> { // Renamed function
+export async function getStreamStateStore(): Promise<StreamStateStore> {
     if (!streamStateStoreInstance) {
         streamStateStoreInstance = new StreamStateStore();
     }
