@@ -5,7 +5,6 @@ import type { PageServerLoad, Actions } from './$types';
 import { error } from '@sveltejs/kit';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
-import { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
 
 // Schemas for validation
 const UpdateDreamSchema = v.object({
@@ -35,7 +34,7 @@ const UpdateDreamDateSchema = v.object({
 });
 
 const ResetAnalysisSchema = v.object({
-	promptType: v.enumType(DreamPromptType) // Expect promptType from the form
+	promptType: v.string() // Expect promptType from the form
 });
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -330,7 +329,6 @@ export const actions: Actions = {
 				data: {
 					status: DreamStatus.PENDING_ANALYSIS, // Use enum
 					interpretation: null, // Clear previous interpretation
-					tags: null, // Clear previous tags
 					promptType: validatedData.promptType, // Persist the selected promptType
 					updatedAt: new Date()
 				}
