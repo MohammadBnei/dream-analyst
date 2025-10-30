@@ -22,6 +22,7 @@ export class StreamProcessor {
 	private platform: App.Platform | undefined;
 	private streamStateStore: Awaited<ReturnType<typeof getStreamStateStore>>;
 	private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
+	private abortController: AbortController; // Internal AbortController for server-side cancellation
 
 	private accumulatedInterpretation: string = '';
 	private accumulatedTags: string[] = [];
@@ -31,6 +32,7 @@ export class StreamProcessor {
 	constructor(streamId: string, platform: App.Platform | undefined) {
 		this.streamId = streamId;
 		this.platform = platform;
+		this.abortController = new AbortController(); // Initialize internal AbortController
 	}
 
 	/**
@@ -95,7 +97,8 @@ export class StreamProcessor {
 				abort: async (reason) => {
 					await this.handleStreamAbort(reason);
 				}
-			})
+			}),
+			{ signal: this.abortController.signal } // Pass the internal abort signal to pipeTo
 		);
 
 		// Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
@@ -118,6 +121,14 @@ export class StreamProcessor {
 				);
 			});
 		}
+	}
+
+	/**
+	 * Cancels the ongoing stream processing.
+	 */
+	public cancelStream(): void {
+		console.log(`Stream ${this.streamId}: Received cancellation request.`);
+		this.abortController.abort('Analysis cancelled by user.');
 	}
 
 	private async processChunk(parsedChunk: AnalysisStreamChunk): Promise<void> {
@@ -181,6 +192,7 @@ export class StreamProcessor {
 			}); // Publish final status
 		}
 		await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on close
+		activeStreamProcessors.delete(this.streamId); // Remove from map on completion/close
 	}
 
 	private async handleStreamAbort(reason: any): Promise<void> {
@@ -199,6 +211,7 @@ export class StreamProcessor {
 			}); // Publish final status
 		}
 		await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on abort
+		activeStreamProcessors.delete(this.streamId); // Remove from map on abortion
 	}
 
 	private async updateResultInDb(status: DreamStatus): Promise<void> {
@@ -227,40 +240,47 @@ const activeStreamProcessors = new Map<string, StreamProcessor>();
 /**
  * Initiates or retrieves an existing StreamProcessor for a given stream.
  * This factory function is responsible for creating the source stream (e.g., from n8n).
- * @param streamId The ID of the stream.
- * @param rawText The raw text of the stream (specific to dream analysis).
+ * @param dream The dream object.
  * @param platform The SvelteKit platform object.
  * @param promptType The type of prompt to use for analysis.
  * @returns The StreamProcessor instance.
  */
-export async function getOrCreateStreamProcessor(
+export function getOrCreateStreamProcessor(
 	dream: Dream,
 	platform: App.Platform | undefined,
-	promptType: DreamPromptType, // Added promptType parameter
-	signal?: AbortSignal
-): Promise<StreamProcessor> {
+	promptType?: DreamPromptType // Make promptType optional here, as it might be retrieved from Redis state
+): StreamProcessor {
 	if (activeStreamProcessors.has(dream.id)) {
-		return activeStreamProcessors.get(dream.id)!;
+		const existingProcessor = activeStreamProcessors.get(dream.id)!;
+		if (promptType) {
+			existingProcessor.setPromptType(promptType); // Update promptType if provided
+		}
+		return existingProcessor;
 	}
 
 	const processor = new StreamProcessor(dream.id, platform);
-	await processor.init();
-	processor.setPromptType(promptType); // Set the prompt type on the processor
 	activeStreamProcessors.set(dream.id, processor);
 
-	if (!signal) {
-		signal = new AbortController().signal;
-	}
+	// Asynchronously initialize and start processing
+	processor.init().then(async () => {
+		// If promptType is not provided, try to get it from the dream object or Redis state
+		const effectivePromptType = promptType || (dream.promptType as DreamPromptType) || 'jungian';
+		processor.setPromptType(effectivePromptType);
 
-	// Create the LangChain stream here
-	const llmStream = await initiateStreamedDreamAnalysis(dream, promptType, signal);
+		// Create the LangChain stream here, passing the processor's internal abort signal
+		const llmStream = await initiateStreamedDreamAnalysis(
+			dream,
+			effectivePromptType,
+			processor.abortController.signal
+		);
 
-	// Start the processing in the background.
-	// The processor itself will handle its lifecycle and removal from the map
-	// once the processing is truly complete or failed.
-	processor.startProcessing(llmStream).finally(() => {
-		// Remove from map once the processing process (including DB updates and Redis cleanup) is done
-		activeStreamProcessors.delete(dream.id);
+		// Start the processing in the background.
+		// The processor itself will handle its lifecycle and removal from the map
+		// once the processing is truly complete or failed.
+		processor.startProcessing(llmStream);
+	}).catch(e => {
+		console.error(`Stream ${dream.id}: Error initializing or starting processor:`, e);
+		activeStreamProcessors.delete(dream.id); // Clean up if initialization fails
 	});
 
 	return processor;
