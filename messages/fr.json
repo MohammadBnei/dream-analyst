@@ -110,5 +110,6 @@
 	"transcription_cancelled_message": "Transcription annulée.",
 	"transcription_failed_message": "Échec de la transcription : {message}",
 	"microphone_access_error": "Impossible d'accéder au microphone. Veuillez vous assurer qu'il est connecté et que les autorisations sont accordées.",
-	"recording_failed_error": "Échec de l'enregistrement : {message}"
+	"recording_failed_error": "Échec de l'enregistrement : {message}",
+	"cancel_analysis_button": "Annuler l'Analyse"
 }
