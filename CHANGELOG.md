@@ -1,5 +1,44 @@
 # Changelog
 
+# [0.9.0](https://github.com/MohammadBnei/dream-analyst/compare/0.8.0...0.9.0) (2025-10-30)
+
+
+### Bug Fixes
+
+* Auto-start analysis stream after resetting analysis using use:enhance ([53d3327](https://github.com/MohammadBnei/dream-analyst/commit/53d3327dc02b24940ccb2fc6da8723d054b08f00))
+* Change currentDreamStatus to be stateful ([a277b48](https://github.com/MohammadBnei/dream-analyst/commit/a277b48960bd6a81a4bcf6781423f7ec97d6e1a2))
+* Clear Redis stream state immediately upon cancellation ([790e294](https://github.com/MohammadBnei/dream-analyst/commit/790e294bc3565261905829ef7d2a19f92468c515))
+* Correct Redis client status check from 'connected' to 'connect' ([679453d](https://github.com/MohammadBnei/dream-analyst/commit/679453dbe37b1c91bec90f528058142ba4ab158f))
+* Correctly cancel stream on dream page by removing redundant dreamId in fetch ([00fd313](https://github.com/MohammadBnei/dream-analyst/commit/00fd31360a8e04f4142bb4da71314c1432b49894))
+* Ensure cancel analysis button appears by correctly managing isLoadingStream ([25c0720](https://github.com/MohammadBnei/dream-analyst/commit/25c07208c4f7c7457f1cfb0f36e1c8a65e0642b7))
+* Ensure cancel analysis form is always in DOM ([db8ebc1](https://github.com/MohammadBnei/dream-analyst/commit/db8ebc1e66a1c3d71371fbb0b9357e04d879f966))
+* Ensure dream status is updated to COMPLETED or FAILED at stream end ([728a33e](https://github.com/MohammadBnei/dream-analyst/commit/728a33ec72e67efddb0c3eb2e6278c710e889be6))
+* Ensure n8nService WritableStream respects abort signal during write ([7981b31](https://github.com/MohammadBnei/dream-analyst/commit/7981b316bff8638a007a5b2870624ffc5ee3680e))
+* Handle Redis subscriber disconnect and expected cancellation errors ([67cb955](https://github.com/MohammadBnei/dream-analyst/commit/67cb95539db04cba351e80d663d57c04c2add211))
+* Handle unhandled promise rejection in streamProcessor.ts ([c0889e8](https://github.com/MohammadBnei/dream-analyst/commit/c0889e84531e549c01d7361abb0dbd45a3630371))
+* Hide cancel analysis button and fix delete dream button ([5ba4d24](https://github.com/MohammadBnei/dream-analyst/commit/5ba4d2435eb7d00099171c69386f85b663e0bd1a))
+* Implement AbortSignal for robust stream cancellation in n8nService and StreamProcessor ([4618f39](https://github.com/MohammadBnei/dream-analyst/commit/4618f39ae310bb44ccba45cec33ef4e8414c39d3))
+* Improve stream analysis cancellation, completion, and state management ([dc77f96](https://github.com/MohammadBnei/dream-analyst/commit/dc77f963f1baff64ea00ded153218763b96acf4b))
+* Prevent double-closing ReadableStream controller on client disconnect ([9e611a5](https://github.com/MohammadBnei/dream-analyst/commit/9e611a52144b14b32b4072666b060442ce7c4d5a))
+* Prevent infinite loop in Svelte effect by checking updatedAt timestamp ([2eb1bac](https://github.com/MohammadBnei/dream-analyst/commit/2eb1bac515ca95dd804cfc5d5a456d1c8b063c83))
+* Send empty FormData for cancelAnalysis POST request to prevent 415 error ([0cc2248](https://github.com/MohammadBnei/dream-analyst/commit/0cc22489de926b8fc40d4089f80038fe9befa7ba))
+* Standardize event handling to `onclick` in dream details page ([818a32f](https://github.com/MohammadBnei/dream-analyst/commit/818a32f8ef7a36a7a59fc9107d4c042a8d0499eb))
+* Update cancel analysis endpoint to use stream state store and new status ([ed4e6ea](https://github.com/MohammadBnei/dream-analyst/commit/ed4e6eae6cfc09aa534e69237d4587f650a49032))
+* Use `$derived` for `currentDreamStatus` to ensure reactivity ([8057c95](https://github.com/MohammadBnei/dream-analyst/commit/8057c95da6637ecd37d783324ecf303c960dbf5b))
+* Use $props() for component props in runes mode ([0f783bf](https://github.com/MohammadBnei/dream-analyst/commit/0f783bf3bb8d4a98c91bd1e4a9c6aeeebc699e19))
+
+
+### Features
+
+* Add cancel analysis button translation ([fe44b72](https://github.com/MohammadBnei/dream-analyst/commit/fe44b725e17e116b5ac55b1b3dfb846cd15ad768))
+* Add cancel interpretation stream on dream page ([d5ff0ab](https://github.com/MohammadBnei/dream-analyst/commit/d5ff0ab1071f2a708a9c9bf7a2f7e0c4ea6e6c3a))
+* Implement AnalysisStreamManager and refactor analysis store and stream endpoint ([06fe519](https://github.com/MohammadBnei/dream-analyst/commit/06fe519eb8ffaae9d15ce9970b5499a4f204e21a))
+* Implement dream listing and cancellation functionality ([a1b765c](https://github.com/MohammadBnei/dream-analyst/commit/a1b765c04f47c54eb121545313fd66c1dd7bc16b))
+* Implement stream cancellation from client to server processor ([a0c8617](https://github.com/MohammadBnei/dream-analyst/commit/a0c8617dd16735f1405b7c02e7554bc7d93bbe4b))
+* Migrate dream fetching to SvelteKit load function ([154a3b1](https://github.com/MohammadBnei/dream-analyst/commit/154a3b165d10617ad8abfbbf90ff0605aae588d8))
+* migrate dream remote functions to SvelteKit API endpoints ([1dd6ad7](https://github.com/MohammadBnei/dream-analyst/commit/1dd6ad70bee0cc3752c00a36dcd5c203d7f480af))
+* refactor dream operations to use SvelteKit form actions ([15fab18](https://github.com/MohammadBnei/dream-analyst/commit/15fab18b9bff2edefee595d26be1c69e3d22b45c))
+
 # [0.8.0](https://github.com/MohammadBnei/dream-analyst/compare/0.7.0...0.8.0) (2025-10-30)
 
 
