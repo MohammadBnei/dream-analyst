@@ -84,11 +84,14 @@ model CreditTransaction {
   actionType           CreditActionType // Type of action (e.g., DREAM_ANALYSIS, CHAT_MESSAGE, DAILY_GRANT)
   relatedDreamId       String?          @map("related_dream_id") // Optional: Link to a dream
   relatedChatMessageId String?          @unique @map("related_chat_message_id") // Optional: Link to a chat message
+  adminId              String?          @map("admin_id") // New: ID of the admin performing the action
+  notes                String? // New: Optional notes/reason for the transaction
   createdAt            DateTime         @default(now()) @map("created_at")
 
   // Optional relations to link to specific actions
   dream       Dream?     @relation(fields: [relatedDreamId], references: [id])
   chatMessage DreamChat? @relation(fields: [relatedChatMessageId], references: [id])
+  admin       User?      @relation("AdminActions", fields: [adminId], references: [id]) // New: Relation to the admin user
 
   @@map("credit_transaction")
 }
