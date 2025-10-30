@@ -42,13 +42,6 @@
 				return 'badge-neutral';
 		}
 	}
-
-	function confirmCancelAnalysis(dreamId: string) {
-		if (!confirm('Are you sure you want to cancel the analysis for this dream?')) {
-			return false; // Prevent form submission
-		}
-		return true; // Allow form submission
-	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -61,7 +54,7 @@
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				class="stroke-current shrink-0 h-6 w-6"
+				class="h-6 w-6 shrink-0 stroke-current"
 				fill="none"
 				viewBox="0 0 24 24"
 				><path
@@ -72,7 +65,7 @@
 				></path></svg
 			>
 			<span>Error: {clientError}</span>
-			<button class="btn btn-sm btn-ghost" onclick={() => (clientError = null)}>Clear</button>
+			<button class="btn btn-ghost btn-sm" onclick={() => (clientError = null)}>Clear</button>
 		</div>
 	{:else if dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
@@ -121,7 +114,7 @@
 						{/if}
 
 						<div class="mt-4 card-actions justify-end">
-							{#if dream.status === 'PENDING_ANALYSIS'}
+							<!-- {#if dream.status === 'PENDING_ANALYSIS'}
 								<form
 									method="POST"
 									action="?/cancelAnalysis"
@@ -138,7 +131,7 @@
 										{m.cancel_analysis_button()}
 									</button>
 								</form>
-							{/if}
+							{/if} -->
 							<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary"
 								>{m.view_details_button()}</a
 							>
