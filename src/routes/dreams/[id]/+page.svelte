@@ -51,7 +51,7 @@
 				streamedInterpretation = dream.interpretation || '';
 				streamedTags = dream.tags || [];
 			}
-			currentDreamStatus = dream.status;
+			// currentDreamStatus is derived, so no direct assignment needed here
 			editedRawText = dream.rawText;
 			editedInterpretationText = dream.interpretation || '';
 		}
@@ -123,11 +123,11 @@
 
 		isLoadingStream = true;
 		streamError = null;
-		// currentDreamStatus = DreamStatus.PENDING_ANALYSIS; // This is derived, so don't set directly
+		// currentDreamStatus is derived, so no direct assignment needed here
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
-				isLoadingStream = false;
+				// isLoadingStream remains true until onEnd or onError
 				if (data.content) {
 					streamedInterpretation += data.content;
 				}
@@ -158,6 +158,7 @@
 			},
 			onClose: () => {
 				console.log('Analysis service stream closed.');
+				isLoadingStream = false; // Ensure loading is false when stream closes
 			}
 		});
 		analysisService.startStream();
