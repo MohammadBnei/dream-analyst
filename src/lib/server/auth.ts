@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { env } from '$env/dynamic/private';
 import type { Cookies } from '@sveltejs/kit';
+import type { UserRole } from '@prisma/client'; // Import UserRole enum
 
 const JWT_SECRET = env.JWT_SECRET || 'your_jwt_secret_here'; // Use a strong secret from environment variables
 const JWT_EXPIRES_IN = '30d'; // Token expiration time
@@ -19,10 +20,12 @@ interface TokenPayload {
   userId: string;
   username: string;
   email: string;
+  role: UserRole; // Added role to token payload
+  credits: number; // Added credits to token payload
 }
 
-export const generateToken = (userId: string, username: string, email: string): string => {
-  const payload: TokenPayload = { userId, username, email };
+export const generateToken = (userId: string, username: string, email: string, role: UserRole, credits: number): string => {
+  const payload: TokenPayload = { userId, username, email, role, credits };
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };
 

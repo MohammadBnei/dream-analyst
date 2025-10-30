@@ -1,6 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword, generateToken, setAuthTokenCookie } from '$lib/server/auth';
 import { getPrismaClient } from '$lib/server/db';
+import { getCreditService } from '$lib/server/creditService'; // Import credit service
+import { UserRole } from '@prisma/client'; // Import UserRole enum
 
 export const actions = {
 	default: async ({ request, cookies }) => {
@@ -35,6 +37,7 @@ export const actions = {
 		}
 
 		const prisma = await getPrismaClient();
+		const creditService = getCreditService();
 
 
 		const existingUser = await prisma.user.findUnique({
@@ -68,11 +71,16 @@ export const actions = {
 			data: {
 				username,
 				email,
-				passwordHash
+				passwordHash,
+				role: UserRole.BASIC, // Assign default role
+				credits: 0 // Initialize credits to 0, daily grant will add more
 			}
 		});
 
-		const token = generateToken(newUser.id, newUser.username, newUser.email);
+		// Grant initial daily credits
+		const updatedCredits = await creditService.grantDailyCredits(newUser.id);
+
+		const token = generateToken(newUser.id, newUser.username, newUser.email, newUser.role, updatedCredits);
 		setAuthTokenCookie(cookies, token);
 
 		throw redirect(302, '/');
