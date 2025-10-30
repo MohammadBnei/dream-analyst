@@ -518,7 +518,7 @@
 
 		<!-- Delete Confirmation Modal -->
 		{#if showDeleteModal}
-			<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick}>
+			<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick} >
 				<div class="modal-box">
 					<h3 class="text-lg font-bold">{m.confirm_deletion_title()}</h3>
 					<p class="py-4">{m.confirm_deletion_message()}</p>
@@ -551,13 +551,7 @@
 						<form
 							method="POST"
 							action="?/deleteDream"
-							use:enhance={() => {
-								isDeleting = true;
-								return async ({ update }) => {
-									await update();
-									// Redirection is handled by the action, so no need to set isDeleting to false here
-								};
-							}}
+							use:enhance
 						>
 							<button type="submit" class="btn btn-error" disabled={isDeleting}>
 								{#if isDeleting}
