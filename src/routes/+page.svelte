@@ -1,5 +1,6 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
+	import icon512 from '$lib/assets/icon-512x512.png'; // Import the icon
 
 	// Assuming data will be passed from +page.server.ts, including user login status
 	let { data } = $props();
@@ -20,6 +21,7 @@
 	<div class="hero bg-base-200 rounded-lg shadow-xl mb-8">
 		<div class="hero-content text-center">
 			<div class="max-w-md">
+				<img src={icon512} alt={m.app_name()} class="mx-auto mb-4 w-32 h-32" /> <!-- Added icon -->
 				<h1 class="text-5xl font-bold">{m.home_page_title()}</h1>
 				<p class="py-6">
 					{m.home_page_intro()}
