@@ -6,11 +6,14 @@
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import { enhance } from '$app/forms';
-	import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+	// Removed: import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 	let { data, form } = $props();
 
 	let dream = $state(data.dream);
+
+	// Define DreamStatus locally based on the dream object's status type
+	type DreamStatus = typeof dream.status;
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>(dream.tags || []);
@@ -18,7 +21,7 @@
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
 
-	let showDeleteModal = $state(false);
+	// Removed showDeleteModal state as it's replaced by checkbox
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 
@@ -88,8 +91,7 @@
 	});
 
 	onMount(() => {
-		if (dream.status === DreamStatus.PENDING_ANALYSIS) {
-			// Use enum
+		if (dream.status === 'PENDING_ANALYSIS') { // Use string literal
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			startStream();
 		}
@@ -103,12 +105,12 @@
 	function getStatusBadgeClass(status: DreamStatus) {
 		// Use DreamStatus enum
 		switch (status) {
-			case DreamStatus.COMPLETED:
+			case 'COMPLETED': // Use string literal
 				return 'badge-success';
-			case DreamStatus.PENDING_ANALYSIS:
+			case 'PENDING_ANALYSIS': // Use string literal
 			case 'pending_stream': // Assuming a new status for when stream is pending
 				return 'badge-info';
-			case DreamStatus.ANALYSIS_FAILED:
+			case 'ANALYSIS_FAILED': // Use string literal
 				return 'badge-error';
 			default:
 				return 'badge-neutral';
@@ -153,7 +155,7 @@
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				dream.status = DreamStatus.ANALYSIS_FAILED; // Use enum
+				dream.status = 'ANALYSIS_FAILED'; // Use string literal
 				streamError = errorMsg;
 			},
 			onClose: () => {
@@ -180,18 +182,6 @@
 
 	function handleBackClick() {
 		goto('/dreams');
-	}
-
-	function handleShowDeleteModal() {
-		showDeleteModal = true;
-	}
-
-	function handleCancelDelete() {
-		showDeleteModal = false;
-	}
-
-	function handleModalSelfClick() {
-		showDeleteModal = false;
 	}
 
 	function toggleEditMode() {
@@ -247,9 +237,10 @@
 		</button>
 		<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
 		<div class="w-24 text-right">
-			<button onclick={handleShowDeleteModal} class="btn btn-sm btn-error">
+			<!-- Button to open modal -->
+			<label for="delete_dream_modal" class="btn btn-sm btn-error">
 				{m.delete_dream_button()}
-			</button>
+			</label>
 		</div>
 	</div>
 
@@ -264,11 +255,11 @@
 						<span class="badge {getStatusBadgeClass(dream.status)}"
 							>{dream.status?.replace('_', ' ')}</span
 						>
-						{#if dream.status === DreamStatus.PENDING_ANALYSIS}
+						{#if dream.status === 'PENDING_ANALYSIS'}
 							<form method="POST" action="?/updateStatus" use:enhance>
 								<select name="status" class="select-bordered select select-sm">
 									<option value="" disabled selected>{m.change_status_option()}</option>
-									<option value={DreamStatus.ANALYSIS_FAILED}
+									<option value="ANALYSIS_FAILED"
 										>{m.reset_to_failed_analysis_option()}</option
 									>
 								</select>
@@ -370,7 +361,7 @@
 									{m.edit_button()}
 								</button>
 							{/if}
-							{#if dream.status === DreamStatus.COMPLETED || dream.status === DreamStatus.ANALYSIS_FAILED}
+							{#if dream.status === 'COMPLETED' || dream.status === 'ANALYSIS_FAILED'}
 								<form
 									method="POST"
 									action="?/resetAnalysis"
@@ -379,7 +370,7 @@
 										streamedInterpretation = ''; // Clear previous interpretation
 										streamedTags = []; // Clear previous tags
 										streamError = null; // Clear previous error
-										dream.status = DreamStatus.PENDING_ANALYSIS; // Optimistically set status
+										dream.status = 'PENDING_ANALYSIS'; // Optimistically set status
 										return async ({ update, result }) => {
 											await update(); // Update page data from server response
 											if (result.type === 'success') {
@@ -455,7 +446,7 @@
 								</button>
 							</div>
 						</form>
-					{:else if dream.status === DreamStatus.PENDING_ANALYSIS && !isLoadingStream && !streamError}
+					{:else if dream.status === 'PENDING_ANALYSIS' && !isLoadingStream && !streamError}
 						<div class="alert alert-info shadow-lg">
 							<div>
 								<svg
@@ -473,7 +464,7 @@
 								<span>{m.analysis_pending_message()}</span>
 							</div>
 						</div>
-					{:else if dream.status === DreamStatus.ANALYSIS_FAILED && !isLoadingStream && !streamError}
+					{:else if dream.status === 'ANALYSIS_FAILED' && !isLoadingStream && !streamError}
 						<div class="alert alert-error shadow-lg">
 							<div>
 								<svg
@@ -515,57 +506,6 @@
 				</div>
 			</div>
 		</div>
-
-		<!-- Delete Confirmation Modal -->
-		{#if showDeleteModal}
-			<dialog open class="modal modal-bottom sm:modal-middle" onclick={handleModalSelfClick} >
-				<div class="modal-box">
-					<h3 class="text-lg font-bold">{m.confirm_deletion_title()}</h3>
-					<p class="py-4">{m.confirm_deletion_message()}</p>
-					{#if deleteError}
-						<div class="mb-4 alert alert-error shadow-lg">
-							<div>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-6 w-6 flex-shrink-0 stroke-current"
-									fill="none"
-									viewBox="0 0 24 24"
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-									></path></svg
-								>
-								<span>{deleteError}</span>
-							</div>
-						</div>
-					{/if}
-					<div class="modal-action">
-						<button
-							onclick={handleCancelDelete}
-							type="button"
-							class="btn btn-ghost"
-							disabled={isDeleting}>{m.cancel_button()}</button
-						>
-						<form
-							method="POST"
-							action="?/deleteDream"
-							use:enhance
-						>
-							<button type="submit" class="btn btn-error" disabled={isDeleting}>
-								{#if isDeleting}
-									<span class="loading loading-spinner"></span>
-									{m.deleting_button()}
-								{:else}
-									{m.delete_button()}
-								{/if}
-							</button>
-						</form>
-					</div>
-				</div>
-			</dialog>
-		{/if}
 	{:else}
 		<!-- This block handles the case where data.dream is null, e.g., if the load function threw an error -->
 		<div role="alert" class="alert alert-error">
@@ -600,3 +540,59 @@
 		};
 	}}
 ></form>
+
+<!-- Delete Confirmation Checkbox Modal -->
+<input type="checkbox" id="delete_dream_modal" class="modal-toggle" />
+<div class="modal" role="dialog">
+	<div class="modal-box">
+		<h3 class="text-lg font-bold">{m.confirm_deletion_title()}</h3>
+		<p class="py-4">{m.confirm_deletion_message()}</p>
+		{#if deleteError}
+			<div class="mb-4 alert alert-error shadow-lg">
+				<div>
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						class="h-6 w-6 flex-shrink-0 stroke-current"
+						fill="none"
+						viewBox="0 0 24 24"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+						></path></svg
+					>
+					<span>{deleteError}</span>
+				</div>
+			</div>
+		{/if}
+		<div class="modal-action">
+			<label for="delete_dream_modal" class="btn btn-ghost" disabled={isDeleting}
+				>{m.cancel_button()}</label
+			>
+			<form
+				method="POST"
+				action="?/deleteDream"
+				use:enhance={() => {
+					isDeleting = true;
+					return async ({ update }) => {
+						await update();
+						// Redirection is handled by the action, so no need to set isDeleting to false here
+						// Close the modal after successful deletion (before redirect)
+						const checkbox = document.getElementById('delete_dream_modal') as HTMLInputElement;
+						if (checkbox) checkbox.checked = false;
+					};
+				}}
+			>
+				<button type="submit" class="btn btn-error" disabled={isDeleting}>
+					{#if isDeleting}
+						<span class="loading loading-spinner"></span>
+						{m.deleting_button()}
+					{:else}
+						{m.delete_button()}
+					{/if}
+				</button>
+			</form>
+		</div>
+	</div>
+</div>
