@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/private';
 import type { Dream } from '@prisma/client';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { DREAM_INTERPRETATION_SYSTEM_PROMPT } from './prompts'; // Import the prompt
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
@@ -43,15 +44,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
         );
 
         const stream = await chat.stream([
-            new SystemMessage(
-                "You are an expert dream interpreter. Analyze the user's dream, providing a detailed interpretation and extracting key themes or tags. " +
-                "Provide the interpretation in a continuous stream of text. When you identify a key theme, output it as a separate JSON object. " +
-                "The output should be a series of JSON objects, each on a new line. " +
-                "For interpretation text, use the format: `{\"content\": \"Your interpretation text here...\"}`. " +
-                "For tags, use the format: `{\"tags\": [\"tag1\", \"tag2\"]}`. " +
-                "Do not include any other text outside of these JSON objects. " +
-                "Ensure the interpretation is insightful and empathetic."
-            ),
+            new SystemMessage(DREAM_INTERPRETATION_SYSTEM_PROMPT), // Use the imported prompt
             new HumanMessage(`My dream: ${rawText}`),
         ], {
             signal: signal // Pass the abort signal directly to the stream method
