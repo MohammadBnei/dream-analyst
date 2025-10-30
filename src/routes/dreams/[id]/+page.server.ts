@@ -282,15 +282,17 @@ export const actions: Actions = {
                 return fail(403, { error: 'Forbidden: Dream does not belong to user or does not exist.' });
             }
 
-            // Update dream status in DB
+            // Publish cancellation message to Redis FIRST
+            await analysisStore.publishUpdate(dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: 'Analysis cancelled by user.' });
+
+            // Then update dream status in DB
             await prisma.dream.update({
                 where: { id: dreamId },
                 data: { status: DreamStatus.ANALYSIS_FAILED } // Use enum
             });
 
-            // Publish cancellation message to Redis
-            await analysisStore.publishUpdate(dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: 'Analysis cancelled by user.' });
-            await analysisStore.clearAnalysis(dreamId); // Clear Redis state
+            // Clear Redis state
+            await analysisStore.clearAnalysis(dreamId);
 
             return { success: true, message: 'Analysis cancelled successfully.' };
         } catch (e) {
