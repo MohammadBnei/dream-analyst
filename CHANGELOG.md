@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.12.0](https://github.com/MohammadBnei/dream-analyst/compare/0.11.0...0.12.0) (2025-10-30)
+
+
+### Features
+
+* Add app icon to home page hero section ([44d2d6b](https://github.com/MohammadBnei/dream-analyst/commit/44d2d6bb3f9f0095afeba233a78795ca1d0710dd))
+
 # [0.11.0](https://github.com/MohammadBnei/dream-analyst/compare/0.10.0...0.11.0) (2025-10-30)
 
 
