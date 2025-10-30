@@ -2,9 +2,45 @@
 	import * as m from '$lib/paraglide/messages';
 	import dreamerLogo from '$lib/assets/dreamer-logo.png'; 
 	import darkDreamerLogo from '$lib/assets/dark-dreamer-logo.png'; 
+	import { onMount } from 'svelte';
 
 	// Assuming data will be passed from +page.server.ts, including user login status
 	let { data } = $props();
+
+	let deferredPrompt: Event | null = null;
+	let showInstallButton = false;
+
+	onMount(() => {
+		window.addEventListener('beforeinstallprompt', (e) => {
+			// Prevent the mini-infobar from appearing on mobile
+			e.preventDefault();
+			// Stash the event so it can be triggered later.
+			deferredPrompt = e;
+			// Update UI notify the user they can install the PWA
+			showInstallButton = true;
+			console.log('beforeinstallprompt fired');
+		});
+
+		window.addEventListener('appinstalled', () => {
+			// Hide the install button
+			showInstallButton = false;
+			console.log('PWA was installed');
+		});
+	});
+
+	async function installPWA() {
+		if (deferredPrompt) {
+			// Show the install prompt
+			(deferredPrompt as any).prompt();
+			// Wait for the user to respond to the prompt
+			const { outcome } = await (deferredPrompt as any).userChoice;
+			// Optionally, send analytics event with outcome of user choice
+			console.log(`User response to the install prompt: ${outcome}`);
+			// We've used the prompt, and can't use it again, clear it.
+			deferredPrompt = null;
+			showInstallButton = false; // Hide the button after prompt
+		}
+	}
 </script>
 
 <svelte:head>
@@ -37,6 +73,14 @@
 			</div>
 		</div>
 	</div>
+
+	{#if showInstallButton}
+		<section class="mb-8 text-center">
+			<button on:click={installPWA} class="btn btn-secondary btn-lg">
+				Install App
+			</button>
+		</section>
+	{/if}
 
 	<section class="py-8">
 		<h2 class="mb-8 text-center text-4xl font-bold">{m.how_it_works_title()}</h2>
