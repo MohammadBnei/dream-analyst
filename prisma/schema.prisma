@@ -27,66 +27,68 @@ enum CreditActionType {
 }
 
 model User {
-  id                String             @id @default(uuid()) @map("id")
-  username          String             @unique
-  email             String             @unique
-  passwordHash      String             @map("password_hash")
-  role              UserRole           @default(BASIC) // Added role field
-  credits           Int                @default(0)     // Added credits field
-  dreams            Dream[]
-  chatMessages      DreamChat[]
+  id                 String              @id @default(uuid()) @map("id")
+  username           String              @unique
+  email              String              @unique
+  passwordHash       String              @map("password_hash")
+  role               UserRole            @default(BASIC) // Added role field
+  credits            Int                 @default(0) // Added credits field
+  dreams             Dream[]
+  chatMessages       DreamChat[]
   creditTransactions CreditTransaction[] // Link to credit transactions
 
   @@map("user")
 }
 
 model Dream {
-  id             String      @id @default(uuid())
-  userId         String      @map("user_id")
-  user           User?       @relation(fields: [userId], references: [id])
-  rawText        String      @map("raw_text")
-  analysisText   String?     @map("analysis_text")
-  interpretation String?
-  status         DreamStatus @default(PENDING_ANALYSIS)
-  tags           Json?
-  dreamDate      DateTime    @default(now()) @map("dream_date") // New field for the actual dream date
-  promptType     String?     @default("jungian") // Added promptType field
-  chatMessages   DreamChat[] // Link to new chat messages
-  createdAt      DateTime    @default(now()) @map("created_at")
-  updatedAt      DateTime    @default(now()) @updatedAt @map("updated_at")
+  id                String              @id @default(uuid())
+  userId            String              @map("user_id")
+  user              User?               @relation(fields: [userId], references: [id])
+  rawText           String              @map("raw_text")
+  analysisText      String?             @map("analysis_text")
+  interpretation    String?
+  status            DreamStatus         @default(PENDING_ANALYSIS)
+  tags              Json?
+  dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
+  promptType        String?             @default("jungian") // Added promptType field
+  chatMessages      DreamChat[] // Link to new chat messages
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at")
+  CreditTransaction CreditTransaction[]
 
   @@map("dreams")
 }
 
 model DreamChat {
-  id        String   @id @default(uuid())
-  dreamId   String   @map("dream_id")
-  dream     Dream    @relation(fields: [dreamId], references: [id], onDelete: Cascade)
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
-  role      String   // 'user' or 'assistant'
-  content   String
+  id         String   @id @default(uuid())
+  dreamId    String   @map("dream_id")
+  dream      Dream    @relation(fields: [dreamId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id])
+  role       String // 'user' or 'assistant'
+  content    String
   promptType String? // Added promptType to DreamChat
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt  DateTime @default(now()) @map("created_at")
 
   creditTransaction CreditTransaction? // Optional link to a credit transaction
+
   @@map("dream_chat")
 }
 
 // New model for tracking credit transactions
 model CreditTransaction {
-  id            String           @id @default(uuid())
-  userId        String           @map("user_id")
-  user          User             @relation(fields: [userId], references: [id])
-  amount        Int              // Positive for grants, negative for deductions
-  actionType    CreditActionType // Type of action (e.g., DREAM_ANALYSIS, CHAT_MESSAGE, DAILY_GRANT)
-  relatedDreamId String?         @map("related_dream_id") // Optional: Link to a dream
-  relatedChatMessageId String?   @unique @map("related_chat_message_id") // Optional: Link to a chat message
-  createdAt     DateTime         @default(now()) @map("created_at")
+  id                   String           @id @default(uuid())
+  userId               String           @map("user_id")
+  user                 User             @relation(fields: [userId], references: [id])
+  amount               Int // Positive for grants, negative for deductions
+  actionType           CreditActionType // Type of action (e.g., DREAM_ANALYSIS, CHAT_MESSAGE, DAILY_GRANT)
+  relatedDreamId       String?          @map("related_dream_id") // Optional: Link to a dream
+  relatedChatMessageId String?          @unique @map("related_chat_message_id") // Optional: Link to a chat message
+  createdAt            DateTime         @default(now()) @map("created_at")
 
   // Optional relations to link to specific actions
-  dream         Dream?           @relation(fields: [relatedDreamId], references: [id])
-  chatMessage   DreamChat?       @relation(fields: [relatedChatMessageId], references: [id])
+  dream       Dream?     @relation(fields: [relatedDreamId], references: [id])
+  chatMessage DreamChat? @relation(fields: [relatedChatMessageId], references: [id])
 
   @@map("credit_transaction")
 }
