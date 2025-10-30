@@ -263,6 +263,7 @@ export const actions: Actions = {
         }
     },
 
+    // Changed to DELETE method for cancellation
     cancelAnalysis: async ({ params, locals }) => {
         const dreamId = params.id;
         const sessionUser = locals.user;

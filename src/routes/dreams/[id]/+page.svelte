@@ -34,6 +34,9 @@
 
 	let analysisService: DreamAnalysisService | null = null;
 
+	// Reference to the hidden form for cancelling analysis
+	let cancelAnalysisForm: HTMLFormElement;
+
 	// Update dream state when data from load function changes (e.g., after form action)
 	$effect(() => {
 		// Only update if the incoming dream data is different from the current state
@@ -169,20 +172,9 @@
 		isLoadingStream = false; // Update UI
 		streamError = 'Analysis cancelled by user.'; // Set a message
 
-		// Trigger server action to update status and notify background process
-		// Send an empty FormData object to ensure it's treated as a form submission
-		const response = await fetch('?/cancelAnalysis', {
-			method: 'POST',
-			body: new FormData() // Explicitly send an empty FormData
-		});
-
-		if (response.ok) {
-			console.log('Analysis cancellation initiated on server.');
-			await invalidate('dream'); // Re-fetch dream data to update status
-		} else {
-			const errorData = await response.json();
-			console.error('Failed to cancel analysis on server:', errorData.error);
-			streamError = errorData.error || 'Failed to cancel analysis on server.';
+		// Programmatically submit the hidden form to trigger the server action
+		if (cancelAnalysisForm) {
+			cancelAnalysisForm.requestSubmit();
 		}
 	}
 
@@ -417,11 +409,7 @@
 									</button>
 								</form>
 							{/if}
-							{#if dream.status === DreamStatus.PENDING_ANALYSIS && isLoadingStream}
-								<button onclick={cancelStream} class="btn btn-sm btn-warning">
-									{m.cancel_analysis_button()}
-								</button>
-							{/if}
+							<!-- Removed the cancel analysis button as requested -->
 						</div>
 					</div>
 
@@ -527,6 +515,21 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- Hidden form for cancelling analysis -->
+		<form
+			bind:this={cancelAnalysisForm}
+			method="POST"
+			action="?/cancelAnalysis"
+			style="display: none;"
+			use:enhance={() => {
+				return async ({ update }) => {
+					await update();
+					// Invalidate 'dream' to ensure the UI reflects the updated status from the server
+					await invalidate('dream');
+				};
+			}}
+		></form>
 
 		<!-- Delete Confirmation Modal -->
 		{#if showDeleteModal}
