@@ -3,12 +3,16 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+	// Removed: import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 	// Data loaded from +page.server.ts
 	let { data, form } = $props(); // Use $props() for both data and form
 
 	let dreams = $derived(data.dreams);
+
+	// Define DreamStatus locally based on the dream object's status type
+	// Assuming all dreams in the array will have a consistent status type
+	type DreamStatus = (typeof dreams)[number]['status'];
 
 	let clientError: string | null = $state(null); // For errors during client-side actions like cancelAnalysis confirmation
 
@@ -26,13 +30,13 @@
 	});
 
 	// Function to determine badge color based on dream status
-	function getStatusBadgeClass(status: DreamStatus) { // Use DreamStatus enum
+	function getStatusBadgeClass(status: DreamStatus) {
 		switch (status) {
-			case DreamStatus.COMPLETED:
+			case 'COMPLETED': // Use string literal
 				return 'badge-success';
-			case DreamStatus.PENDING_ANALYSIS:
+			case 'PENDING_ANALYSIS': // Use string literal
 				return 'badge-info';
-			case DreamStatus.ANALYSIS_FAILED:
+			case 'ANALYSIS_FAILED': // Use string literal
 				return 'badge-error';
 			default:
 				return 'badge-neutral';
@@ -89,7 +93,7 @@
 							<h2 class="card-title text-lg">
 								{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
 							</h2>
-							<span class="badge {getStatusBadgeClass(dream.status as DreamStatus)}"
+							<span class="badge {getStatusBadgeClass(dream.status)}"
 								>{dream.status.replace('_', ' ')}</span
 							>
 						</div>
@@ -110,14 +114,14 @@
 							<p class="line-clamp-3 text-sm text-base-content/70 italic">
 								{dream.interpretation}
 							</p>
-						{:else if dream.status === DreamStatus.PENDING_ANALYSIS}
+						{:else if dream.status === 'PENDING_ANALYSIS'}
 							<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
-						{:else if dream.status === DreamStatus.ANALYSIS_FAILED}
+						{:else if dream.status === 'ANALYSIS_FAILED'}
 							<p class="text-sm text-error italic">{m.ANALYSIS_FAILED_try_again_message()}</p>
 						{/if}
 
 						<div class="mt-4 card-actions justify-end">
-							{#if dream.status === DreamStatus.PENDING_ANALYSIS}
+							{#if dream.status === 'PENDING_ANALYSIS'}
 								<form
 									method="POST"
 									action="?/cancelAnalysis"
