@@ -5,8 +5,7 @@
 	import { invalidateAll } from '$app/navigation';
 
 	// Data loaded from +page.server.ts
-	export let data;
-	export let form; // Data from form actions
+	let { data, form } = $props(); // Use $props() for both data and form
 
 	let dreams = $derived(data.dreams);
 
