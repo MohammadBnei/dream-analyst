@@ -1,34 +1,13 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
-	import { onMount } from 'svelte';
 	import { invalidateAll } from '$app/navigation';
 
-	let dreams: App.Dream[] = [];
-	let isLoading = true;
-	let error: string | null = null;
+	// Data loaded from +page.server.ts
+	let { data } = $props();
+	let dreams: App.Dream[] = data.dreams;
 
-	onMount(async () => {
-		await fetchDreams();
-	});
-
-	async function fetchDreams() {
-		isLoading = true;
-		error = null;
-		try {
-			const response = await fetch('/api/dreams');
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to fetch dreams.');
-			}
-			dreams = await response.json();
-		} catch (e: any) {
-			console.error('Error fetching dreams:', e);
-			error = e.message || 'An unknown error occurred while fetching dreams.';
-		} finally {
-			isLoading = false;
-		}
-	}
+	let error: string | null = null; // For errors during client-side actions like cancelAnalysis
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
@@ -62,10 +41,9 @@
 			alert('Analysis cancelled successfully!');
 			// Invalidate all data to refetch dreams and update UI
 			await invalidateAll();
-			await fetchDreams(); // Re-fetch dreams to update the list
 		} catch (e: any) {
 			console.error('Error cancelling analysis:', e);
-			alert(`Error cancelling analysis: ${e.message}`);
+			error = e.message || 'An unknown error occurred while cancelling analysis.';
 		}
 	}
 </script>
@@ -76,11 +54,7 @@
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
-	{#if isLoading}
-		<div class="flex justify-center items-center h-64">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:else if error}
+	{#if error}
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -94,8 +68,8 @@
 					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
 				></path></svg
 			>
-			<span>Error loading dreams: {error}</span>
-			<button class="btn btn-sm btn-ghost" on:click={fetchDreams}>Retry</button>
+			<span>Error: {error}</span>
+			<button class="btn btn-sm btn-ghost" onclick={() => (error = null)}>Clear</button>
 		</div>
 	{:else if dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
@@ -146,7 +120,7 @@
 						<div class="mt-4 card-actions justify-end">
 							{#if dream.status === 'pending_analysis'}
 								<button
-									on:click={() => cancelAnalysis(dream.id)}
+									onclick={() => cancelAnalysis(dream.id)}
 									class="btn btn-sm btn-warning"
 								>
 									{m.cancel_analysis_button()}
