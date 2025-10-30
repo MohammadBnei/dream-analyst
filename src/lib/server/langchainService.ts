@@ -5,8 +5,7 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
-const YOUR_SITE_URL = env.YOUR_SITE_URL; // Optional, for OpenRouter rankings
-const YOUR_SITE_NAME = env.YOUR_SITE_NAME; // Optional, for OpenRouter rankings
+const YOUR_SITE_URL = env.ORIGIN; // Optional, for OpenRouter rankings
 
 // Define the custom type for the processed stream chunks
 export interface AnalysisStreamChunk {
@@ -34,12 +33,11 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
                 apiKey: OPENROUTER_API_KEY,
                 // LangChain's ChatOpenAI handles the AbortSignal internally if passed in the constructor options
                 // However, for streaming, we'll manage it more directly with the ReadableStream's cancel method.
-            },
-            {
-                baseURL: 'https://openrouter.ai/api/v1',
-                defaultHeaders: {
-                    ...(YOUR_SITE_URL && { 'HTTP-Referer': YOUR_SITE_URL }),
-                    ...(YOUR_SITE_NAME && { 'X-Title': YOUR_SITE_NAME }),
+                configuration: {
+                    baseURL: 'https://openrouter.ai/api/v1',
+                    defaultHeaders: {
+                        ...(YOUR_SITE_URL && { 'HTTP-Referer': YOUR_SITE_URL }),
+                    },
                 },
             },
         );
