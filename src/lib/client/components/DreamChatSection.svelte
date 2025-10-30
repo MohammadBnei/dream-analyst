@@ -9,7 +9,7 @@
 	let { dreamId } = $props();
 
 	let chatService = $state<ClientChatService | null>(null);
-	let chatMessages = $state<Partial<ChatMessage>[]>([]);
+	let chatMessages = $state<Partial<App.ChatMessage>[]>([]); // Use App.ChatMessage
 	let chatInput = $state('');
 	let isSendingChatMessage = $state(false);
 	let chatError = $state<string | null>(null);
@@ -92,8 +92,12 @@
 	async function deleteChatMessage(messageId: string) {
 		if (!chatService) return;
 
+		if (!confirm(m.confirm_delete_chat_message())) {
+			return;
+		}
+
 		try {
-			await chatService.(messageId);
+			await chatService.deleteMessage(messageId);
 			chatMessages = chatMessages.filter((msg) => msg.id !== messageId);
 			// Optionally, invalidate 'dream' if deleting a message should trigger a full data refresh
 			// await invalidate('dream');

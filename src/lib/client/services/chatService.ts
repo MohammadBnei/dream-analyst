@@ -29,7 +29,7 @@ export class ClientChatService {
      * Loads the chat history for the current dream from the API.
      * @returns A promise that resolves to an array of ChatMessage.
      */
-    public async loadHistory(): Promise<ChatMessage[]> {
+    public async loadHistory(): Promise<App.ChatMessage[]> {
         if (!browser) return [];
 
         try {
@@ -153,6 +153,33 @@ export class ClientChatService {
                 this.callbacks.onError(`Failed to connect to chat stream: ${(error as Error).message}`);
                 this.abortController = null;
             }
+        }
+    }
+
+    public async deleteMessage(messageId: string): Promise<void> {
+        if (!browser) {
+            console.warn('ClientChatService can only run in the browser.');
+            throw new Error('ClientChatService can only run in the browser.');
+        }
+
+        try {
+            const response = await fetch(`/api/dreams/${this.dreamId}/chat-messages/${messageId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Failed to delete chat message');
+            }
+
+            // No content expected for a successful delete, but we can return a success message
+            console.log(`Chat message ${messageId} deleted successfully.`);
+        } catch (error) {
+            console.error(`Error deleting chat message ${messageId}:`, error);
+            throw error; // Re-throw to be handled by the component
         }
     }
 
