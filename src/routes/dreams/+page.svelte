@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
-	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 	// Removed: import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
@@ -19,7 +18,6 @@
 	// Handle form action responses
 	$effect(() => {
 		if (form?.success) {
-			console.log(form.message);
 			// Invalidate all data to refetch dreams and update UI after a successful action
 			invalidateAll();
 		}
@@ -55,8 +53,8 @@
 	<meta property="twitter:description" content={m.dreams_page_description()} />
 </svelte:head>
 
-<div class="container mx-auto max-w-4xl p-4">
-	<div class="mb-6 flex items-center justify-between">
+<div class="container max-w-4xl p-4 mx-auto">
+	<div class="flex items-center justify-between mb-6">
 		<h1 class="text-3xl font-bold">{m.your_dreams_title()}</h1>
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
@@ -65,7 +63,7 @@
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6 shrink-0 stroke-current"
+				class="w-6 h-6 stroke-current shrink-0"
 				fill="none"
 				viewBox="0 0 24 24"
 				><path
@@ -79,8 +77,8 @@
 			<button class="btn btn-ghost btn-sm" onclick={() => (clientError = null)}>Clear</button>
 		</div>
 	{:else if dreams.length === 0}
-		<div class="hero rounded-box bg-base-200 p-8">
-			<div class="hero-content text-center">
+		<div class="p-8 hero rounded-box bg-base-200">
+			<div class="text-center hero-content">
 				<div class="max-w-md">
 					<h2 class="mb-4 text-2xl font-bold">{m.no_dreams_recorded_title()}</h2>
 					<p class="mb-5">{m.no_dreams_recorded_message()}</p>
@@ -91,10 +89,10 @@
 	{:else}
 		<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 			{#each dreams as dream (dream.id)}
-				<div class="card bg-base-100 shadow-xl" transition:fade>
+				<div class="shadow-xl card bg-base-100" transition:fade>
 					<div class="card-body">
-						<div class="mb-2 flex items-start justify-between">
-							<h2 class="card-title text-lg">
+						<div class="flex items-start justify-between mb-2">
+							<h2 class="text-lg card-title">
 								{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
 							</h2>
 							<span class="badge {getStatusBadgeClass(dream.status)}"
@@ -102,12 +100,12 @@
 							>
 						</div>
 
-						<p class="mb-4 line-clamp-3 text-sm text-base-content/80">
+						<p class="mb-4 text-sm line-clamp-3 text-base-content/80">
 							{dream.rawText}
 						</p>
 
 						{#if dream.tags && dream.tags.length > 0}
-							<div class="mb-4 flex flex-wrap gap-2">
+							<div class="flex flex-wrap gap-2 mb-4">
 								{#each dream.tags as tag}
 									<span class="badge badge-outline badge-sm">{tag}</span>
 								{/each}
@@ -115,16 +113,16 @@
 						{/if}
 
 						{#if dream.interpretation}
-							<p class="line-clamp-3 text-sm text-base-content/70 italic">
+							<p class="text-sm italic line-clamp-3 text-base-content/70">
 								{dream.interpretation}
 							</p>
 						{:else if dream.status === 'PENDING_ANALYSIS'}
-							<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
+							<p class="text-sm italic text-info">{m.analysis_pending_message()}</p>
 						{:else if dream.status === 'ANALYSIS_FAILED'}
-							<p class="text-sm text-error italic">{m.ANALYSIS_FAILED_try_again_message()}</p>
+							<p class="text-sm italic text-error">{m.ANALYSIS_FAILED_try_again_message()}</p>
 						{/if}
 
-						<div class="mt-4 card-actions justify-end">
+						<div class="justify-end mt-4 card-actions">
 							<!-- {#if dream.status === 'PENDING_ANALYSIS'}
 								<form
 									method="POST"

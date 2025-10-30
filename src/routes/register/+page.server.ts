@@ -72,7 +72,7 @@ export const actions = {
 			}
 		});
 
-		const token = generateToken(newUser.id, newUser.username, newUser.email || undefined);
+		const token = generateToken(newUser.id, newUser.username, newUser.email);
 		setAuthTokenCookie(cookies, token);
 
 		throw redirect(302, '/');

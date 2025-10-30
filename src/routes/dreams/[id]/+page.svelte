@@ -121,7 +121,6 @@
 			case 'COMPLETED': // Use string literal
 				return 'badge-success';
 			case 'PENDING_ANALYSIS': // Use string literal
-			case 'pending_stream': // Assuming a new status for when stream is pending
 				return 'badge-info';
 			case 'ANALYSIS_FAILED': // Use string literal
 				return 'badge-error';
@@ -155,7 +154,6 @@
 				}
 			},
 			onEnd: async (data) => {
-				console.log('Stream ended:', data);
 				isLoadingStream = false;
 				if (data.status) {
 					dream.status = data.status as DreamStatus;
@@ -180,7 +178,6 @@
 	}
 
 	async function cancelStream() {
-		console.log({ dream });
 		if (!dream.id) return;
 
 		analysisService?.closeStream(); // Close client-side stream immediately
@@ -319,7 +316,7 @@
 
 				<div class="mb-6">
 					<div class="mb-2 flex items-center justify-between">
-						<h3 class="text-lg font-semibold">{m.dream_date_label()}</h3>
+						<h3 class="font-semibold">{m.dream_date_label()} {new Date(dream.dreamDate).toLocaleDateString()}</h3>
 						{#if !isEditingDreamDate}
 							<button onclick={toggleDreamDateEditMode} class="btn btn-ghost btn-sm">
 								<svg
@@ -355,7 +352,7 @@
 							<input
 								type="date"
 								name="dreamDate"
-								class="input input-bordered w-full"
+								class="input input-bordered w-fit"
 								bind:value={editedDreamDate}
 								oninput={handleDreamDateInput}
 							/>
@@ -380,10 +377,6 @@
 								</button>
 							</div>
 						</form>
-					{:else}
-						<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
-							{new Date(dream.dreamDate).toLocaleDateString()}
-						</p>
 					{/if}
 				</div>
 

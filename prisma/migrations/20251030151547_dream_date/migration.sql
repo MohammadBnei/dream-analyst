@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "dreams" ADD COLUMN     "dream_date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

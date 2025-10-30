@@ -18,10 +18,10 @@ export const comparePassword = async (password: string, hash: string): Promise<b
 interface TokenPayload {
   userId: string;
   username: string;
-  email?: string;
+  email: string;
 }
 
-export const generateToken = (userId: string, username: string, email?: string): string => {
+export const generateToken = (userId: string, username: string, email: string): string => {
   const payload: TokenPayload = { userId, username, email };
   return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
 };

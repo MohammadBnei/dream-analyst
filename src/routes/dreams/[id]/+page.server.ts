@@ -3,7 +3,6 @@ import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types';
 import { error } from '@sveltejs/kit';
-import { getAnalysisStore } from '$lib/server/analysisStore';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 // Schemas for validation
@@ -349,42 +348,4 @@ export const actions: Actions = {
         }
     },
 
-    // Changed to DELETE method for cancellation
-    cancelAnalysis: async ({ params, locals }) => {
-        const dreamId = params.id;
-        const sessionUser = locals.user;
-        if (!sessionUser) {
-            return fail(401, { message: 'Unauthorized' });
-        }
-
-        const prisma = await getPrismaClient();
-        const analysisStore = await getAnalysisStore();
-
-        try {
-            const dream = await prisma.dream.findUnique({
-                where: { id: dreamId }
-            });
-
-            if (!dream || dream.userId !== sessionUser.id) {
-                return fail(403, { error: 'Forbidden: Dream does not belong to user or does not exist.' });
-            }
-
-            // Publish cancellation message to Redis FIRST
-            await analysisStore.publishUpdate(dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: 'Analysis cancelled by user.' });
-
-            // Then update dream status in DB
-            await prisma.dream.update({
-                where: { id: dreamId },
-                data: { status: DreamStatus.ANALYSIS_FAILED } // Use enum
-            });
-
-            // Clear Redis state
-            await analysisStore.clearAnalysis(dreamId);
-
-            return { success: true, message: 'Analysis cancelled successfully.' };
-        } catch (e) {
-            console.error(`Error cancelling analysis for dream ${dreamId}:`, e);
-            return fail(500, { error: 'Failed to cancel analysis.' });
-        }
-    }
 };

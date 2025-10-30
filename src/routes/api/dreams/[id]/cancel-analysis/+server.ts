@@ -32,7 +32,7 @@ export async function DELETE({ params, locals }) {
         }
 
         // Publish a cancellation signal. This method now also clears the Redis state.
-        await streamStateStore.publishCancellation(dreamId);
+        await streamStateStore.clearStreamState(dreamId);
 
         // Update the dream status in the database to reflect cancellation
         await prisma.dream.update({

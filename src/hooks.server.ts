@@ -21,29 +21,14 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 		return resolve(event);
 	}
 
-	const prisma = await getPrismaClient();
-
 	const decodedToken = auth.verifyToken(authToken);
 
 	if (decodedToken && decodedToken.userId) {
-		// We can directly use the username and email from the decoded token
-		// if we trust the token to contain up-to-date user information.
-		// If not, we would fetch the user from the DB using decodedToken.userId
-		// For now, let's fetch from DB to ensure data consistency.
-		const user = await prisma.user.findUnique({
-			where: { id: decodedToken.userId }
-		});
-		if (user) {
-			event.locals.user = {
-				id: user.id,
-				username: user.username,
-				email: user.email
-			};
-		} else {
-			// User not found in DB, token might be valid but user deleted
-			auth.deleteAuthTokenCookie(event.cookies);
-			event.locals.user = undefined;
-		}
+		event.locals.user = {
+			id: decodedToken.userId,
+			username: decodedToken.username,
+			email: decodedToken.email
+		};
 	} else {
 		// Token is invalid or expired
 		auth.deleteAuthTokenCookie(event.cookies);
