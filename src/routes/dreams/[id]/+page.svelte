@@ -4,18 +4,19 @@
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
-    import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the RichTextInput component
+	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
+	import { enhance } from '$app/forms';
 
-	let { params } = $props();
-	const dreamId = params.id;
+	export let data; // Data from +page.server.ts load function
+	export let form; // Data from form actions
 
-	let dream: App.Dream | null = null;
-	let isLoadingDream = true;
-	let dreamError: string | null = null;
+	const dreamId = data.dream.id;
 
-	let streamedInterpretation = $state('');
-	let streamedTags = $state<string[]>([]);
-	let currentDreamStatus = $state<App.Dream['status']>('pending_analysis');
+	let dream: App.Dream = $state(data.dream);
+
+	let streamedInterpretation = $state(dream.interpretation || '');
+	let streamedTags = $state<string[]>(dream.tags || []);
+	let currentDreamStatus = $state<App.Dream['status']>(dream.status);
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -25,54 +26,75 @@
 	let deleteError = $state<string | null>(null);
 
 	let isEditing = $state(false);
-	let editedRawText = $state('');
+	let editedRawText = $state(dream.rawText);
 	let isSavingEdit = $state(false);
 	let editError = $state<string | null>(null);
 
 	let isEditingInterpretation = $state(false);
-	let editedInterpretationText = $state('');
+	let editedInterpretationText = $state(dream.interpretation || '');
 	let isSavingInterpretationEdit = $state(false);
 	let interpretationEditError = $state<string | null>(null);
 
 	let analysisService: DreamAnalysisService | null = null;
 
-	onMount(async () => {
-		await fetchDream();
+	// Update dream state when data from load function changes (e.g., after form action)
+	$effect(() => {
+		if (data.dream) {
+			dream = data.dream;
+			// Only update streamed content if it's not actively streaming
+			if (!isLoadingStream) {
+				streamedInterpretation = dream.interpretation || '';
+				streamedTags = dream.tags || [];
+			}
+			currentDreamStatus = dream.status;
+			editedRawText = dream.rawText;
+			editedInterpretationText = dream.interpretation || '';
+		}
+	});
+
+	// Handle form action responses
+	$effect(() => {
+		if (form?.success) {
+			if (form.dream) {
+				dream = form.dream; // Update dream object from action response
+				currentDreamStatus = form.dream.status;
+				editedRawText = form.dream.rawText;
+				editedInterpretationText = form.dream.interpretation || '';
+			}
+			if (form.message) {
+				console.log(form.message);
+			}
+		}
+		if (form?.error) {
+			console.error('Form action error:', form.error);
+			// Specific error handling for different actions
+			if (form.rawText !== undefined) {
+				editError = form.error;
+			} else if (form.interpretation !== undefined) {
+				interpretationEditError = form.error;
+			} else if (form.error && form.error.includes('delete')) {
+				deleteError = form.error;
+			} else {
+				streamError = form.error; // Generic error for other actions
+			}
+		}
+
+		// Reset saving states
+		isSavingEdit = false;
+		isSavingInterpretationEdit = false;
+		isDeleting = false;
+	});
+
+	onMount(() => {
+		if (dream.status === 'pending_analysis') {
+			console.log('Dream is pending analysis on mount, attempting to start stream...');
+			startStream();
+		}
 	});
 
 	onDestroy(() => {
 		analysisService?.closeStream();
 	});
-
-	async function fetchDream() {
-		isLoadingDream = true;
-		dreamError = null;
-		try {
-			const response = await fetch(`/api/dreams/${dreamId}`);
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to fetch dream.');
-			}
-			dream = await response.json();
-			if (dream) {
-				streamedInterpretation = dream.interpretation || '';
-				streamedTags = dream.tags || [];
-				currentDreamStatus = dream.status;
-				editedRawText = dream.rawText;
-				editedInterpretationText = dream.interpretation || '';
-
-				if (dream.status === 'pending_analysis') {
-					console.log('Dream is pending analysis on mount, attempting to start stream...');
-					startStream();
-				}
-			}
-		} catch (e: any) {
-			console.error(`Error fetching dream ${dreamId}:`, e);
-			dreamError = e.message || 'An unknown error occurred while fetching the dream.';
-		} finally {
-			isLoadingDream = false;
-		}
-	}
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
@@ -90,7 +112,7 @@
 	}
 
 	function startStream() {
-		if (!dream?.id) {
+		if (!dream.id) {
 			console.warn('Cannot start stream: dream ID is not available.');
 			return;
 		}
@@ -115,7 +137,9 @@
 			onEnd: async (data) => {
 				console.log('Stream ended:', data);
 				isLoadingStream = false;
-				await fetchDream(); // Re-fetch dream to get the final persisted status
+				// Invalidate the page data to re-fetch the dream from the server
+				// This will update the `dream` state via the $effect block
+				await data.update();
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
@@ -128,94 +152,6 @@
 			}
 		});
 		analysisService.startStream();
-	}
-
-	async function regenerateAnalysis() {
-		if (!dream?.id) return;
-
-		analysisService?.closeStream();
-		streamedInterpretation = '';
-		streamedTags = [];
-		streamError = null;
-		currentDreamStatus = 'pending_analysis';
-		isLoadingStream = true;
-
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}/reset-status`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to reset analysis status.');
-			}
-
-			await fetchDream(); // Refresh to get the updated dream object
-			startStream();
-		} catch (e: any) {
-			console.error('Error regenerating analysis:', e);
-			streamError = e.message || m.unknown_error_regenerating_analysis();
-			currentDreamStatus = 'analysis_failed';
-			isLoadingStream = false;
-		}
-	}
-
-	async function handleDeleteDream() {
-		if (!dream?.id) return;
-
-		isDeleting = true;
-		deleteError = null;
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}`, {
-				method: 'DELETE'
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to delete dream.');
-			}
-
-			await goto('/dreams');
-		} catch (e: any) {
-			console.error('Error deleting dream:', e);
-			deleteError = e.message || m.unknown_error_deleting_dream();
-		} finally {
-			isDeleting = false;
-			showDeleteModal = false;
-		}
-	}
-
-	async function handleManualStatusChange(event: Event) {
-		const target = event.target as HTMLSelectElement;
-		const newStatus = target.value;
-
-		if (!dream || !newStatus) return;
-
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}/update-status`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ status: newStatus })
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to update dream status.');
-			}
-
-			currentDreamStatus = newStatus as App.Dream['status'];
-			await fetchDream();
-			console.log('Dream status updated successfully!');
-		} catch (e: any) {
-			console.error('Error updating dream status:', e);
-			alert(`Error updating dream status: ${e.message}`);
-			target.value = dream.status;
-		}
 	}
 
 	function handleBackClick() {
@@ -237,104 +173,38 @@
 	function toggleEditMode() {
 		isEditing = !isEditing;
 		if (isEditing) {
-			editedRawText = dream?.rawText || '';
+			editedRawText = dream.rawText;
 			editError = null;
-		}
-	}
-
-	async function handleSaveEdit() {
-		if (!dream?.id || editedRawText.length < 10) {
-			editError = m.dream_text_too_short_error();
-			return;
-		}
-
-		isSavingEdit = true;
-		editError = null;
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ rawText: editedRawText })
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to update dream.');
-			}
-
-			await fetchDream();
-			isEditing = false;
-			console.log('Dream raw text updated successfully!');
-		} catch (e: any) {
-			console.error('Error saving dream edit:', e);
-			editError = e.message || m.unknown_error_saving_dream();
-		} finally {
-			isSavingEdit = false;
 		}
 	}
 
 	function handleCancelEdit() {
 		isEditing = false;
-		editedRawText = dream?.rawText || '';
+		editedRawText = dream.rawText;
 		editError = null;
 	}
 
 	function toggleInterpretationEditMode() {
 		isEditingInterpretation = !isEditingInterpretation;
 		if (isEditingInterpretation) {
-			editedInterpretationText = dream?.interpretation || '';
+			editedInterpretationText = dream.interpretation || '';
 			interpretationEditError = null;
-		}
-	}
-
-	async function handleSaveInterpretationEdit() {
-		if (!dream?.id || editedInterpretationText.length < 10) {
-			interpretationEditError = m.interpretation_text_too_short_error();
-			return;
-		}
-
-		isSavingInterpretationEdit = true;
-		interpretationEditError = null;
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}/interpretation`, {
-				method: 'PUT',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ interpretation: editedInterpretationText })
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to update interpretation.');
-			}
-
-			await fetchDream();
-			isEditingInterpretation = false;
-			console.log('Dream interpretation updated successfully!');
-		} catch (e: any) {
-			console.error('Error saving interpretation edit:', e);
-			interpretationEditError = e.message || m.unknown_error_saving_interpretation();
-		} finally {
-			isSavingInterpretationEdit = false;
 		}
 	}
 
 	function handleCancelInterpretationEdit() {
 		isEditingInterpretation = false;
-		editedInterpretationText = dream?.interpretation || '';
+		editedInterpretationText = dream.interpretation || '';
 		interpretationEditError = null;
 	}
 
-    function handleRawTextInput(value: string) {
-        editedRawText = value;
-    }
+	function handleRawTextInput(value: string) {
+		editedRawText = value;
+	}
 
-    function handleInterpretationInput(value: string) {
-        editedInterpretationText = value;
-    }
+	function handleInterpretationInput(value: string) {
+		editedInterpretationText = value;
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -359,28 +229,7 @@
 		</div>
 	</div>
 
-	{#if isLoadingDream}
-		<div class="flex justify-center items-center h-64">
-			<span class="loading loading-spinner loading-lg"></span>
-		</div>
-	{:else if dreamError}
-		<div role="alert" class="alert alert-error">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="stroke-current shrink-0 h-6 w-6"
-				fill="none"
-				viewBox="0 0 24 24"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-				></path></svg
-			>
-			<span>Error loading dream: {dreamError}</span>
-			<button class="btn btn-sm btn-ghost" onclick={fetchDream}>Retry</button>
-		</div>
-	{:else if dream}
+	{#if data.dream}
 		<div class="card bg-base-100 p-6 shadow-xl">
 			<div class="card-body p-0">
 				<div class="mb-4 flex items-center justify-between">
@@ -392,74 +241,28 @@
 							>{currentDreamStatus?.replace('_', ' ')}</span
 						>
 						{#if currentDreamStatus === 'pending_analysis'}
-							<select class="select select-bordered select-sm" onchange={handleManualStatusChange}>
-								<option value="" disabled selected>{m.change_status_option()}</option>
-								<option value="analysis_failed">{m.reset_to_failed_analysis_option()}</option>
-							</select>
+							<form method="POST" action="?/updateStatus" use:enhance>
+								<select
+									name="status"
+									class="select select-bordered select-sm"
+									onchange="this.form.submit()"
+								>
+									<option value="" disabled selected>{m.change_status_option()}</option>
+									<option value="analysis_failed">{m.reset_to_failed_analysis_option()}</option>
+								</select>
+							</form>
 						{/if}
 					</div>
-				</div>
-
-				<div class="mb-6">
-					<div class="flex items-center justify-between mb-2">
-						<h3 class="text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
-						{#if !isEditing}
-							<button onclick={toggleEditMode} class="btn btn-sm btn-ghost">
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-								</svg>
-								{m.edit_button()}
-							</button>
-						{/if}
-					</div>
-					{#if isEditing}
-						<RichTextInput
-                            placeholder={m.raw_dream_text_heading()}
-                            rows={8}
-                            bind:value={editedRawText}
-                            onInput={handleRawTextInput}
-                        />
-						{#if editError}
-							<div class="text-error text-sm mt-1">{editError}</div>
-						{/if}
-						<div class="mt-2 flex justify-end gap-2">
-							<button onclick={handleCancelEdit} class="btn btn-sm btn-ghost">{m.cancel_button()}</button>
-							<button onclick={handleSaveEdit} class="btn btn-sm btn-primary" disabled={isSavingEdit || editedRawText.length < 10}>
-								{#if isSavingEdit}
-									<span class="loading loading-spinner"></span>
-									{m.save_button()}
-								{:else}
-									{m.save_button()}
-								{/if}
-							</button>
-						</div>
-					{:else}
-						<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
-							{dream.rawText}
-						</p>
-					{/if}
 				</div>
 
 				<div class="mb-6">
 					<div class="mb-2 flex items-center justify-between">
-						<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
-						{#if !isEditingInterpretation}
-							<button onclick={toggleInterpretationEditMode} class="btn btn-sm btn-ghost">
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-								</svg>
-								{m.edit_button()}
-							</button>
-						{/if}
-						{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
-							<button
-								onclick={regenerateAnalysis}
-								class="btn btn-sm btn-primary"
-								disabled={isLoadingStream}
-							>
+						<h3 class="text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
+						{#if !isEditing}
+							<button onclick={toggleEditMode} class="btn btn-sm btn-ghost">
 								<svg
 									xmlns="http://www.w3.org/2000/svg"
-									class="mr-1 h-4 w-4"
+									class="h-5 w-5"
 									fill="none"
 									viewBox="0 0 24 24"
 									stroke="currentColor"
@@ -468,35 +271,150 @@
 										stroke-linecap="round"
 										stroke-linejoin="round"
 										stroke-width="2"
-										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
+										d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
 									/>
 								</svg>
-								{m.regenerate_analysis_button()}
+								{m.edit_button()}
 							</button>
 						{/if}
 					</div>
+					{#if isEditing}
+						<form
+							method="POST"
+							action="?/updateDream"
+							use:enhance={() => {
+								isSavingEdit = true;
+								return async ({ update }) => {
+									await update();
+									isEditing = false; // Exit edit mode on success or failure
+								};
+							}}
+						>
+							<RichTextInput
+								name="rawText"
+								placeholder={m.raw_dream_text_heading()}
+								rows={8}
+								bind:value={editedRawText}
+								onInput={handleRawTextInput}
+							/>
+							{#if editError}
+								<div class="mt-1 text-sm text-error">{editError}</div>
+							{/if}
+							<div class="mt-2 flex justify-end gap-2">
+								<button onclick={handleCancelEdit} type="button" class="btn btn-sm btn-ghost"
+									>{m.cancel_button()}</button
+								>
+								<button
+									type="submit"
+									class="btn btn-sm btn-primary"
+									disabled={isSavingEdit || editedRawText.length < 10}
+								>
+									{#if isSavingEdit}
+										<span class="loading loading-spinner"></span>
+										{m.save_button()}
+									{:else}
+										{m.save_button()}
+									{/if}
+								</button>
+							</div>
+						</form>
+					{:else}
+						<p class="whitespace-pre-wrap leading-relaxed text-base-content/80">
+							{dream.rawText}
+						</p>
+					{/if}
+				</div>
+
+				<div class="mb-6">
+					<div class="mb-2 flex items-center justify-between">
+						<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
+						<div class="flex items-center gap-2">
+							{#if !isEditingInterpretation}
+								<button onclick={toggleInterpretationEditMode} class="btn btn-sm btn-ghost">
+									<svg
+										xmlns="http://www.w3.org/2000/svg"
+										class="h-5 w-5"
+										fill="none"
+										viewBox="0 0 24 24"
+										stroke="currentColor"
+									>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+										/>
+									</svg>
+									{m.edit_button()}
+								</button>
+							{/if}
+							{#if currentDreamStatus === 'completed' || currentDreamStatus === 'analysis_failed'}
+								<form method="POST" action="?/resetAnalysis" use:enhance>
+									<button type="submit" class="btn btn-sm btn-primary" disabled={isLoadingStream}>
+										<svg
+											xmlns="http://www.w3.org/2000/svg"
+											class="mr-1 h-4 w-4"
+											fill="none"
+											viewBox="0 0 24 24"
+											stroke="currentColor"
+										>
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
+											/>
+										</svg>
+										{m.regenerate_analysis_button()}
+									</button>
+								</form>
+							{/if}
+						</div>
+					</div>
 
 					{#if isEditingInterpretation}
-						<RichTextInput
-                            placeholder={m.interpretation_heading()}
-                            rows={8}
-                            bind:value={editedInterpretationText}
-                            onInput={handleInterpretationInput}
-                        />
-						{#if interpretationEditError}
-							<div class="text-error text-sm mt-1">{interpretationEditError}</div>
-						{/if}
-						<div class="mt-2 flex justify-end gap-2">
-							<button onclick={handleCancelInterpretationEdit} class="btn btn-sm btn-ghost">{m.cancel_button()}</button>
-							<button onclick={handleSaveInterpretationEdit} class="btn btn-sm btn-primary" disabled={isSavingInterpretationEdit || editedInterpretationText.length < 10}>
-								{#if isSavingInterpretationEdit}
-									<span class="loading loading-spinner"></span>
-									{m.save_button()}
-								{:else}
-									{m.save_button()}
-								{/if}
-							</button>
-						</div>
+						<form
+							method="POST"
+							action="?/updateInterpretation"
+							use:enhance={() => {
+								isSavingInterpretationEdit = true;
+								return async ({ update }) => {
+									await update();
+									isEditingInterpretation = false; // Exit edit mode on success or failure
+								};
+							}}
+						>
+							<RichTextInput
+								name="interpretation"
+								placeholder={m.interpretation_heading()}
+								rows={8}
+								bind:value={editedInterpretationText}
+								onInput={handleInterpretationInput}
+							/>
+							{#if interpretationEditError}
+								<div class="mt-1 text-sm text-error">{interpretationEditError}</div>
+							{/if}
+							<div class="mt-2 flex justify-end gap-2">
+								<button
+									onclick={handleCancelInterpretationEdit}
+									type="button"
+									class="btn btn-sm btn-ghost"
+									>{m.cancel_button()}</button
+								>
+								<button
+									type="submit"
+									class="btn btn-sm btn-primary"
+									disabled={isSavingInterpretationEdit || editedInterpretationText.length < 10}
+								>
+									{#if isSavingInterpretationEdit}
+										<span class="loading loading-spinner"></span>
+										{m.save_button()}
+									{:else}
+										{m.save_button()}
+									{/if}
+								</button>
+							</div>
+						</form>
 					{:else if currentDreamStatus === 'pending_analysis' && !isLoadingStream && !streamError}
 						<div class="alert alert-info shadow-lg">
 							<div>
@@ -582,20 +500,49 @@
 						</div>
 					{/if}
 					<div class="modal-action">
-						<button onclick={handleCancelDelete} class="btn btn-ghost" disabled={isDeleting}
+						<button onclick={handleCancelDelete} type="button" class="btn btn-ghost" disabled={isDeleting}
 							>{m.cancel_button()}</button
 						>
-						<button onclick={handleDeleteDream} class="btn btn-error" disabled={isDeleting}>
-							{#if isDeleting}
-								<span class="loading loading-spinner"></span>
-								{m.deleting_button()}
-							{:else}
-								{m.delete_button()}
-							{/if}
-						</button>
+						<form
+							method="POST"
+							action="?/deleteDream"
+							use:enhance={() => {
+								isDeleting = true;
+								return async ({ update }) => {
+									await update();
+									// Redirection is handled by the action, so no need to set isDeleting to false here
+								};
+							}}
+						>
+							<button type="submit" class="btn btn-error" disabled={isDeleting}>
+								{#if isDeleting}
+									<span class="loading loading-spinner"></span>
+									{m.deleting_button()}
+								{:else}
+									{m.delete_button()}
+								{/if}
+							</button>
+						</form>
 					</div>
 				</div>
 			</dialog>
 		{/if}
+	{:else}
+		<!-- This block handles the case where data.dream is null, e.g., if the load function threw an error -->
+		<div role="alert" class="alert alert-error">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="stroke-current shrink-0 h-6 w-6"
+				fill="none"
+				viewBox="0 0 24 24"
+				><path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="2"
+					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+				></path></svg
+			>
+			<span>Error loading dream details.</span>
+		</div>
 	{/if}
 </div>

@@ -1,13 +1,29 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
+	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
 
 	// Data loaded from +page.server.ts
-	let { data } = $props();
+	export let data;
+	export let form; // Data from form actions
+
 	let dreams = $derived(data.dreams);
 
-	let error: string | null = null; // For errors during client-side actions like cancelAnalysis
+	let clientError: string | null = null; // For errors during client-side actions like cancelAnalysis confirmation
+
+	// Handle form action responses
+	$effect(() => {
+		if (form?.success) {
+			console.log(form.message);
+			// Invalidate all data to refetch dreams and update UI after a successful action
+			invalidateAll();
+		}
+		if (form?.error) {
+			console.error('Form action error:', form.error);
+			clientError = form.error;
+		}
+	});
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
@@ -23,24 +39,11 @@
 		}
 	}
 
-	async function cancelAnalysis(dreamId: string) {
-		try {
-			const response = await fetch(`/api/dreams/${dreamId}/cancel-analysis`, {
-				method: 'DELETE'
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to cancel analysis');
-			}
-
-			alert('Analysis cancelled successfully!');
-			// Invalidate all data to refetch dreams and update UI
-			await invalidateAll();
-		} catch (e: any) {
-			console.error('Error cancelling analysis:', e);
-			error = e.message || 'An unknown error occurred while cancelling analysis.';
+	function confirmCancelAnalysis(dreamId: string) {
+		if (!confirm('Are you sure you want to cancel the analysis for this dream?')) {
+			return false; // Prevent form submission
 		}
+		return true; // Allow form submission
 	}
 </script>
 
@@ -50,7 +53,7 @@
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
-	{#if error}
+	{#if clientError}
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -64,8 +67,8 @@
 					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
 				></path></svg
 			>
-			<span>Error: {error}</span>
-			<button class="btn btn-sm btn-ghost" onclick={() => (error = null)}>Clear</button>
+			<span>Error: {clientError}</span>
+			<button class="btn btn-sm btn-ghost" onclick={() => (clientError = null)}>Clear</button>
 		</div>
 	{:else if dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
@@ -115,12 +118,22 @@
 
 						<div class="mt-4 card-actions justify-end">
 							{#if dream.status === 'pending_analysis'}
-								<button
-									onclick={() => cancelAnalysis(dream.id)}
-									class="btn btn-sm btn-warning"
+								<form
+									method="POST"
+									action="?/cancelAnalysis"
+									use:enhance={() => {
+										return ({ cancel }) => {
+											if (!confirmCancelAnalysis(dream.id)) {
+												cancel(); // Prevent form submission if confirmation fails
+											}
+										};
+									}}
 								>
-									{m.cancel_analysis_button()}
-								</button>
+									<input type="hidden" name="dreamId" value={dream.id} />
+									<button type="submit" class="btn btn-sm btn-warning">
+										{m.cancel_analysis_button()}
+									</button>
+								</form>
 							{/if}
 							<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary">{m.view_details_button()}</a>
 						</div>

@@ -1,67 +1,51 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
-	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
-	import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the new component
+	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
+	import { enhance } from '$app/forms';
 
-	let dreamText: string = '';
+	export let form; // Data from form action
+
+	let dreamText: string = form?.rawText || '';
 	let isSaving: boolean = false;
-	let errorMessage: string | null = null;
 
 	$: isSaveDisabled = dreamText.length < 10 || isSaving;
 
-	async function handleSubmit() {
-		isSaving = true;
-		errorMessage = null;
-
-		try {
-			const response = await fetch('/api/dreams', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				},
-				body: JSON.stringify({ rawText: dreamText })
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to create dream.');
-			}
-
-			const result = await response.json();
-			if (result && result.dreamId) {
-				await goto(`/dreams/${result.dreamId}`);
-			} else {
-				errorMessage = m.dream_saved_no_id_error();
-			}
-		} catch (e: any) {
-			errorMessage = e.message || m.unknown_error_occurred();
-		} finally {
-			isSaving = false;
-		}
-	}
-
-	function resetForm() {
-		dreamText = '';
-		isSaving = false;
-		errorMessage = null;
-	}
-
 	function handleRichTextInput(value: string) {
 		dreamText = value;
+	}
+
+	// Reset form after successful submission (handled by redirect) or on error
+	$: if (form?.error) {
+		isSaving = false;
+	} else if (form?.success) {
+		dreamText = ''; // Clear text on success
+		isSaving = false;
 	}
 </script>
 
 <div class="container mx-auto max-w-2xl p-4">
 	<h1 class="mb-6 text-center text-3xl font-bold">{m.new_dream_title()}</h1>
 
-	<form on:submit|preventDefault={handleSubmit} class="space-y-6">
+	<form
+		method="POST"
+		action="?/createDream"
+		use:enhance={() => {
+			isSaving = true;
+			return async ({ update }) => {
+				await update();
+				isSaving = false;
+			};
+		}}
+		class="space-y-6"
+	>
 		<div class="form-control">
 			<label for="dreamText" class="label">
 				<span class="label-text">{m.what_did_you_dream_label()}</span>
 			</label>
 			<RichTextInput
 				id="dreamText"
+				name="rawText"
 				placeholder={m.describe_dream_placeholder()}
 				rows={8}
 				bind:value={dreamText}
@@ -84,7 +68,7 @@
 		</div>
 	</form>
 
-	{#if errorMessage}
+	{#if form?.error}
 		<div role="alert" class="mt-8 alert alert-error" transition:fade>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -98,8 +82,7 @@
 					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
 				></path></svg
 			>
-			<span>{m.error_prefix()}: {errorMessage}</span>
-			<button class="btn btn-ghost btn-sm" on:click={resetForm}>{m.retry_button()}</button>
+			<span>{m.error_prefix()}: {form.error}</span>
 		</div>
 	{/if}
 </div>
