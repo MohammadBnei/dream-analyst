@@ -5,12 +5,12 @@
 
 	const { data, form } = $props();
 
-	let user = $state(data.user);
+	let user = $derived(data.user);
 	let dailyLimit = $state(data.dailyLimit);
 	let dailyUsage = $state(data.dailyUsage);
 
-	let editedUsername = $state(user.username);
-	let editedEmail = $state(user.email);
+	let editedUsername = $derived(user.username);
+	let editedEmail = $derived(user.email);
 
 	let isEditingUsername = $state(false);
 	let isEditingEmail = $state(false);
@@ -19,17 +19,6 @@
 	let emailEditError = $state<string | null>(null);
 	let formMessage = $state<string | null>(null);
 	let formMessageType: 'success' | 'error' | null = null;
-
-	// Effect to update local state when data from load function changes
-	$effect(() => {
-		if (data.user) {
-			user = data.user;
-			dailyLimit = data.dailyLimit;
-			dailyUsage = data.dailyUsage;
-			editedUsername = user.username;
-			editedEmail = user.email;
-		}
-	});
 
 	// Effect to handle form submission responses
 	$effect(() => {
