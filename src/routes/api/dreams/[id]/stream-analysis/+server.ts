@@ -74,7 +74,8 @@ export async function GET({ params, locals, platform, request }) {
 			);
 			await streamStateStore.markStreamStarted(dreamId, promptType); // Mark as started in Redis with promptType
 			// Get or create the processor. It will start the processing in the background.
-			getOrCreateStreamProcessor(dream, platform, promptType, request.signal); // Pass promptType
+			// IMPORTANT: Removed request.signal here to prevent server-side abortion on client disconnect.
+			getOrCreateStreamProcessor(dream, platform, promptType); // Pass promptType
 		} else {
 			console.debug(
 				`Dream ${dreamId}: Background stream processing already running (tracked by Redis).`
