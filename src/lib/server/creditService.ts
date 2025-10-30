@@ -4,7 +4,7 @@ import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 
 // Define credit costs and daily limits per role
 const CREDIT_COSTS = {
-    DREAM_ANALYSIS: 5, // Cost for one dream analysis
+    DREAM_ANALYSIS: 2, // Cost for one dream analysis
     CHAT_MESSAGE: 1 // Cost for one AI chat message
 };
 
