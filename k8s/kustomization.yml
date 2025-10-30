@@ -8,5 +8,5 @@ resources:
   - service.yml
 
 images:
-  - name: mohammaddocker/dream-analyst
-    newTag: 0.14.3
+- name: mohammaddocker/dream-analyst
+  newTag: 0.15.0
