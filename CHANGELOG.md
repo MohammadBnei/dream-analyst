@@ -1,5 +1,18 @@
 # Changelog
 
+# [0.10.0](https://github.com/MohammadBnei/dream-analyst/compare/0.9.2...0.10.0) (2025-10-30)
+
+
+### Bug Fixes
+
+* Update favicon to .ico format ([a53aabb](https://github.com/MohammadBnei/dream-analyst/commit/a53aabbc145bceef845172d94d0169923ebb63bb))
+
+
+### Features
+
+* Add PWA capabilities and SEO optimization ([5729e4d](https://github.com/MohammadBnei/dream-analyst/commit/5729e4d0b130a04291a07c3a1ec9a4f04d8efcdc))
+* Conditionally display CTA based on user login status ([7edf99b](https://github.com/MohammadBnei/dream-analyst/commit/7edf99b1a0fae4d4e4cdf59e07f1b95eb06d3ada))
+
 ## [0.9.2](https://github.com/MohammadBnei/dream-analyst/compare/0.9.1...0.9.2) (2025-10-30)
 
 ## [0.9.1](https://github.com/MohammadBnei/dream-analyst/compare/0.9.0...0.9.1) (2025-10-30)
