@@ -24,7 +24,7 @@
 				<p class="py-6">
 					{m.home_page_intro()}
 				</p>
-				{#if data.user}
+				{#if data.isLoggedIn}
 					<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 				{:else}
 					<a href="/register" class="btn btn-primary">{m.register_button()}</a>
