@@ -38,7 +38,10 @@
 
 	// Update dream state when data from load function changes (e.g., after form action)
 	$effect(() => {
-		if (data.dream) {
+		// Only update if the incoming dream data is different from the current state
+		// This prevents an infinite loop if `dream` is updated and then `data.dream` is still the same
+		// We compare `updatedAt` as a simple way to check if the dream object itself has changed.
+		if (data.dream && dream.updatedAt !== data.dream.updatedAt) {
 			dream = data.dream;
 			// Only update streamed content if it's not actively streaming
 			if (!isLoadingStream) {
@@ -55,10 +58,9 @@
 	$effect(() => {
 		if (form?.success) {
 			if (form.dream) {
-				dream = form.dream; // Update dream object from action response
-				currentDreamStatus = form.dream.status;
-				editedRawText = form.dream.rawText;
-				editedInterpretationText = form.dream.interpretation || '';
+				// When a form action successfully updates the dream, update the local state
+				// This will then trigger the $effect above to synchronize other related states
+				dream = form.dream;
 			}
 			if (form.message) {
 				console.log(form.message);
