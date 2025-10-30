@@ -1,5 +1,21 @@
 # Changelog
 
+# [0.13.0](https://github.com/MohammadBnei/dream-analyst/compare/0.12.3...0.13.0) (2025-10-30)
+
+
+### Bug Fixes
+
+* Prevent hydration mismatch for PWA install button ([90b458c](https://github.com/MohammadBnei/dream-analyst/commit/90b458cd8d41ce2c48ee15c7a2f870aff457c7ff))
+
+
+### Features
+
+* Add install app button translation ([b882c25](https://github.com/MohammadBnei/dream-analyst/commit/b882c259082c5ecce2ac7c734c6f22cccc8a5b7c))
+* Add install app button translation to French ([e993beb](https://github.com/MohammadBnei/dream-analyst/commit/e993bebe75f15837473b30fe16338e1560ae0048))
+* Add PWA install CTA to home page ([c6554bd](https://github.com/MohammadBnei/dream-analyst/commit/c6554bd53645361c4ecf98cf6b5f49ac0ed9ca49))
+* Add PWA service worker and manifest link ([576aa96](https://github.com/MohammadBnei/dream-analyst/commit/576aa968e95e46d7d99ae36a79f4ac0091a38fb6))
+* Add shortcut for new dream entry to manifest ([ac32c87](https://github.com/MohammadBnei/dream-analyst/commit/ac32c87698b32c74924b66c45ecd6e5bb5b0c4f5))
+
 ## [0.12.3](https://github.com/MohammadBnei/dream-analyst/compare/0.12.2...0.12.3) (2025-10-30)
 
 ## [0.12.2](https://github.com/MohammadBnei/dream-analyst/compare/0.12.1...0.12.2) (2025-10-30)
