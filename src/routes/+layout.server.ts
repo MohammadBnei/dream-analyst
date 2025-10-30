@@ -6,6 +6,7 @@ export const load = (async ({ locals, request }) => {
 
 	return {
 		isLoggedIn: !!locals.user,
+		isAdmin: locals.user?.role === 'ADMIN',
 		lang: lang
 	};
 }) satisfies LayoutServerLoad;

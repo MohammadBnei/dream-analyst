@@ -7,7 +7,7 @@
 
 	let { children, data }: LayoutProps = $props();
 
-	const { isLoggedIn, lang } = data;
+	const { isLoggedIn, lang, isAdmin } = data;
 
 	let currentTheme: string;
 
@@ -91,7 +91,9 @@
 							</form>
 						</li>
 						<li><a href="/profile">{m.profile_link()}</a></li>
-						<li><a href="/admin">{m.admin_link()}</a></li>
+						{#if isAdmin}
+							<li><a href="/admin">{m.admin_link()}</a></li>
+						{/if}
 					{:else}
 						<li><a href="/login">{m.login_link()}</a></li>
 						<li><a href="/register">{m.register_link()}</a></li>
