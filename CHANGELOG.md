@@ -1,5 +1,18 @@
 # Changelog
 
+# [0.19.0](https://github.com/MohammadBnei/dream-analyst/compare/0.18.1...0.19.0) (2025-10-30)
+
+
+### Bug Fixes
+
+* Allow symbolic interpretation for Hulm dreams after initial advice ([c819c8c](https://github.com/MohammadBnei/dream-analyst/commit/c819c8c4751dc3e8cd229d9053c8e5e45b1c53a5))
+
+
+### Features
+
+* add Islamic dream analysis prompt and type ([0e9583a](https://github.com/MohammadBnei/dream-analyst/commit/0e9583a0d2db7af526649aded5c22847d502197c))
+* Add Islamic dream interpretation prompt and knowledge integration ([396b2b9](https://github.com/MohammadBnei/dream-analyst/commit/396b2b9dbc1f694287454b39906589f696929b85))
+
 ## [0.18.1](https://github.com/MohammadBnei/dream-analyst/compare/0.18.0...0.18.1) (2025-10-30)
 
 # [0.18.0](https://github.com/MohammadBnei/dream-analyst/compare/0.17.0...0.18.0) (2025-10-30)
