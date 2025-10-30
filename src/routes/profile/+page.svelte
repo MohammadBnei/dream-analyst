@@ -35,12 +35,12 @@
 	$effect(() => {
 		if (form) {
 			if (form.success) {
-				formMessage = form.message || 'Update successful!';
+				formMessage = form.message || m.update_successful();
 				formMessageType = 'success';
 				// Invalidate all data to ensure header and other parts reflect new user info
 				invalidateAll();
 			} else {
-				formMessage = form.message || 'Update failed.';
+				formMessage = form.message || m.update_failed();
 				formMessageType = 'error';
 			}
 
