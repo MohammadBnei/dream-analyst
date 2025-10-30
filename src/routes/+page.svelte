@@ -52,16 +52,18 @@
 <div class="container mx-auto p-4">
 	<div class="hero mb-8 rounded-lg bg-base-200 shadow-xl">
 		<div class="hero-content flex-col lg:flex-row">
-			<img
-				src={dreamerLogo}
-				alt={m.app_name()}
-				class="w-full rounded-lg shadow-2xl dark:hidden"
-			/>
-			<img
-				src={darkDreamerLogo}
-				alt={m.app_name()}
-				class="hidden w-full rounded-lg shadow-2xl dark:block"
-			/>
+			<div class="w-full max-w-sm">
+				<img
+					src={dreamerLogo}
+					alt={m.app_name()}
+					class="rounded-lg shadow-2xl dark:hidden"
+				/>
+				<img
+					src={darkDreamerLogo}
+					alt={m.app_name()}
+					class="hidden rounded-lg shadow-2xl dark:block"
+				/>
+			</div>
 			<!-- Adjusted icon size -->
 			<div>
 				<h1 class="text-5xl font-bold">{m.home_page_title()}</h1>
