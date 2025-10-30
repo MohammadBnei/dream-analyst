@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import { goto, invalidate } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
@@ -138,9 +138,7 @@
 			onEnd: async (data) => {
 				console.log('Stream ended:', data);
 				isLoadingStream = false;
-				// Invalidate the page data to re-fetch the dream from the server
-				// This will update the `dream` state via the $effect block
-				await data.update();
+				await invalidate("dream");
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
@@ -246,6 +244,7 @@
 								<select
 									name="status"
 									class="select-bordered select select-sm"
+									onchange={() => this.submit()}
 								>
 									<option value="" disabled selected>{m.change_status_option()}</option>
 									<option value="analysis_failed">{m.reset_to_failed_analysis_option()}</option>
