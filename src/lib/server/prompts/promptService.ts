@@ -4,6 +4,7 @@ import {
     DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
     type DreamPromptType
 } from './dreamAnalyst';
+import { JUNGIAN_KNOWLEDGE } from '../knowledge/jungian'; // Import Jungian knowledge here
 
 /**
  * A service for managing and retrieving various system prompts.
@@ -37,14 +38,21 @@ export class PromptService {
     /**
      * Retrieves a system prompt based on its type.
      * @param promptType The type of the dream analysis prompt to retrieve.
-     * @returns The system prompt string.
+     * @returns The system prompt string, potentially augmented with specific knowledge.
      * @throws Error if the promptType is not recognized.
      */
     public getSystemPrompt(promptType: DreamPromptType): string {
-        const prompt = this.prompts[promptType];
+        let prompt = this.prompts[promptType];
         if (!prompt) {
             throw new Error(`Unknown dream prompt type: ${promptType}`);
         }
+
+        // Conditionally add Jungian knowledge if the prompt type is Jungian
+        if (promptType === 'jungian' && JUNGIAN_KNOWLEDGE) {
+            // Prepend or append the knowledge. Prepending might be better for context.
+            prompt = JUNGIAN_KNOWLEDGE + "\n\n" + prompt;
+        }
+
         return prompt;
     }
 

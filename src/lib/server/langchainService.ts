@@ -4,7 +4,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { promptService } from './prompts/promptService'; // Import the prompt service
 import type { DreamPromptType } from './prompts/dreamAnalyst'; // Import the type
-import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // Assuming this is still relevant for Jungian, might need to be conditional
+// Removed: import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // No longer needed here
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
@@ -48,17 +48,15 @@ export async function initiateStreamedDreamAnalysis(
             },
         );
 
-        // Use the PromptService to get the system prompt
+        // Use the PromptService to get the system prompt, which now handles Jungian knowledge
         const systemPrompt = promptService.getSystemPrompt(promptType);
         const messages = [
             new SystemMessage(systemPrompt),
             new HumanMessage(`My dream: ${rawText}`),
         ];
 
-        // Conditionally add Jungian knowledge if the prompt type is Jungian
-        if (promptType === 'jungian' && JUNGIAN_KNOWLEDGE) {
-            messages.splice(1, 0, new SystemMessage(JUNGIAN_KNOWLEDGE)); // Insert after the main system prompt
-        }
+        // Removed: Conditionally add Jungian knowledge if the prompt type is Jungian
+        // This logic is now encapsulated within promptService.getSystemPrompt()
 
         const stream = await chat.stream(messages, {
             signal: signal // Pass the abort signal directly to the stream method
