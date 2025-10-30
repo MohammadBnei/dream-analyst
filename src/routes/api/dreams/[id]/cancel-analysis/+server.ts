@@ -1,7 +1,7 @@
-// src/routes/api/dreams/[id]/cancel-analysis/+server.ts
 import { error, json } from '@sveltejs/kit';
-import { getAnalysisStore } from '$lib/server/analysisStore';
+import { getStreamStateStore } from '$lib/server/streamStateStore'; // Updated import
 import { getPrismaClient } from '$lib/server/db';
+import { DreamStatus } from '@prisma/client'; // Ensure DreamStatus is imported
 
 export async function DELETE({ params, locals }) {
     const dreamId = params.id;
@@ -16,7 +16,7 @@ export async function DELETE({ params, locals }) {
     }
 
     const prisma = await getPrismaClient();
-    const analysisStore = await getAnalysisStore();
+    const streamStateStore = await getStreamStateStore(); // Updated function call
 
     try {
         const dream = await prisma.dream.findUnique({
@@ -27,19 +27,18 @@ export async function DELETE({ params, locals }) {
             throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
         }
 
-        if (dream.status !== 'PENDING_ANALYSIS') {
+        if (dream.status !== DreamStatus.PENDING_ANALYSIS) { // Use DreamStatus enum
             return json({ message: 'Analysis is not currently pending for this dream.' }, { status: 409 });
         }
 
-        // Clear the analysis state from Redis and publish a cancellation message
-        await analysisStore.clearAnalysis(dreamId);
-        await analysisStore.publishUpdate(dreamId, { finalStatus: 'ANALYSIS_FAILED', message: 'Analysis cancelled by user.' });
+        // Publish a cancellation signal. This method now also clears the Redis state.
+        await streamStateStore.publishCancellation(dreamId);
 
-        // Update the dream status in the database
+        // Update the dream status in the database to reflect cancellation
         await prisma.dream.update({
             where: { id: dreamId },
             data: {
-                status: 'ANALYSIS_FAILED',
+                status: DreamStatus.ANALYSIS_FAILED, // Set status to failed upon cancellation
                 interpretation: dream.interpretation || '', // Keep existing interpretation if any
                 tags: dream.tags || [], // Keep existing tags if any
                 updatedAt: new Date()
@@ -51,6 +50,6 @@ export async function DELETE({ params, locals }) {
 
     } catch (e) {
         console.error(`Error cancelling analysis for dream ${dreamId}:`, e);
-        throw error(500, `Failed to cancel analysis: ${e.message}`);
+        throw error(500, `Failed to cancel analysis: ${(e as Error).message}`);
     }
 }
