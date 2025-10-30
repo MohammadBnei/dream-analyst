@@ -1,5 +1,19 @@
 # Changelog
 
+# [0.7.0](https://github.com/MohammadBnei/dream-analyst/compare/0.6.0...0.7.0) (2025-10-29)
+
+
+### Bug Fixes
+
+* Implement theme switching with localStorage and swap component ([91879c8](https://github.com/MohammadBnei/dream-analyst/commit/91879c8ea8a656c471b4307459808a74f2b8b390))
+* Use translations for RichTextInput component messages ([101b12d](https://github.com/MohammadBnei/dream-analyst/commit/101b12dbfb9ded174c2718b62c5b0ee34a3fc120))
+
+
+### Features
+
+* Add audio input related translations ([c878ceb](https://github.com/MohammadBnei/dream-analyst/commit/c878cebc9ce15ed55866e218d5b1af5b9ad91b87))
+* Add light/dark theme switch to navbar and sidebar ([fae5ace](https://github.com/MohammadBnei/dream-analyst/commit/fae5aced86b5dcad78ac39898b0ae1f19c45e155))
+
 # [0.6.0](https://github.com/MohammadBnei/dream-analyst/compare/0.5.0...0.6.0) (2025-10-29)
 
 
