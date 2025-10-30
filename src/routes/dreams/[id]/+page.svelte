@@ -1,15 +1,20 @@
 <script lang="ts">
-	import { goto, invalidate } from '$app/navigation';
+	import { invalidate } from '$app/navigation';
 	import { onDestroy, onMount } from 'svelte';
-	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
-	import { ClientChatService } from '$lib/client/services/chatService'; // Import the new client chat service
-	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
-	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
-	import { enhance } from '$app/forms';
+	import { ClientChatService } from '$lib/client/services/chatService';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-	import { promptService } from '$lib/prompts/promptService';
 	import type { ChatMessage } from '@langchain/core/messages';
+
+	// New Components
+	import DreamHeader from '$lib/client/components/DreamHeader.svelte';
+	import DreamNavigation from '$lib/client/components/DreamNavigation.svelte';
+	import DreamStatusBadge from '$lib/client/components/DreamStatusBadge.svelte';
+	import DreamRawTextSection from '$lib/client/components/DreamRawTextSection.svelte';
+	import DreamInterpretationSection from '$lib/client/components/DreamInterpretationSection.svelte';
+	import DreamChatSection from '$lib/client/components/DreamChatSection.svelte';
+	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
+	import DeleteDreamModal from '$lib/client/components/DeleteDreamModal.svelte';
 
 	let { data, form } = $props();
 
@@ -25,38 +30,13 @@
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
 
-	let isDeleting = $state(false);
-	let deleteError = $state<string | null>(null);
-
-	let isEditing = $state(false);
-	let editedRawText = $state(dream.rawText);
-	let isSavingEdit = $state(false);
-	let editError = $state<string | null>(null);
-
-	let isEditingInterpretation = $state(false);
-	let editedInterpretationText = $state(dream.interpretation || '');
-	let isSavingInterpretationEdit = $state(false);
-	let interpretationEditError = $state<string | null>(null);
-
-	let isEditingDreamDate = $state(false);
-	let editedDreamDate = $state(dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '');
-	let isSavingDreamDate = $state(false);
-	let dreamDateEditError = $state<string | null>(null);
-
 	let analysisService: DreamAnalysisService | null = null;
-	let clientChatService: ClientChatService | null = null; // New client chat service instance
+	let clientChatService: ClientChatService | null = null;
 
 	let selectedPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
-	const availablePromptTypes: DreamPromptType[] = promptService.getAvailablePromptTypes();
-
-	let cancelAnalysisForm: HTMLFormElement;
 
 	// Chat specific states
 	let chatMessages = $state<any[]>([]);
-	let chatInput = $state('');
-	let isSendingChatMessage = $state(false);
-	let chatError = $state<string | null>(null);
-	let chatContainer: HTMLElement; // Reference to the chat scroll container
 
 	// Update dream state when data from load function changes (e.g., after form action)
 	$effect(() => {
@@ -68,42 +48,29 @@
 				streamedInterpretation = dream.interpretation || '';
 				streamedTags = dream.tags as string[] || [];
 			}
-			editedRawText = dream.rawText;
-			editedInterpretationText = dream.interpretation || '';
-			editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
 			selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 		}
 	});
 
-	// Handle form action responses
+	// Handle form action responses for errors
 	$effect(() => {
 		if (form?.success) {
 			if (form.dream) {
 				dream = form.dream;
 			}
-			if (form.message) {
-				console.log(form.message);
-			}
+			// Invalidate 'dream' to ensure the latest DB state is fetched after any successful form action
+			invalidate('dream');
 		}
 		if (form?.error) {
 			console.error('Form action error:', form.error);
-			if (form.rawText !== undefined) {
-				editError = form.error;
-			} else if (form.interpretation !== undefined) {
-				interpretationEditError = form.error;
-			} else if (form.dreamDate !== undefined) {
-				dreamDateEditError = form.error;
-			} else if (form.error && form.error.includes('delete')) {
-				deleteError = form.error;
+			// Specific error handling for interpretation and raw text is now within their components
+			// This top-level error is for general page-level errors or those not handled by sub-components
+			if (form.error && form.error.includes('delete')) {
+				// This error will be passed to DeleteDreamModal
 			} else {
-				streamError = form.error;
+				streamError = form.error; // General stream error
 			}
 		}
-
-		isSavingEdit = false;
-		isSavingInterpretationEdit = false;
-		isSavingDreamDate = false;
-		isDeleting = false;
 	});
 
 	onMount(async () => {
@@ -112,41 +79,23 @@
 			startStream(selectedPromptType);
 		}
 
-		// Initialize chat service and load history if interpretation exists
+		// Initialize chat service if interpretation exists
 		if (dream.interpretation && dream.id) {
 			clientChatService = new ClientChatService(dream.id, {
 				onMessage: (data) => {
-					// Update the last message if it's from the assistant and still streaming
-					if (chatMessages.length > 0 && chatMessages[chatMessages.length - 1].role === 'assistant' && !data.final) {
-						chatMessages[chatMessages.length - 1].content += data.content || '';
-						chatMessages = [...chatMessages]; // Trigger reactivity
-					} else if (data.content) {
-						// Add new assistant message if it's the first chunk or previous was final
-						chatMessages = [...chatMessages, { role: 'assistant', content: data.content }];
-					}
-					scrollToBottom();
+					// This will be handled by DreamChatSection's internal state
 				},
 				onEnd: async (data) => {
-					isSendingChatMessage = false;
-					if (data.message) {
-						chatError = data.message;
-					}
-					await invalidate('dream'); // Invalidate to ensure latest DB state (including chat history) is fetched
-					await loadChatHistory(); // Reload history to get the saved messages
-					scrollToBottom();
+					// This will be handled by DreamChatSection's internal state
 				},
 				onError: (errorMsg) => {
-					console.error('Chat stream error:', errorMsg);
-					isSendingChatMessage = false;
-					chatError = errorMsg;
-					scrollToBottom();
+					// This will be handled by DreamChatSection's internal state
 				},
 				onClose: () => {
-					console.log('Chat service stream closed.');
-					isSendingChatMessage = false;
+					// This will be handled by DreamChatSection's internal state
 				}
 			});
-			await loadChatHistory();
+			chatMessages = await clientChatService.loadHistory();
 		}
 	});
 
@@ -154,19 +103,6 @@
 		analysisService?.closeStream();
 		clientChatService?.closeStream();
 	});
-
-	function getStatusBadgeClass(status: DreamStatus) {
-		switch (status) {
-			case 'COMPLETED':
-				return 'badge-success';
-			case 'PENDING_ANALYSIS':
-				return 'badge-info';
-			case 'ANALYSIS_FAILED':
-				return 'badge-error';
-			default:
-				return 'badge-neutral';
-		}
-	}
 
 	function startStream(promptType: DreamPromptType) {
 		if (!dream.id) {
@@ -176,6 +112,9 @@
 
 		isLoadingStream = true;
 		streamError = null;
+		streamedInterpretation = ''; // Clear previous interpretation
+		streamedTags = []; // Clear previous tags
+		dream.status = 'PENDING_ANALYSIS'; // Optimistically set status
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -197,7 +136,7 @@
 				if (data.message) {
 					streamError = data.message;
 				}
-				await invalidate('dream');
+				await invalidate('dream'); // Invalidate to ensure latest DB state
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
@@ -213,556 +152,69 @@
 		analysisService.startStream(promptType);
 	}
 
-	async function cancelStream() {
-		if (!dream.id) return;
-
+	function handleCancelAnalysis() {
 		analysisService?.closeStream();
 		isLoadingStream = false;
 		streamError = 'Analysis cancelled by user.';
-
-		if (cancelAnalysisForm) {
-			cancelAnalysisForm.requestSubmit();
-		}
+		// The form submission for cancelling analysis is now handled by DreamInterpretationSection
 	}
 
-	function handleBackClick() {
-		goto('/dreams');
+	function openDeleteModal() {
+		const checkbox = document.getElementById('delete_dream_modal') as HTMLInputElement;
+		if (checkbox) checkbox.checked = true;
 	}
 
-	function toggleEditMode() {
-		isEditing = !isEditing;
-		if (isEditing) {
-			editedRawText = dream.rawText;
-			editError = null;
-		}
-	}
-
-	function handleCancelEdit() {
-		isEditing = false;
-		editedRawText = dream.rawText;
-		editError = null;
-	}
-
-	function toggleInterpretationEditMode() {
-		isEditingInterpretation = !isEditingInterpretation;
-		if (isEditingInterpretation) {
-			editedInterpretationText = dream.interpretation || '';
-			interpretationEditError = null;
-		}
-	}
-
-	function handleCancelInterpretationEdit() {
-		isEditingInterpretation = false;
-		editedInterpretationText = dream.interpretation || '';
-		interpretationEditError = null;
-	}
-
-	function handleRawTextInput(value: string) {
-		editedRawText = value;
-	}
-
-	function handleInterpretationInput(value: string) {
-		editedInterpretationText = value;
-	}
-
-	function toggleDreamDateEditMode() {
-		isEditingDreamDate = !isEditingDreamDate;
-		if (isEditingDreamDate) {
-			editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
-			dreamDateEditError = null;
-		}
-	}
-
-	function handleCancelDreamDateEdit() {
-		isEditingDreamDate = false;
-		editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
-		dreamDateEditError = null;
-	}
-
-	function handleDreamDateInput(event: Event) {
-		editedDreamDate = (event.target as HTMLInputElement).value;
-	}
-
-	function handlePromptTypeChange(event: Event) {
-		selectedPromptType = (event.target as HTMLSelectElement).value as DreamPromptType;
-	}
-
-	async function loadChatHistory() {
-		if (clientChatService) {
-			chatMessages = await clientChatService.loadHistory();
-			scrollToBottom();
-		}
-	}
-
-	async function sendChatMessage() {
-		if (!chatInput.trim() || !clientChatService || isSendingChatMessage) return;
-
-		const messageToSend = chatInput;
-		chatInput = ''; // Clear input immediately
-		isSendingChatMessage = true;
-		chatError = null;
-
-		// Add user message to display
-		chatMessages = [...chatMessages, { role: 'user', content: messageToSend }];
-		scrollToBottom();
-
-		try {
-			await clientChatService.sendMessage(messageToSend);
-			// The onEnd callback will handle setting isSendingChatMessage to false and reloading history
-		} catch (error) {
-			console.error('Error sending chat message:', error);
-			chatError = `Failed to send message: ${(error as Error).message}`;
-			isSendingChatMessage = false;
-		}
-	}
-
-	function scrollToBottom() {
-		// Use a timeout to ensure DOM has updated before scrolling
-		setTimeout(() => {
-			if (chatContainer) {
-				chatContainer.scrollTop = chatContainer.scrollHeight;
-			}
-		}, 0);
+	function handleDreamUpdate() {
+		// This function can be called by child components to trigger a re-fetch of dream data
+		// if their internal state changes and needs to be reflected in the parent or other components.
+		invalidate('dream');
 	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
-	<div class="mb-6 flex items-center justify-between">
-		<button onclick={handleBackClick} class="btn btn-ghost">
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-5 w-5"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
-			>
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-			</svg>
-			{m.back_to_dreams_button()}
-		</button>
-		<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
-		<div class="w-24 text-right">
-			<!-- Button to open modal -->
-			<label for="delete_dream_modal" class="btn btn-sm btn-error" class:hidden={dream.status === 'PENDING_ANALYSIS'}>
-				{m.delete_dream_button()}
-			</label>
-		</div>
-	</div>
-
 	{#if data.dream}
+		<DreamHeader dreamStatus={dream.status} onDeleteClick={openDeleteModal} />
+
 		<div class="card bg-base-100 p-6 shadow-xl">
 			<div class="card-body p-0">
-				<div class="mb-4 flex items-center justify-between">
-					<div class="flex items-center gap-2">
-						{#if prevDreamId}
-							<a href="/dreams/{prevDreamId}" class="btn btn-sm btn-outline">
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-								</svg>
-								{m.previous_dream_button()}
-							</a>
-						{/if}
-						<h2 class="card-title text-2xl">
-							{m.dream_on_date({ date: new Date(dream.dreamDate).toLocaleDateString() })}
-						</h2>
-						{#if nextDreamId}
-							<a href="/dreams/{nextDreamId}" class="btn btn-sm btn-outline">
-								{m.next_dream_button()}
-								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-								</svg>
-							</a>
-						{/if}
-					</div>
-					<div class="flex items-center gap-2">
-						<span class="badge {getStatusBadgeClass(dream.status)}"
-							>{dream.status?.replace('_', ' ')}</span
-						>
-						{#if dream.status === 'PENDING_ANALYSIS'}
-							<form method="POST" action="?/updateStatus" use:enhance>
-								<select name="status" class="select-bordered select select-sm">
-									<option value="" disabled selected>{m.change_status_option()}</option>
-									<option value="ANALYSIS_FAILED"
-										>{m.reset_to_failed_analysis_option()}</option
-									>
-								</select>
-							</form>
-						{/if}
-					</div>
-				</div>
+				<DreamNavigation
+					dreamDate={dream.dreamDate}
+					prevDreamId={prevDreamId}
+					nextDreamId={nextDreamId}
+				>
+					<svelte:fragment slot="status-badge">
+						<DreamStatusBadge status={dream.status} />
+					</svelte:fragment>
+				</DreamNavigation>
 
-				<div class="mb-6">
-					<div class="mb-2 flex items-center justify-between">
-						<h3 class="font-semibold">{m.dream_date_label()} {new Date(dream.dreamDate).toLocaleDateString()}</h3>
-						{#if !isEditingDreamDate}
-							<button onclick={toggleDreamDateEditMode} class="btn btn-ghost btn-sm">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-5 w-5"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-									/>
-								</svg>
-								{m.edit_button()}
-							</button>
-						{/if}
-					</div>
-					{#if isEditingDreamDate}
-						<form
-							method="POST"
-							action="?/updateDreamDate"
-							use:enhance={() => {
-								isSavingDreamDate = true;
-								return async ({ update }) => {
-									await update();
-									isEditingDreamDate = false; // Exit edit mode on success or failure
-								};
-							}}
-						>
-							<input
-								type="date"
-								name="dreamDate"
-								class="input input-bordered w-fit"
-								bind:value={editedDreamDate}
-								oninput={handleDreamDateInput}
-							/>
-							{#if dreamDateEditError}
-								<div class="mt-1 text-sm text-error">{dreamDateEditError}</div>
-							{/if}
-							<div class="mt-2 flex justify-end gap-2">
-								<button onclick={handleCancelDreamDateEdit} type="button" class="btn btn-ghost btn-sm"
-									>{m.cancel_button()}</button
-								>
-								<button
-									type="submit"
-									class="btn btn-sm btn-primary"
-									disabled={isSavingDreamDate}
-								>
-									{#if isSavingDreamDate}
-										<span class="loading loading-spinner"></span>
-										{m.save_button()}
-									{:else}
-										{m.save_button()}
-									{/if}
-								</button>
-							</div>
-						</form>
-					{/if}
-				</div>
+				<DreamDateSection dreamDate={dream.dreamDate} onUpdate={handleDreamUpdate} />
 
-				<div class="mb-6">
-					<div class="mb-2 flex items-center justify-between">
-						<h3 class="text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
-						{#if !isEditing}
-							<button onclick={toggleEditMode} class="btn btn-ghost btn-sm">
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-5 w-5"
-									fill="none"
-									viewBox="0 0 24 24"
-									stroke="currentColor"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-									/>
-								</svg>
-								{m.edit_button()}
-							</button>
-						{/if}
-					</div>
-					{#if isEditing}
-						<form
-							method="POST"
-							action="?/updateDream"
-							use:enhance={() => {
-								isSavingEdit = true;
-								return async ({ update }) => {
-									await update();
-									isEditing = false; // Exit edit mode on success or failure
-								};
-							}}
-						>
-							<RichTextInput
-								name="rawText"
-								placeholder={m.raw_dream_text_heading()}
-								rows={8}
-								bind:value={editedRawText}
-								onInput={handleRawTextInput}
-							/>
-							{#if editError}
-								<div class="mt-1 text-sm text-error">{editError}</div>
-							{/if}
-							<div class="mt-2 flex justify-end gap-2">
-								<button onclick={handleCancelEdit} type="button" class="btn btn-ghost btn-sm"
-									>{m.cancel_button()}</button
-								>
-								<button
-									type="submit"
-									class="btn btn-sm btn-primary"
-									disabled={isSavingEdit || editedRawText.length < 10}
-								>
-									{#if isSavingEdit}
-										<span class="loading loading-spinner"></span>
-										{m.save_button()}
-									{:else}
-										{m.save_button()}
-									{/if}
-								</button>
-							</div>
-						</form>
-					{:else}
-						<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
-							{dream.rawText}
-						</p>
-					{/if}
-				</div>
+				<DreamRawTextSection rawText={dream.rawText} onUpdate={handleDreamUpdate} />
 
-				<div class="mb-6">
-					<div class="mb-2 flex items-center justify-between">
-						<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
-						<div class="flex items-center gap-2">
-							{#if !isEditingInterpretation}
-								<button onclick={toggleInterpretationEditMode} class="btn btn-ghost btn-sm">
-									<svg
-										xmlns="http://www.w3.org/2000/svg"
-										class="h-5 w-5"
-										fill="none"
-										viewBox="0 0 24 24"
-										stroke="currentColor"
-									>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-										/>
-									</svg>
-									{m.edit_button()}
-								</button>
-							{/if}
-							<!-- Prompt Type Selector -->
-							<select
-								class="select select-bordered select-sm"
-								bind:value={selectedPromptType}
-								onchange={handlePromptTypeChange}
-								disabled={isLoadingStream}
-							>
-								{#each availablePromptTypes as type}
-									<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-								{/each}
-							</select>
+				<DreamInterpretationSection
+					dreamId={dream.id}
+					interpretation={streamedInterpretation}
+					tags={streamedTags}
+					status={dream.status}
+					promptType={selectedPromptType}
+					isLoadingStream={isLoadingStream}
+					streamError={streamError}
+					onRegenerateAnalysis={startStream}
+					onCancelAnalysis={handleCancelAnalysis}
+				/>
 
-							{#if dream.status === 'COMPLETED' || dream.status === 'ANALYSIS_FAILED'}
-								<form
-									method="POST"
-									action="?/resetAnalysis"
-									use:enhance={() => {
-										isLoadingStream = true; // Optimistically set loading state
-										streamedInterpretation = ''; // Clear previous interpretation
-										streamedTags = []; // Clear previous tags
-										streamError = null; // Clear previous error
-										dream.status = 'PENDING_ANALYSIS'; // Optimistically set status
-										return async ({ update, result }) => {
-											await update(); // Update page data from server response
-											if (result.type === 'success') {
-												startStream(selectedPromptType); // Start the stream if reset was successful
-											} else {
-												isLoadingStream = false; // Reset loading on error
-											}
-										};
-									}}
-								>
-									<button type="submit" class="btn btn-sm btn-primary" disabled={isLoadingStream}>
-										<svg
-											xmlns="http://www.w3.org/2000/svg"
-											class="mr-1 h-4 w-4"
-											fill="none"
-											viewBox="0 0 24 24"
-											stroke="currentColor"
-										>
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
-											/>
-										</svg>
-										{m.regenerate_analysis_button()}
-									</button>
-								</form>
-							{/if}
-						</div>
-					</div>
-
-					{#if isEditingInterpretation}
-						<form
-							method="POST"
-							action="?/updateInterpretation"
-							use:enhance={() => {
-								isSavingInterpretationEdit = true;
-								return async ({ update }) => {
-									await update();
-									isEditingInterpretation = false; // Exit edit mode on success or failure
-								};
-							}}
-						>
-							<RichTextInput
-								name="interpretation"
-								placeholder={m.interpretation_heading()}
-								rows={8}
-								bind:value={editedInterpretationText}
-								onInput={handleInterpretationInput}
-							/>
-							{#if interpretationEditError}
-								<div class="mt-1 text-sm text-error">{interpretationEditError}</div>
-							{/if}
-							<div class="mt-2 flex justify-end gap-2">
-								<button
-									onclick={handleCancelInterpretationEdit}
-									type="button"
-									class="btn btn-ghost btn-sm">{m.cancel_button()}</button
-								>
-								<button
-									type="submit"
-									class="btn btn-sm btn-primary"
-									disabled={isSavingInterpretationEdit || editedInterpretationText.length < 10}
-								>
-									{#if isSavingInterpretationEdit}
-										<span class="loading loading-spinner"></span>
-										{m.save_button()}
-									{:else}
-										{m.save_button()}
-									{/if}
-								</button>
-							</div>
-						</form>
-					{:else if dream.status === 'PENDING_ANALYSIS' && !isLoadingStream && !streamError}
-						<div class="alert alert-info shadow-lg">
-							<div>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									fill="none"
-									viewBox="0 0 24 24"
-									class="h-6 w-6 shrink-0 stroke-current"
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-									></path></svg
-								>
-								<span>{m.analysis_pending_message()}</span>
-							</div>
-						</div>
-					{:else if dream.status === 'ANALYSIS_FAILED' && !isLoadingStream && !streamError}
-						<div class="alert alert-error shadow-lg">
-							<div>
-								<svg
-									xmlns="http://www.w3.org/2000/svg"
-									class="h-6 w-6 flex-shrink-0 stroke-current"
-									fill="none"
-									viewBox="0 0 24 24"
-									><path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-									></path></svg
-								>
-								<span>{m.ANALYSIS_FAILED_message()}</span>
-							</div>
-						</div>
-						<button onclick={() => startStream(selectedPromptType)} class="btn mt-4 btn-primary"
-							>{m.retry_analysis_button()}</button
-						>
-					{:else if !streamedInterpretation && !streamedTags.length && !isLoadingStream && !streamError}
-						<p>{m.no_interpretation_available_message()}</p>
-					{/if}
-
-					{#if streamedInterpretation || streamedTags.length > 0 || isLoadingStream || streamError}
-						<StreamedAnalysisDisplay
-							interpretation={streamedInterpretation}
-							tags={streamedTags}
-							isLoading={isLoadingStream}
-							errorMessage={streamError}
-							status={dream.status}
-						/>
-					{/if}
-				</div>
-
-				<!-- Chat Interface Section -->
 				{#if dream.interpretation}
-					<div class="mb-6">
-						<h3 class="text-lg font-semibold mb-4">{m.chat_with_ai_heading()}</h3>
-						<div
-							bind:this={chatContainer}
-							class="chat-container h-96 overflow-y-auto rounded-box bg-base-200 p-4"
-						>
-							{#each chatMessages as msg (msg.content)}
-								<div class="chat {msg.role === 'user' ? 'chat-end' : 'chat-start'}">
-									<div class="chat-bubble {msg.role === 'user' ? 'chat-bubble-primary' : ''}">
-										{msg.content}
-									</div>
-								</div>
-							{/each}
-							{#if isSendingChatMessage}
-								<div class="chat chat-start">
-									<div class="chat-bubble">
-										<span class="loading loading-dots"></span>
-									</div>
-								</div>
-							{/if}
-							{#if chatError}
-								<div class="chat chat-start">
-									<div class="chat-bubble chat-bubble-error">
-										{chatError}
-									</div>
-								</div>
-							{/if}
-						</div>
-						<div class="mt-4 flex gap-2">
-							<input
-								type="text"
-								placeholder={m.type_your_message_placeholder()}
-								class="input input-bordered flex-grow"
-								bind:value={chatInput}
-								onkeydown={(e) => {
-									if (e.key === 'Enter' && !e.shiftKey) {
-										e.preventDefault();
-										sendChatMessage();
-									}
-								}}
-								disabled={isSendingChatMessage}
-							/>
-							<button class="btn btn-primary" onclick={sendChatMessage} disabled={!chatInput.trim() || isSendingChatMessage}>
-								{#if isSendingChatMessage}
-									<span class="loading loading-spinner"></span>
-								{:else}
-									{m.send_button()}
-								{/if}
-							</button>
-						</div>
-					</div>
+					<DreamChatSection
+						dreamId={dream.id}
+						initialChatMessages={chatMessages}
+						chatServiceInstance={clientChatService}
+					/>
 				{/if}
 
-				<div class="mt-6 text-sm text-base-content/60">
-					<p>{m.created_at_label({ date: new Date(dream.createdAt).toLocaleString() })}</p>
-					<p>{m.last_updated_at_label({ date: new Date(dream.updatedAt).toLocaleString() })}</p>
-				</div>
+				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />
 			</div>
 		</div>
 	{:else}
-		<!-- This block handles the case where data.dream is null, e.g., if the load function threw an error -->
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -781,73 +233,4 @@
 	{/if}
 </div>
 
-<!-- Hidden form for cancelling analysis - moved outside the #if data.dream block -->
-<form
-	bind:this={cancelAnalysisForm}
-	method="POST"
-	action="?/cancelAnalysis"
-	style="display: none;"
-	use:enhance={() => {
-		return async ({ update }) => {
-			await update();
-			// Invalidate 'dream' to ensure the UI reflects the updated status from the server
-			await invalidate('dream');
-		};
-	}}
-></form>
-
-<!-- Delete Confirmation Checkbox Modal -->
-<input type="checkbox" id="delete_dream_modal" class="modal-toggle" />
-<div class="modal" role="dialog">
-	<div class="modal-box">
-		<h3 class="text-lg font-bold">{m.confirm_deletion_title()}</h3>
-		<p class="py-4">{m.confirm_deletion_message()}</p>
-		{#if deleteError}
-			<div class="mb-4 alert alert-error shadow-lg">
-				<div>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-6 w-6 flex-shrink-0 stroke-current"
-						fill="none"
-						viewBox="0 0 24 24"
-						><path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-						></path></svg
-					>
-					<span>{deleteError}</span>
-				</div>
-			</div>
-		{/if}
-		<div class="modal-action">
-			<label for="delete_dream_modal" class="btn btn-ghost" disabled={isDeleting}
-				>{m.cancel_button()}</label
-			>
-			<form
-				method="POST"
-				action="?/deleteDream"
-				use:enhance={() => {
-					isDeleting = true;
-					return async ({ update }) => {
-						await update();
-						// Redirection is handled by the action, so no need to set isDeleting to false here
-						// Close the modal after successful deletion (before redirect)
-						const checkbox = document.getElementById('delete_dream_modal') as HTMLInputElement;
-						if (checkbox) checkbox.checked = false;
-					};
-				}}
-			>
-				<button type="submit" class="btn btn-error" disabled={isDeleting}>
-					{#if isDeleting}
-						<span class="loading loading-spinner"></span>
-						{m.deleting_button()}
-					{:else}
-						{m.delete_button()}
-					{/if}
-				</button>
-			</form>
-		</div>
-	</div>
-</div>
+<DeleteDreamModal onDeleteSuccess={handleDreamUpdate} />
