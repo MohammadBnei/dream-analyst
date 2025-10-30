@@ -121,6 +121,7 @@
 	"chat_with_ai_heading": "Chat with AI",
 	"type_your_message_placeholder": "Type your message...",
 	"send_button": "Send",
+	"submit_button": "Submit",
 	"delete_chat_message_button": "Delete Message",
 	"confirm_delete_chat_message": "Are you sure you want to delete this chat message? This action cannot be undone.",
 	"profile_title": "User Profile",
