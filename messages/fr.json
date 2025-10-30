@@ -120,5 +120,6 @@
 	"dream_date_label": "Date du Rêve :",
 	"chat_with_ai_heading": "Discuter avec l'IA",
 	"type_your_message_placeholder": "Tapez votre message...",
-	"send_button": "Envoyer"
+	"send_button": "Envoyer",
+	"delete_chat_message_button": "Supprimer le message"
 }
