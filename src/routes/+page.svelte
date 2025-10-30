@@ -11,25 +11,17 @@
 	let deferredPrompt: Event | null = null;
 	let showInstallButton = $state(false);
 
-	onMount(() => {
-		if (browser) { // Ensure this runs only in the browser
-			window.addEventListener('beforeinstallprompt', (e) => {
-				// Prevent the mini-infobar from appearing on mobile
-				e.preventDefault();
-				// Stash the event so it can be triggered later.
-				deferredPrompt = e;
-				// Update UI notify the user they can install the PWA
-				showInstallButton = true;
-				console.log('beforeinstallprompt fired');
-			});
-
-			window.addEventListener('appinstalled', () => {
-				// Hide the install button
-				showInstallButton = false;
-				console.log('PWA was installed');
-			});
-		}
+	$effect(() => {
+		console.log({ showInstallButton, deferredPrompt });
 	});
+
+	if (browser) {
+		window.addEventListener('appinstalled', () => {
+			// Hide the install button
+			showInstallButton = false;
+			console.log('PWA was installed');
+		});
+	}
 
 	async function installPWA() {
 		if (deferredPrompt) {
@@ -56,7 +48,11 @@
 	<meta property="twitter:title" content={m.home_page_title()} />
 	<meta property="twitter:description" content={m.home_page_intro()} />
 </svelte:head>
-
+<svelte:window
+	onbeforeinstallprompt={(e) => {
+		deferredPrompt = e;
+	}}
+/>
 <div class="container mx-auto p-4">
 	<div class="hero mb-8 rounded-lg bg-base-200 shadow-xl">
 		<div class="hero-content flex-col lg:flex-row">
@@ -85,12 +81,10 @@
 		</div>
 	</div>
 
-	{#if browser}
-		{#if showInstallButton}
-			<section class="mb-8 text-center">
-				<button onclick={installPWA} class="btn btn-lg btn-secondary"> Install App </button>
-			</section>
-		{/if}
+	{#if showInstallButton}
+		<section class="mb-8 text-center">
+			<button onclick={installPWA} class="btn btn-lg btn-secondary"> Install App </button>
+		</section>
 	{/if}
 
 	<section class="py-8">

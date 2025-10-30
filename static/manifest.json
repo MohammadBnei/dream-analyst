@@ -31,5 +31,18 @@
                 }
             ]
         }
+    ],
+    "screenshots": [
+        {
+            "src": "screenshot_1280x800.webp",
+            "type": "image/webp",
+            "sizes": "1280x800",
+            "form_factor": "wide"
+        },
+        {
+            "src": "screenshot-mobile.webp",
+            "type": "image/webp",
+            "sizes": "1390x1940"
+        }
     ]
 }
