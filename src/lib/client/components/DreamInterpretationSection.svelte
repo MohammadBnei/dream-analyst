@@ -10,10 +10,10 @@
 		interpretation,
 		tags,
 		status,
-		promptType,
+		promptType, // This prop now represents the current promptType from the dream
 		isLoadingStream,
 		streamError,
-		onRegenerateAnalysis,
+		onRegenerateAnalysis, // This callback now expects a promptType argument
 		onCancelAnalysis
 	} = $props();
 
@@ -22,9 +22,11 @@
 	let isSavingInterpretationEdit = $state(false);
 	let interpretationEditError = $state<string | null>(null);
 
+	// Local state for the selected prompt type in the dropdown
 	let selectedPromptType: DreamPromptType = $state(promptType || 'jungian');
 	const availablePromptTypes: DreamPromptType[] = promptService.getAvailablePromptTypes();
 
+	// Effect to update local selectedPromptType when the prop changes (e.g., after a successful regeneration)
 	$effect(() => {
 		editedInterpretationText = interpretation || '';
 		selectedPromptType = promptType || 'jungian';
@@ -63,7 +65,8 @@
 	async function handleRegenerateSubmit({ update, result }) {
 		await update(); // Update page data from server response
 		if (result.type === 'success') {
-			onRegenerateAnalysis(selectedPromptType); // Start the stream if reset was successful
+			// Call the parent's onRegenerateAnalysis with the currently selected prompt type
+			onRegenerateAnalysis(selectedPromptType);
 		}
 	}
 
@@ -114,6 +117,8 @@
 						return handleRegenerateSubmit;
 					}}
 				>
+					<!-- Hidden input to send selectedPromptType to the server action -->
+					<input type="hidden" name="promptType" value={selectedPromptType} />
 					<button type="submit" class="btn btn-sm btn-primary" disabled={isLoadingStream}>
 						<svg
 							xmlns="http://www.w3.org/2000/svg"

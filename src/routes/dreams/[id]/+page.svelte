@@ -33,6 +33,7 @@
 	let analysisService: DreamAnalysisService | null = $state(null);
 	let clientChatService: ClientChatService | null = $state(null);
 
+	// Initialize selectedPromptType from dream data
 	let selectedPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 
 	// Chat specific states
@@ -48,6 +49,7 @@
 				streamedInterpretation = dream.interpretation || '';
 				streamedTags = (dream.tags as string[]) || [];
 			}
+			// Update selectedPromptType from the updated dream data
 			selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 		}
 	});
@@ -76,6 +78,7 @@
 	onMount(async () => {
 		if (dream.status === 'PENDING_ANALYSIS') {
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
+			// Use the dream's promptType to start the stream
 			startStream(selectedPromptType);
 		}
 	});

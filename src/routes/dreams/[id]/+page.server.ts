@@ -4,6 +4,8 @@ import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types';
 import { error } from '@sveltejs/kit';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+import { getCreditService } from '$lib/server/creditService'; // Import credit service
+import { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
 
 // Schemas for validation
 const UpdateDreamSchema = v.object({
@@ -30,6 +32,10 @@ const UpdateDreamDateSchema = v.object({
 		v.string(),
 		v.check((s) => !isNaN(new Date(s).getTime()), 'Invalid date format')
 	)
+});
+
+const ResetAnalysisSchema = v.object({
+	promptType: v.enumType(DreamPromptType) // Expect promptType from the form
 });
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -281,7 +287,7 @@ export const actions: Actions = {
 		}
 	},
 
-	resetAnalysis: async ({ params, locals }) => {
+	resetAnalysis: async ({ request, params, locals }) => {
 		const dreamId = params.id;
 		const sessionUser = locals.user;
 		if (!sessionUser) {
@@ -289,6 +295,18 @@ export const actions: Actions = {
 		}
 
 		const prisma = await getPrismaClient();
+		const creditService = getCreditService();
+
+		const formData = await request.formData();
+		const promptType = formData.get('promptType');
+
+		let validatedData;
+		try {
+			validatedData = v.parse(ResetAnalysisSchema, { promptType });
+		} catch (e: any) {
+			const issues = e.issues.map((issue: any) => issue.message);
+			return fail(400, { promptType, error: issues.join(', ') });
+		}
 
 		const dream = await prisma.dream.findUnique({
 			where: { id: dreamId }
@@ -299,16 +317,35 @@ export const actions: Actions = {
 		}
 
 		try {
-			await prisma.dream.update({
+			// Check if the user has enough credits for a new analysis
+			const cost = creditService.getCost('DREAM_ANALYSIS');
+			const hasCredits = await creditService.checkCredits(sessionUser.id, cost);
+
+			if (!hasCredits) {
+				return fail(402, { error: 'Insufficient credits for dream analysis or daily limit exceeded.' });
+			}
+
+			const updatedDream = await prisma.dream.update({
 				where: { id: dreamId },
 				data: {
 					status: DreamStatus.PENDING_ANALYSIS, // Use enum
 					interpretation: null, // Clear previous interpretation
-					tags: null // Clear previous tags
+					tags: null, // Clear previous tags
+					promptType: validatedData.promptType, // Persist the selected promptType
+					updatedAt: new Date()
 				}
 			});
-			return { success: true, message: 'Dream status reset to PENDING_ANALYSIS.' };
-		} catch (e) {
+
+			// Deduct credits for the new analysis
+			await creditService.deductCredits(
+				sessionUser.id,
+				cost,
+				'DREAM_ANALYSIS',
+				updatedDream.id
+			);
+
+			return { success: true, message: 'Dream status reset to PENDING_ANALYSIS.', dream: updatedDream };
+		} catch (e: any) {
 			console.error(`Failed to reset dream status for ${dreamId}:`, e);
 			return fail(500, { error: 'Failed to reset dream status.' });
 		}
