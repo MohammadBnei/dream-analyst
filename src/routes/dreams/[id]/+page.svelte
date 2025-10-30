@@ -266,7 +266,7 @@
 		<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
 		<div class="w-24 text-right">
 			<!-- Button to open modal -->
-			<label for="delete_dream_modal" class="btn btn-sm btn-error">
+			<label for="delete_dream_modal" class="btn btn-sm btn-error" disabled={dream.status === 'PENDING_ANALYSIS'}>
 				{m.delete_dream_button()}
 			</label>
 		</div>
