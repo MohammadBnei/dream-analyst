@@ -13,6 +13,7 @@ const YOUR_SITE_URL = env.ORIGIN;
 export interface ChatMessage {
     role: 'user' | 'assistant' | 'system';
     content: string;
+    promptType?: DreamPromptType; // Added promptType to ChatMessage interface
 }
 
 class ChatService {
@@ -47,6 +48,7 @@ class ChatService {
         return dbMessages.map(msg => ({
             role: msg.role as 'user' | 'assistant', // Assuming role is always 'user' or 'assistant'
             content: msg.content,
+            promptType: msg.promptType as DreamPromptType,
         }));
     }
 
@@ -56,8 +58,9 @@ class ChatService {
      * @param userId The ID of the user.
      * @param role The role of the message sender ('user' or 'assistant').
      * @param content The content of the message.
+     * @param promptType The prompt type used for this message (optional, primarily for AI messages).
      */
-    async saveChatMessage(dreamId: string, userId: string, role: 'user' | 'assistant', content: string): Promise<void> {
+    async saveChatMessage(dreamId: string, userId: string, role: 'user' | 'assistant', content: string, promptType?: DreamPromptType): Promise<void> {
         if (!this.prisma) {
             this.prisma = await getPrismaClient();
         }
@@ -67,6 +70,7 @@ class ChatService {
                 userId: userId,
                 role: role,
                 content: content,
+                promptType: promptType, // Save the prompt type
             },
         });
     }
@@ -159,7 +163,7 @@ class ChatService {
             ];
 
             // Save user message to DB before streaming AI response
-            await this.saveChatMessage(dreamId, userId, 'user', userMessage);
+            await this.saveChatMessage(dreamId, userId, 'user', userMessage, promptType);
 
             const stream = await chat.stream(messages, { signal: signal });
 
@@ -184,7 +188,7 @@ class ChatService {
                             controller.enqueue(encoder.encode(JSON.stringify({ final: true, message: 'Chat aborted.' }) + '\n'));
                         } else {
                             // Save AI response to DB
-                            await ChatService.getInstance().saveChatMessage(dreamId, userId, 'assistant', assistantResponse);
+                            await ChatService.getInstance().saveChatMessage(dreamId, userId, 'assistant', assistantResponse, promptType);
                             controller.enqueue(encoder.encode(JSON.stringify({ final: true }) + '\n'));
                         }
                     } catch (error) {
