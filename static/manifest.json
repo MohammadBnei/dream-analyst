@@ -17,5 +17,19 @@
             "sizes": "512x512",
             "type": "image/png"
         }
+    ],
+    "shortcuts": [
+        {
+            "name": "New Dream",
+            "short_name": "New Dream",
+            "description": "Add a new dream entry",
+            "url": "/dreams/new",
+            "icons": [
+                {
+                    "src": "/icon-192x192.png",
+                    "sizes": "192x192"
+                }
+            ]
+        }
     ]
 }
