@@ -16,7 +16,6 @@ model User {
   email            String            @unique
   passwordHash     String            @map("password_hash")
   dreams           Dream[]
-  dailyDreamCounts DailyDreamCount[]
 
   @@map("user")
 }
@@ -32,31 +31,7 @@ model Dream {
   tags          Json?
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at")
-  versions      DreamVersion[] // Add relation to DreamVersion
 
   @@map("dreams")
 }
 
-model DreamVersion {
-  id             String    @id @default(uuid())
-  dreamId        String    @map("dream_id")
-  dream          Dream     @relation(fields: [dreamId], references: [id], onDelete: Cascade)
-  versionNumber  Int       @default(1)
-  interpretation String?
-  tags           Json?
-  createdAt      DateTime  @default(now()) @map("created_at")
-
-  @@unique([dreamId, versionNumber]) // Ensure unique version for each dream
-  @@map("dream_versions")
-}
-
-model DailyDreamCount {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
-  date      DateTime @map("count_date") @db.Date // Store only the date part
-  count     Int      @default(0)
-
-  @@unique([userId, date]) // Ensure only one entry per user per day
-  @@map("daily_dream_count")
-}
