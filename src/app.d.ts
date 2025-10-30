@@ -1,6 +1,6 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 
-import type { Dream, DreamChat } from "@prisma/client";
+import type { Dream, DreamChat } from '@prisma/client';
 
 // for information about these interfaces
 declare global {
@@ -12,15 +12,15 @@ declare global {
 				id: string;
 				username: string;
 				email: string; // Added email field
+				role: UserRole;
 			};
-			// The 'session' object is removed as we are no longer using Lucia's session management
 		}
 		// interface Error {}
 		// interface PageData {}
 		// interface Platform {}
 
-		interface ChatMessage extends DreamChat { }
+		interface ChatMessage extends DreamChat {}
 	}
 }
 
-export { };
+export {};

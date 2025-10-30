@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
 
 export async function GET() {
-    return json({ status: 'ok' }, { status: 200 });
+	return json({ status: 'ok' }, { status: 200 });
 }

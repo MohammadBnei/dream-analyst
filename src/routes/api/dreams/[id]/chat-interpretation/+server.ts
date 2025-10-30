@@ -7,116 +7,118 @@ import { getCreditService } from '$lib/server/creditService'; // Import credit s
 const encoder = new TextEncoder();
 
 function getCurrentUser(locals: App.Locals) {
-    if (!locals.user) {
-        throw error(401, 'Unauthorized');
-    }
-    return locals.user;
+	if (!locals.user) {
+		throw error(401, 'Unauthorized');
+	}
+	return locals.user;
 }
 
 export async function POST({ params, locals, request }) {
-    const dreamId = params.id;
-    const sessionUser = getCurrentUser(locals);
-    const prisma = await getPrismaClient();
-    const chatService = getChatService();
-    const creditService = getCreditService();
+	const dreamId = params.id;
+	const sessionUser = getCurrentUser(locals);
+	const prisma = await getPrismaClient();
+	const chatService = getChatService();
+	const creditService = getCreditService();
 
-    if (!dreamId) {
-        throw error(400, 'Dream ID is required.');
-    }
+	if (!dreamId) {
+		throw error(400, 'Dream ID is required.');
+	}
 
-    const dream = await prisma.dream.findUnique({
-        where: { id: dreamId }
-    });
+	const dream = await prisma.dream.findUnique({
+		where: { id: dreamId }
+	});
 
-    if (!dream || dream.userId !== sessionUser.id) {
-        throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
-    }
+	if (!dream || dream.userId !== sessionUser.id) {
+		throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
+	}
 
-    if (!dream.interpretation) {
-        throw error(400, 'Dream must have an initial interpretation before starting a chat.');
-    }
+	if (!dream.interpretation) {
+		throw error(400, 'Dream must have an initial interpretation before starting a chat.');
+	}
 
-    const { message: userMessage } = await request.json();
-    if (!userMessage || typeof userMessage !== 'string') {
-        throw error(442, 'User message is required and must be a string.');
-    }
+	const { message: userMessage } = await request.json();
+	if (!userMessage || typeof userMessage !== 'string') {
+		throw error(442, 'User message is required and must be a string.');
+	}
 
-    const dreamPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
+	const dreamPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 
-    try {
-        // The credit deduction for chat messages is now handled inside chatService.chatWithAI
-        // This ensures the user message is saved and linked to the credit transaction before LLM call.
-        const aiStream = await chatService.chatWithAI(
-            dreamId,
-            sessionUser.id,
-            userMessage,
-            dream.rawText,
-            dream.interpretation,
-            dreamPromptType,
-            request.signal // Pass the abort signal from the client request
-        );
+	try {
+		// The credit deduction for chat messages is now handled inside chatService.chatWithAI
+		// This ensures the user message is saved and linked to the credit transaction before LLM call.
+		const aiStream = await chatService.chatWithAI(
+			dreamId,
+			sessionUser.id,
+			userMessage,
+			dream.rawText,
+			dream.interpretation,
+			dreamPromptType,
+			request.signal // Pass the abort signal from the client request
+		);
 
-        return new Response(aiStream, {
-            headers: {
-                'Content-Type': 'application/x-ndjson',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive'
-            }
-        });
-
-    } catch (e) {
-        console.error(`Error in chat-interpretation endpoint for dream ${dreamId}:`, e);
-        // If the error is due to insufficient credits, return a specific error message
-        if ((e as Error).message.includes('Insufficient credits') || (e as Error).message.includes('Daily credit limit exceeded')) {
-            throw error(402, (e as Error).message); // 402 Payment Required
-        }
-        throw error(500, `Failed to initiate chat: ${(e as Error).message}`);
-    }
+		return new Response(aiStream, {
+			headers: {
+				'Content-Type': 'application/x-ndjson',
+				'Cache-Control': 'no-cache',
+				Connection: 'keep-alive'
+			}
+		});
+	} catch (e) {
+		console.error(`Error in chat-interpretation endpoint for dream ${dreamId}:`, e);
+		// If the error is due to insufficient credits, return a specific error message
+		if (
+			(e as Error).message.includes('Insufficient credits') ||
+			(e as Error).message.includes('Daily credit limit exceeded')
+		) {
+			throw error(402, (e as Error).message); // 402 Payment Required
+		}
+		throw error(500, `Failed to initiate chat: ${(e as Error).message}`);
+	}
 }
 
 // GET endpoint to retrieve chat history
 export async function GET({ params, locals }) {
-    const dreamId = params.id;
-    const sessionUser = getCurrentUser(locals);
-    const chatService = getChatService();
+	const dreamId = params.id;
+	const sessionUser = getCurrentUser(locals);
+	const chatService = getChatService();
 
-    if (!dreamId) {
-        throw error(400, 'Dream ID is required.');
-    }
+	if (!dreamId) {
+		throw error(400, 'Dream ID is required.');
+	}
 
-    try {
-        const history = await chatService.loadChatHistory(dreamId, sessionUser.id);
-        return new Response(JSON.stringify(history), {
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-    } catch (e) {
-        console.error(`Error loading chat history for dream ${dreamId}:`, e);
-        throw error(500, `Failed to load chat history: ${(e as Error).message}`);
-    }
+	try {
+		const history = await chatService.loadChatHistory(dreamId, sessionUser.id);
+		return new Response(JSON.stringify(history), {
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+	} catch (e) {
+		console.error(`Error loading chat history for dream ${dreamId}:`, e);
+		throw error(500, `Failed to load chat history: ${(e as Error).message}`);
+	}
 }
 
 // DELETE endpoint to clear chat history
 export async function DELETE({ params, locals }) {
-    const dreamId = params.id;
-    const sessionUser = getCurrentUser(locals);
-    const chatService = getChatService();
+	const dreamId = params.id;
+	const sessionUser = getCurrentUser(locals);
+	const chatService = getChatService();
 
-    if (!dreamId) {
-        throw error(400, 'Dream ID is required.');
-    }
+	if (!dreamId) {
+		throw error(400, 'Dream ID is required.');
+	}
 
-    try {
-        await chatService.clearChatHistory(dreamId, sessionUser.id);
-        return new Response(JSON.stringify({ message: 'Chat history cleared.' }), {
-            status: 200,
-            headers: {
-                'Content-Type': 'application/json'
-            }
-        });
-    } catch (e) {
-        console.error(`Error clearing chat history for dream ${dreamId}:`, e);
-        throw error(500, `Failed to clear chat history: ${(e as Error).message}`);
-    }
+	try {
+		await chatService.clearChatHistory(dreamId, sessionUser.id);
+		return new Response(JSON.stringify({ message: 'Chat history cleared.' }), {
+			status: 200,
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+	} catch (e) {
+		console.error(`Error clearing chat history for dream ${dreamId}:`, e);
+		throw error(500, `Failed to clear chat history: ${(e as Error).message}`);
+	}
 }

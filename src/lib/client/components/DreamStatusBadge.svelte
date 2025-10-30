@@ -21,9 +21,7 @@
 </script>
 
 <div class="flex items-center gap-2">
-	<span class="badge {getStatusBadgeClass(status)}"
-		>{status?.replace('_', ' ')}</span
-	>
+	<span class="badge {getStatusBadgeClass(status)}">{status?.replace('_', ' ')}</span>
 	{#if status === 'PENDING_ANALYSIS'}
 		<form method="POST" action="?/updateStatus" use:enhance>
 			<select name="status" class="select-bordered select select-sm">

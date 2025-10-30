@@ -4,13 +4,12 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { UserRole } from '@prisma/client';
 
-	export let data;
-	export let form;
+	const { data, form } = $props();
 
-	let users = $state(data.users);
-	let userRoles = $state(data.userRoles);
+	let users = $derived(data.users);
+	let userRoles = $derived(data.userRoles);
 
-	let formMessage = $state<string | null>(null);
+	let formMessage = $derived<string | null>(null);
 	let formMessageType: 'success' | 'error' | null = null;
 
 	// State for credit adjustment forms
@@ -61,21 +60,23 @@
 		fetch('?/updateUserRole', {
 			method: 'POST',
 			body: formData
-		}).then(async (response) => {
-			const result = await response.json();
-			if (result.success) {
-				formMessage = result.message;
-				formMessageType = 'success';
-				invalidateAll();
-			} else {
-				formMessage = result.message;
+		})
+			.then(async (response) => {
+				const result = await response.json();
+				if (result.success) {
+					formMessage = result.message;
+					formMessageType = 'success';
+					invalidateAll();
+				} else {
+					formMessage = result.message;
+					formMessageType = 'error';
+				}
+			})
+			.catch((error) => {
+				console.error('Error updating user role:', error);
+				formMessage = 'An unexpected error occurred while updating role.';
 				formMessageType = 'error';
-			}
-		}).catch((error) => {
-			console.error('Error updating user role:', error);
-			formMessage = 'An unexpected error occurred while updating role.';
-			formMessageType = 'error';
-		});
+			});
 	}
 
 	function handleCreditSubmit(userId: string) {
@@ -109,7 +110,7 @@
 	{/if}
 
 	<div class="overflow-x-auto">
-		<table class="table table-zebra w-full">
+		<table class="table w-full table-zebra">
 			<thead>
 				<tr>
 					<th>{m.username_label()}</th>
@@ -127,7 +128,7 @@
 						<td>{user.email}</td>
 						<td>
 							<select
-								class="select select-bordered select-sm"
+								class="select-bordered select select-sm"
 								value={user.role}
 								onchange={(e) => handleRoleChange(user.id, e)}
 							>
@@ -155,20 +156,24 @@
 									type="number"
 									name="amount"
 									min="1"
-									class="input input-bordered input-sm w-20"
+									class="input-bordered input input-sm w-20"
 									bind:value={creditAmount[user.id]}
 									disabled={isSubmittingCredits[user.id]}
 								/>
 								<select
 									name="action"
-									class="select select-bordered select-sm"
+									class="select-bordered select select-sm"
 									bind:value={creditAction[user.id]}
 									disabled={isSubmittingCredits[user.id]}
 								>
 									<option value="grant">{m.grant_button()}</option>
 									<option value="deduct">{m.deduct_button()}</option>
 								</select>
-								<button type="submit" class="btn btn-sm btn-primary" disabled={isSubmittingCredits[user.id]}>
+								<button
+									type="submit"
+									class="btn btn-sm btn-primary"
+									disabled={isSubmittingCredits[user.id]}
+								>
 									{#if isSubmittingCredits[user.id]}
 										<span class="loading loading-spinner"></span>
 									{:else}

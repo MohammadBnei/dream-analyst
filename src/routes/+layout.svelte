@@ -78,7 +78,7 @@
 				</label>
 			</div>
 			<div class="mx-2 flex-1 px-2 text-xl font-bold">
-				<a href="/" class="btn btn-ghost text-xl">{m.app_name()}</a>
+				<a href="/" class="btn text-xl btn-ghost">{m.app_name()}</a>
 			</div>
 			<div class="hidden flex-none lg:block">
 				<ul class="menu menu-horizontal">
@@ -90,6 +90,8 @@
 								<button type="submit">{m.logout_link()}</button>
 							</form>
 						</li>
+						<li><a href="/profile">{m.profile_link()}</a></li>
+						<li><a href="/admin">{m.admin_link()}</a></li>
 					{:else}
 						<li><a href="/login">{m.login_link()}</a></li>
 						<li><a href="/register">{m.register_link()}</a></li>
@@ -102,7 +104,7 @@
 
 							<!-- sun icon -->
 							<svg
-								class="swap-on fill-current w-6 h-6"
+								class="swap-on h-6 w-6 fill-current"
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"
 								><path
@@ -112,7 +114,7 @@
 
 							<!-- moon icon -->
 							<svg
-								class="swap-off fill-current w-6 h-6"
+								class="swap-off h-6 w-6 fill-current"
 								xmlns="http://www.w3.org/2000/svg"
 								viewBox="0 0 24 24"
 								><path
@@ -153,17 +155,17 @@
 
 					<!-- sun icon -->
 					<svg
-						class="swap-on fill-current w-6 h-6"
+						class="swap-on h-6 w-6 fill-current"
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 24 24"
 						><path
 							d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM18.36,6.34a1,1,0,0,0-1.41-1.41l-.71.71a1,1,0,0,0,1.41,1.41ZM12,19a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM7.05,6.34l-.71-.71A1,1,0,0,0,5.64,7.05l.71.71A1,1,0,0,0,7.05,6.34ZM17.31,17l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,17.31,17ZM20,11H19a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-8-6a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V6A1,1,0,0,0,12,5Z"
-							/></svg
-						>
+						/></svg
+					>
 
 					<!-- moon icon -->
 					<svg
-						class="swap-off fill-current w-6 h-6"
+						class="swap-off h-6 w-6 fill-current"
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 24 24"
 						><path

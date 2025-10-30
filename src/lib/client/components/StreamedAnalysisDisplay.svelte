@@ -10,7 +10,9 @@
 		status: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle';
 	}>();
 
-	function getStatusBadgeClass(currentStatus: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle') {
+	function getStatusBadgeClass(
+		currentStatus: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle'
+	) {
 		switch (currentStatus) {
 			case 'COMPLETED':
 				return 'badge-success';
@@ -25,18 +27,12 @@
 	}
 </script>
 
-<div class="mt-8 p-6 bg-base-200 rounded-box shadow-lg">
+<div class="mt-8 rounded-box bg-base-200 p-6 shadow-lg">
 	{#if isLoading}
-		<div class="alert alert-info shadow-lg mb-4">
+		<div class="mb-4 alert alert-info shadow-lg">
 			<div>
 				<svg class="mr-3 h-5 w-5 animate-spin" viewBox="0 0 24 24">
-					<circle
-						class="opacity-25"
-						cx="12"
-						cy="12"
-						r="10"
-						stroke="currentColor"
-						stroke-width="4"
+					<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
 					></circle>
 					<path
 						class="opacity-75"
@@ -50,10 +46,10 @@
 	{/if}
 
 	{#if errorMessage}
-		<div role="alert" class="alert alert-error mb-4">
+		<div role="alert" class="mb-4 alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				class="stroke-current shrink-0 h-6 w-6"
+				class="h-6 w-6 shrink-0 stroke-current"
 				fill="none"
 				viewBox="0 0 24 24"
 				><path
@@ -69,7 +65,7 @@
 
 	{#if tags.length > 0}
 		<div class="mb-4">
-			<h3 class="text-lg font-medium mb-2">{m.tags_heading()}:</h3>
+			<h3 class="mb-2 text-lg font-medium">{m.tags_heading()}:</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each tags as tag}
 					<span class="badge {getStatusBadgeClass(status)} badge-lg">{tag}</span>
@@ -81,13 +77,16 @@
 	{#if interpretation}
 		<div class="mb-4">
 			<div class="prose max-w-none">
-				<Streamdown animation={{animateOnMount: true, enabled: isLoading, type: 'blur'}}  content={interpretation} />
+				<Streamdown
+					animation={{ animateOnMount: true, enabled: isLoading, type: 'blur' }}
+					content={interpretation}
+				/>
 			</div>
 		</div>
 	{/if}
 
 	{#if !isLoading && !errorMessage && !interpretation && !tags.length && status === 'idle'}
-		<p class="text-center text-sm text-base-content/70 mt-4">
+		<p class="mt-4 text-center text-sm text-base-content/70">
 			{m.dream_analysis_instant_message()}
 		</p>
 	{/if}

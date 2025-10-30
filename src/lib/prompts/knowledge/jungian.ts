@@ -236,4 +236,4 @@ Process (as guidance for users):
 Integration:
 - Active imagination helps bridge unconscious content into consciousness.
 - Creative forms (e.g. drawing, writing, movement) can emerge through this process.
-`
+`;

@@ -19,7 +19,6 @@ export const actions = {
 		const prisma = await getPrismaClient();
 		const creditService = getCreditService();
 
-
 		const existingUser = await prisma.user.findFirst({
 			where: {
 				OR: [
@@ -48,7 +47,13 @@ export const actions = {
 		// Grant daily credits upon login if not already granted
 		const updatedCredits = await creditService.grantDailyCredits(existingUser.id);
 
-		const token = generateToken(existingUser.id, existingUser.username, existingUser.email, existingUser.role, updatedCredits);
+		const token = generateToken(
+			existingUser.id,
+			existingUser.username,
+			existingUser.email,
+			existingUser.role,
+			updatedCredits
+		);
 		setAuthTokenCookie(cookies, token);
 
 		throw redirect(302, '/');

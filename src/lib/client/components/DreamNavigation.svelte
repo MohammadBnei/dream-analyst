@@ -7,7 +7,7 @@
 <div class="mb-4 flex items-center justify-between">
 	<div class="flex items-center gap-2">
 		{#if prevDreamId}
-			<a href="/dreams/{prevDreamId}" class="btn btn-sm btn-outline">
+			<a href="/dreams/{prevDreamId}" class="btn btn-outline btn-sm">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-4 w-4"
@@ -29,7 +29,7 @@
 			{m.dream_on_date({ date: new Date(dreamDate).toLocaleDateString() })}
 		</h2>
 		{#if nextDreamId}
-			<a href="/dreams/{nextDreamId}" class="btn btn-sm btn-outline">
+			<a href="/dreams/{nextDreamId}" class="btn btn-outline btn-sm">
 				{m.next_dream_button()}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

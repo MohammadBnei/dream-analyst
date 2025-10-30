@@ -27,7 +27,8 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 		event.locals.user = {
 			id: decodedToken.userId,
 			username: decodedToken.username,
-			email: decodedToken.email
+			email: decodedToken.email,
+			role: decodedToken.role
 		};
 	} else {
 		// Token is invalid or expired

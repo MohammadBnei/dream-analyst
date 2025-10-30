@@ -105,7 +105,7 @@
 			{/if}
 			<!-- Prompt Type Selector -->
 			<select
-				class="select select-bordered select-sm"
+				class="select-bordered select select-sm"
 				bind:value={selectedPromptType}
 				onchange={handlePromptTypeChange}
 				disabled={isLoadingStream}
@@ -165,10 +165,8 @@
 				<div class="mt-1 text-sm text-error">{interpretationEditError}</div>
 			{/if}
 			<div class="mt-2 flex justify-end gap-2">
-				<button
-					onclick={handleCancelInterpretationEdit}
-					type="button"
-					class="btn btn-ghost btn-sm">{m.cancel_button()}</button
+				<button onclick={handleCancelInterpretationEdit} type="button" class="btn btn-ghost btn-sm"
+					>{m.cancel_button()}</button
 				>
 				<button
 					type="submit"
@@ -229,11 +227,11 @@
 
 	{#if interpretation || tags.length > 0 || isLoadingStream || streamError}
 		<StreamedAnalysisDisplay
-			interpretation={interpretation}
-			tags={tags}
+			{interpretation}
+			{tags}
 			isLoading={isLoadingStream}
 			errorMessage={streamError}
-			status={status}
+			{status}
 		/>
 	{/if}
 </div>

@@ -8,4 +8,3 @@ export const getPrismaClient = async () => {
 	}
 	return prisma;
 };
-

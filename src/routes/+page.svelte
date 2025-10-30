@@ -53,11 +53,7 @@
 	<div class="hero mb-8 rounded-lg bg-base-200 shadow-xl">
 		<div class="hero-content flex-col lg:flex-row">
 			<div class="w-full max-w-sm">
-				<img
-					src={dreamerLogo}
-					alt={m.app_name()}
-					class="rounded-lg shadow-2xl dark:hidden"
-				/>
+				<img src={dreamerLogo} alt={m.app_name()} class="rounded-lg shadow-2xl dark:hidden" />
 				<img
 					src={darkDreamerLogo}
 					alt={m.app_name()}

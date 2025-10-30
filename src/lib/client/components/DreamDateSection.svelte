@@ -69,7 +69,7 @@
 			<input
 				type="date"
 				name="dreamDate"
-				class="input input-bordered w-fit"
+				class="input-bordered input w-fit"
 				bind:value={editedDreamDate}
 				oninput={handleDreamDateInput}
 			/>
