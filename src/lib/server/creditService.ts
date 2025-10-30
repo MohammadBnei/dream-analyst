@@ -121,9 +121,9 @@ class CreditService {
 	 * @throws Error if the amount is not positive or user not found.
 	 */
 	async adminGrantCredits(
+		adminId: string, // Added adminId
 		userId: string,
 		amount: number,
-		adminId: string, // Added adminId
 		reason?: string // Added reason
 	): Promise<number> {
 		if (!this.prisma) {
@@ -180,9 +180,9 @@ class CreditService {
 	 * @throws Error if the amount is not positive or user not found.
 	 */
 	async adminDeductCredits(
+		adminId: string, // Added adminId
 		userId: string,
 		amount: number,
-		adminId: string, // Added adminId
 		reason?: string // Added reason
 	): Promise<number> {
 		if (!this.prisma) {
