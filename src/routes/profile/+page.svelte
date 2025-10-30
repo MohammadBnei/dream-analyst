@@ -2,10 +2,8 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import { page } from '$app/stores';
 
-	export let data;
-	export let form;
+	const { data, form } = $props();
 
 	let user = $state(data.user);
 	let dailyLimit = $state(data.dailyLimit);
@@ -97,7 +95,10 @@
 	<h1 class="mb-6 text-center text-3xl font-bold">{m.profile_title()}</h1>
 
 	{#if formMessage}
-		<div role="alert" class="alert mb-4 {formMessageType === 'success' ? 'alert-success' : 'alert-error'}">
+		<div
+			role="alert"
+			class="mb-4 alert {formMessageType === 'success' ? 'alert-success' : 'alert-error'}"
+		>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				class="h-6 w-6 shrink-0 stroke-current"
@@ -116,7 +117,7 @@
 
 	<div class="card bg-base-100 p-6 shadow-xl">
 		<div class="card-body p-0">
-			<h2 class="card-title mb-4 text-2xl">{m.account_details_heading()}</h2>
+			<h2 class="mb-4 card-title text-2xl">{m.account_details_heading()}</h2>
 
 			<div class="mb-4">
 				<div class="mb-2 flex items-center justify-between">
@@ -157,7 +158,7 @@
 						<input
 							type="text"
 							name="username"
-							class="input input-bordered w-full"
+							class="input-bordered input w-full"
 							bind:value={editedUsername}
 							oninput={handleUsernameInput}
 						/>
@@ -168,9 +169,7 @@
 							<button onclick={handleCancelUsernameEdit} type="button" class="btn btn-ghost btn-sm"
 								>{m.cancel_button()}</button
 							>
-							<button type="submit" class="btn btn-sm btn-primary"
-								>{m.save_button()}</button
-							>
+							<button type="submit" class="btn btn-sm btn-primary">{m.save_button()}</button>
 						</div>
 					</form>
 				{:else}
@@ -217,7 +216,7 @@
 						<input
 							type="email"
 							name="email"
-							class="input input-bordered w-full"
+							class="input-bordered input w-full"
 							bind:value={editedEmail}
 							oninput={handleEmailInput}
 						/>
@@ -228,9 +227,7 @@
 							<button onclick={handleCancelEmailEdit} type="button" class="btn btn-ghost btn-sm"
 								>{m.cancel_button()}</button
 							>
-							<button type="submit" class="btn btn-sm btn-primary"
-								>{m.save_button()}</button
-							>
+							<button type="submit" class="btn btn-sm btn-primary">{m.save_button()}</button>
 						</div>
 					</form>
 				{:else}
