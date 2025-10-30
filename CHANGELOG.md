@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.12.1](https://github.com/MohammadBnei/dream-analyst/compare/0.12.0...0.12.1) (2025-10-30)
+
+
+### Bug Fixes
+
+* Clear stalled Redis stream state and publish failure ([b07fb80](https://github.com/MohammadBnei/dream-analyst/commit/b07fb8056b0584dc402941cea36b211933577ef7))
+* Remove cancellation logic from stream-analysis endpoint and processor ([a0cf6fc](https://github.com/MohammadBnei/dream-analyst/commit/a0cf6fc1c9c98ad2790cd06963aaceb77d6663f1))
+* Remove stream cancellation logic to prevent server instability ([3f4d1fd](https://github.com/MohammadBnei/dream-analyst/commit/3f4d1fd37e74668abc893bb506c1d3f4b56da591))
+
 # [0.12.0](https://github.com/MohammadBnei/dream-analyst/compare/0.11.0...0.12.0) (2025-10-30)
 
 
