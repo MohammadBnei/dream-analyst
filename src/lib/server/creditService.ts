@@ -108,6 +108,124 @@ class CreditService {
     }
 
     /**
+     * Allows an administrator to grant credits to a user.
+     * This bypasses daily limits and credit checks.
+     * @param userId The ID of the user.
+     * @param amount The number of credits to grant (should be positive).
+     * @param adminId The ID of the admin performing the action.
+     * @param reason Optional: A reason for the credit grant.
+     * @returns The new credit balance.
+     * @throws Error if the amount is not positive or user not found.
+     */
+    async adminGrantCredits(
+        userId: string,
+        amount: number,
+        adminId: string,
+        reason?: string
+    ): Promise<number> {
+        if (!this.prisma) {
+            this.prisma = await getPrismaClient();
+        }
+
+        if (amount <= 0) {
+            throw new Error('Grant amount must be positive.');
+        }
+
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true }
+        });
+
+        if (!user) {
+            throw new Error('User not found.');
+        }
+
+        try {
+            const updatedUser = await this.prisma.$transaction(async (tx) => {
+                const newBalance = await tx.user.update({
+                    where: { id: userId },
+                    data: { credits: { increment: amount } },
+                    select: { credits: true }
+                });
+
+                await tx.creditTransaction.create({
+                    data: {
+                        userId: userId,
+                        amount: amount,
+                        actionType: 'ADMIN_GRANT',
+                        adminId: adminId,
+                        notes: reason,
+                    }
+                });
+                return newBalance.credits;
+            });
+            return updatedUser;
+        } catch (error) {
+            console.error(`Failed to admin grant credits for user ${userId}:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Allows an administrator to deduct credits from a user.
+     * This bypasses daily limits and can result in negative credit balances.
+     * @param userId The ID of the user.
+     * @param amount The number of credits to deduct (should be positive).
+     * @param adminId The ID of the admin performing the action.
+     * @param reason Optional: A reason for the credit deduction.
+     * @returns The new credit balance.
+     * @throws Error if the amount is not positive or user not found.
+     */
+    async adminDeductCredits(
+        userId: string,
+        amount: number,
+        adminId: string,
+        reason?: string
+    ): Promise<number> {
+        if (!this.prisma) {
+            this.prisma = await getPrismaClient();
+        }
+
+        if (amount <= 0) {
+            throw new Error('Deduction amount must be positive.');
+        }
+
+        const user = await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { id: true }
+        });
+
+        if (!user) {
+            throw new Error('User not found.');
+        }
+
+        try {
+            const updatedUser = await this.prisma.$transaction(async (tx) => {
+                const newBalance = await tx.user.update({
+                    where: { id: userId },
+                    data: { credits: { decrement: amount } },
+                    select: { credits: true }
+                });
+
+                await tx.creditTransaction.create({
+                    data: {
+                        userId: userId,
+                        amount: -amount, // Store as negative for deduction
+                        actionType: 'ADMIN_DEDUCT',
+                        adminId: adminId,
+                        notes: reason,
+                    }
+                });
+                return newBalance.credits;
+            });
+            return updatedUser;
+        } catch (error) {
+            console.error(`Failed to admin deduct credits for user ${userId}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Checks if a user has sufficient credits for a given amount.
      * @param userId The ID of the user.
      * @param amount The amount of credits required.
