@@ -1,9 +1,10 @@
-// src/routes/api/dreams/[id]/stream-analysis/+server.ts
 import { error } from '@sveltejs/kit';
-import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/n8nService';
 import { getPrismaClient } from '$lib/server/db';
-import { getAnalysisStore, REDIS_HEARTBEAT_INTERVAL_SECONDS } from '$lib/server/analysisStore'; // Import REDIS_HEARTBEAT_INTERVAL_SECONDS
+import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/n8nService';
+import { getAnalysisStore } from '$lib/server/analysisStore';
 import Redis from 'ioredis'; // Import Redis for the subscriber client
+
+const encoder = new TextEncoder();
 
 export async function GET({ params, locals, platform, request }) {
     const dreamId = params.id;
@@ -62,8 +63,8 @@ export async function GET({ params, locals, platform, request }) {
         }
 
         // Now, create a stream that subscribes to Redis Pub/Sub for updates
-        const encoder = new TextEncoder();
         let subscriberClient: Redis | null = null; // Declare subscriber client here
+        let streamClosed = false; // Flag to prevent double closing
 
         const clientStream = new ReadableStream({
             async start(controller) {
@@ -86,6 +87,8 @@ export async function GET({ params, locals, platform, request }) {
 
                 // Subscribe to Redis Pub/Sub for real-time updates
                 subscriberClient = analysisStore.subscribeToUpdates(dreamId, (message) => {
+                    if (streamClosed) return; // Do nothing if stream is already closed
+
                     if (!controller.desiredSize || controller.desiredSize <= 0) {
                         // If client is no longer consuming, close the stream and unsubscribe
                         console.log(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
@@ -93,33 +96,43 @@ export async function GET({ params, locals, platform, request }) {
                             analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                             subscriberClient = null;
                         }
-                        controller.close();
+                        if (!streamClosed) {
+                            controller.close();
+                            streamClosed = true;
+                        }
                         return;
                     }
 
                     // If the message contains a finalStatus, signal end of stream
-                    if (message.finalStatus) {
-                        controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
-                        console.log(`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`);
+                    const parsedMessage = JSON.parse(message);
+                    if (parsedMessage.finalStatus) {
+                        controller.enqueue(encoder.encode(JSON.stringify(parsedMessage) + '\n'));
+                        console.log(`Dream ${dreamId}: Client stream ending due to finalStatus: ${parsedMessage.finalStatus}`);
                         if (subscriberClient) {
                             analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                             subscriberClient = null;
                         }
-                        controller.close();
+                        if (!streamClosed) {
+                            controller.close();
+                            streamClosed = true;
+                        }
                     } else {
                         // Otherwise, enqueue the update
-                        controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
+                        controller.enqueue(encoder.encode(JSON.stringify(parsedMessage) + '\n'));
                     }
                 });
 
                 // Cleanup on client disconnect (HTTP connection aborts)
-                signal.addEventListener('abort', () => {
+                signal.addEventListener('abort', async () => {
                     console.log(`Dream ${dreamId}: Client disconnected from stream (HTTP abort).`);
                     if (subscriberClient) {
-                        analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
+                        await analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                         subscriberClient = null;
                     }
-                    controller.close(); // Ensure controller is closed
+                    if (!streamClosed) {
+                        controller.close(); // Ensure controller is closed
+                        streamClosed = true;
+                    }
                 });
             },
             async cancel() {
@@ -128,6 +141,9 @@ export async function GET({ params, locals, platform, request }) {
                     await analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                     subscriberClient = null;
                 }
+                // Mark as closed to prevent further actions, but don't call controller.close() here
+                // as the stream is already being cancelled.
+                streamClosed = true;
             }
         });
 
@@ -159,7 +175,8 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
 
     // Subscribe to the dream's channel to listen for cancellation signals
     const cancellationSubscriber = analysisStore.subscribeToUpdates(dreamId, (message) => {
-        if (message.finalStatus === 'analysis_failed' && message.message === 'Analysis cancelled by user.') {
+        const parsedMessage = JSON.parse(message);
+        if (parsedMessage.finalStatus === 'analysis_failed' && parsedMessage.message === 'Analysis cancelled by user.') {
             console.log(`Dream ${dreamId}: Background process received cancellation signal.`);
             isCancelled = true;
             // No need to unsubscribe here, the pipeTo will handle aborting the stream
@@ -203,10 +220,9 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                                 status: parsedChunk.status || 'pending_analysis'
                             };
                             // Refresh expiration periodically (heartbeat)
-                            const now = Date.now();
-                            const refresh = (now - lastHeartbeat) / 1000 >= REDIS_HEARTBEAT_INTERVAL_SECONDS;
-                            await analysisStore.updateAnalysis(dreamId, redisUpdateChunk, false, refresh);
-                            if (refresh) lastHeartbeat = now;
+                            // The REDIS_HEARTBEAT_INTERVAL_SECONDS is not directly used here,
+                            // but the updateAnalysis function will handle expiration refresh.
+                            await analysisStore.updateAnalysis(dreamId, redisUpdateChunk, false);
 
                             await analysisStore.publishUpdate(dreamId, redisUpdateChunk);
 
@@ -333,7 +349,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
         }
 
     } catch (e) {
-        // Unsubscribe from cancellation channel in case of initiation error
+        // Unsubscribe from cancellation channel in case of early error
         await analysisStore.unsubscribeFromUpdates(cancellationSubscriber, dreamId);
 
         console.error(`Dream ${dreamId}: Error initiating background n8n stream:`, e);
