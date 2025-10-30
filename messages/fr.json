@@ -122,5 +122,12 @@
 	"type_your_message_placeholder": "Tapez votre message...",
 	"send_button": "Envoyer",
 	"delete_chat_message_button": "Supprimer le message",
-	"confirm_delete_chat_message": "Êtes-vous sûr de vouloir supprimer ce message de chat ? Cette action est irréversible."
+	"confirm_delete_chat_message": "Êtes-vous sûr de vouloir supprimer ce message de chat ? Cette action est irréversible.",
+	"profile_title": "Profil de l'utilisateur",
+	"account_details_heading": "Détails du compte",
+	"update_successful": "Mise à jour réussie !",
+	"update_failed": "Échec de la mise à jour.",
+	"role_label": "Rôle",
+	"credits_label": "Crédits",
+	"daily_usage_label": "Utilisation quotidienne"
 }

@@ -122,5 +122,12 @@
 	"type_your_message_placeholder": "Type your message...",
 	"send_button": "Send",
 	"delete_chat_message_button": "Delete Message",
-	"confirm_delete_chat_message": "Are you sure you want to delete this chat message? This action cannot be undone."
+	"confirm_delete_chat_message": "Are you sure you want to delete this chat message? This action cannot be undone.",
+	"profile_title": "User Profile",
+	"account_details_heading": "Account Details",
+	"update_successful": "Update successful!",
+	"update_failed": "Update failed.",
+	"role_label": "Role",
+	"credits_label": "Credits",
+	"daily_usage_label": "Daily Usage"
 }
