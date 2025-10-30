@@ -9,7 +9,7 @@
 	import { enhance } from '$app/forms';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 	import { promptService } from '$lib/prompts/promptService';
-	import type { ChatMessage } from '$lib/server/chatService'; // Re-use server-side ChatMessage type
+	import type { ChatMessage } from '@langchain/core/messages';
 
 	let { data, form } = $props();
 
@@ -52,7 +52,7 @@
 	let cancelAnalysisForm: HTMLFormElement;
 
 	// Chat specific states
-	let chatMessages = $state<ChatMessage[]>([]);
+	let chatMessages = $state<any[]>([]);
 	let chatInput = $state('');
 	let isSendingChatMessage = $state(false);
 	let chatError = $state<string | null>(null);
@@ -343,7 +343,7 @@
 		<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
 		<div class="w-24 text-right">
 			<!-- Button to open modal -->
-			<label for="delete_dream_modal" class="btn btn-sm btn-error" disabled={dream.status === 'PENDING_ANALYSIS'}>
+			<label for="delete_dream_modal" class="btn btn-sm btn-error" class:hidden={dream.status === 'PENDING_ANALYSIS'}>
 				{m.delete_dream_button()}
 			</label>
 		</div>
