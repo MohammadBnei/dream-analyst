@@ -175,12 +175,9 @@
 		streamError = 'Analysis cancelled by user.'; // Set a message
 
 		// Trigger server action to update status and notify background process
-		const formData = new FormData();
-		formData.append('dreamId', dream.id);
-
+		// The dreamId is already in the URL params, so no need to send it in formData
 		const response = await fetch('?/cancelAnalysis', {
-			method: 'POST',
-			body: formData
+			method: 'POST'
 		});
 
 		if (response.ok) {
