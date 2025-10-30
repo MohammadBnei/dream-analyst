@@ -4,8 +4,8 @@ import type { AnalysisStreamChunk } from '$lib/server/n8nService';
 import { DreamStatus } from '@prisma/client';
 
 const REDIS_PREFIX = 'dream_analysis:';
-const REDIS_EXPIRATION_SECONDS = 60 * 60; // 1 hour
-const REDIS_STALL_THRESHOLD_SECONDS = 60 * 5; // 5 minutes
+const REDIS_EXPIRATION_SECONDS = 60 * 2; // 2 minutes
+const REDIS_STALL_THRESHOLD_SECONDS = 10; // 10 seconds
 
 interface AnalysisState {
     interpretation: string;

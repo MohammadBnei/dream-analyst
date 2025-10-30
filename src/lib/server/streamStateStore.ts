@@ -189,6 +189,7 @@ class StreamStateStore {
         const state = await this.getStreamState(streamId);
         if (state && (state.status === StreamStatus.PENDING || state.status === StreamStatus.IN_PROGRESS)) {
             const now = Date.now();
+            console.log({ state, last: (now - state.lastUpdate) / 1000, REDIS_STALL_THRESHOLD_SECONDS })
             if ((now - state.lastUpdate) / 1000 > REDIS_STALL_THRESHOLD_SECONDS) {
                 console.warn(`Stream ${streamId}: Detected stalled stream (last update ${state.lastUpdate}). Marking as FAILED and clearing state.`);
                 // Mark as failed and publish a final update
