@@ -11,11 +11,12 @@ datasource db {
 }
 
 model User {
-  id           String  @id @default(uuid()) @map("id")
-  username     String  @unique
-  email        String  @unique
-  passwordHash String  @map("password_hash")
+  id           String      @id @default(uuid()) @map("id")
+  username     String      @unique
+  email        String      @unique
+  passwordHash String      @map("password_hash")
   dreams       Dream[]
+  chatMessages DreamChat[] // Link to new chat messages
 
   @@map("user")
 }
@@ -31,10 +32,25 @@ model Dream {
   tags           Json?
   dreamDate      DateTime    @default(now()) @map("dream_date") // New field for the actual dream date
   promptType     String?     @default("jungian") // Added promptType field
+  chatMessages   DreamChat[] // Link to new chat messages
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @default(now()) @updatedAt @map("updated_at")
 
   @@map("dreams")
+}
+
+// New model for chat messages related to a dream
+model DreamChat {
+  id        String   @id @default(uuid())
+  dreamId   String   @map("dream_id")
+  dream     Dream    @relation(fields: [dreamId], references: [id], onDelete: Cascade)
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  role      String   // 'user' or 'assistant'
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("dream_chat")
 }
 
 enum DreamStatus {

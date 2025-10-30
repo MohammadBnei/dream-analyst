@@ -66,7 +66,7 @@ export async function POST({ params, locals, request }) {
     }
 }
 
-// Optional: Add a GET endpoint to retrieve chat history if needed for initial load
+// GET endpoint to retrieve chat history
 export async function GET({ params, locals }) {
     const dreamId = params.id;
     const sessionUser = getCurrentUser(locals);
@@ -89,7 +89,7 @@ export async function GET({ params, locals }) {
     }
 }
 
-// Optional: Add a DELETE endpoint to clear chat history
+// DELETE endpoint to clear chat history
 export async function DELETE({ params, locals }) {
     const dreamId = params.id;
     const sessionUser = getCurrentUser(locals);

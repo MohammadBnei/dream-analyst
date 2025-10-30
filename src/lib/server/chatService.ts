@@ -1,9 +1,9 @@
 import { env } from '$env/dynamic/private';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
-import { getRedisPublisher } from '$lib/server/streamStateStore'; // Re-use Redis client
 import { promptService } from '$lib/server/prompts/promptService';
 import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
+import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
@@ -15,61 +15,78 @@ export interface ChatMessage {
     content: string;
 }
 
-// Redis key prefix for chat history
-const CHAT_HISTORY_PREFIX = 'chat_history:';
-const CHAT_HISTORY_EXPIRATION_SECONDS = 60 * 60 * 24; // 24 hours
-
 class ChatService {
-    private redis: ReturnType<typeof getRedisPublisher>;
+    private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
 
     constructor() {
-        this.redis = getRedisPublisher();
-    }
-
-    private getChatKey(dreamId: string, userId: string): string {
-        return `${CHAT_HISTORY_PREFIX}${userId}:${dreamId}`;
+        // Initialize prisma client here, or ensure it's initialized before use
+        getPrismaClient().then(client => {
+            this.prisma = client;
+        });
     }
 
     /**
-     * Loads chat history for a specific dream and user from Redis.
+     * Loads chat history for a specific dream and user from the database.
      * @param dreamId The ID of the dream.
      * @param userId The ID of the user.
      * @returns An array of ChatMessage.
      */
     async loadChatHistory(dreamId: string, userId: string): Promise<ChatMessage[]> {
-        const key = this.getChatKey(dreamId, userId);
-        const rawHistory = await this.redis.get(key);
-        if (rawHistory) {
-            try {
-                return JSON.parse(rawHistory);
-            } catch (e) {
-                console.error(`Failed to parse chat history for ${key}:`, e);
-                return [];
-            }
+        if (!this.prisma) {
+            this.prisma = await getPrismaClient();
         }
-        return [];
+        const dbMessages = await this.prisma.dreamChat.findMany({
+            where: {
+                dreamId: dreamId,
+                userId: userId,
+            },
+            orderBy: {
+                createdAt: 'asc',
+            },
+        });
+        return dbMessages.map(msg => ({
+            role: msg.role as 'user' | 'assistant', // Assuming role is always 'user' or 'assistant'
+            content: msg.content,
+        }));
     }
 
     /**
-     * Saves chat history for a specific dream and user to Redis.
+     * Saves a single chat message to the database.
      * @param dreamId The ID of the dream.
      * @param userId The ID of the user.
-     * @param history The array of ChatMessage to save.
+     * @param role The role of the message sender ('user' or 'assistant').
+     * @param content The content of the message.
      */
-    async saveChatHistory(dreamId: string, userId: string, history: ChatMessage[]): Promise<void> {
-        const key = this.getChatKey(dreamId, userId);
-        await this.redis.setex(key, CHAT_HISTORY_EXPIRATION_SECONDS, JSON.stringify(history));
+    async saveChatMessage(dreamId: string, userId: string, role: 'user' | 'assistant', content: string): Promise<void> {
+        if (!this.prisma) {
+            this.prisma = await getPrismaClient();
+        }
+        await this.prisma.dreamChat.create({
+            data: {
+                dreamId: dreamId,
+                userId: userId,
+                role: role,
+                content: content,
+            },
+        });
     }
 
     /**
-     * Clears chat history for a specific dream and user from Redis.
+     * Clears chat history for a specific dream and user from the database.
      * @param dreamId The ID of the dream.
      * @param userId The ID of the user.
      */
     async clearChatHistory(dreamId: string, userId: string): Promise<void> {
-        const key = this.getChatKey(dreamId, userId);
-        await this.redis.del(key);
-        console.log(`Chat history for dream ${dreamId}, user ${userId} cleared.`);
+        if (!this.prisma) {
+            this.prisma = await getPrismaClient();
+        }
+        await this.prisma.dreamChat.deleteMany({
+            where: {
+                dreamId: dreamId,
+                userId: userId,
+            },
+        });
+        console.log(`Chat history for dream ${dreamId}, user ${userId} cleared from DB.`);
     }
 
     /**
@@ -113,7 +130,7 @@ class ChatService {
                 },
             );
 
-            // Load existing chat history
+            // Load existing chat history from DB
             const history = await this.loadChatHistory(dreamId, userId);
 
             // Construct the initial system prompt based on the chosen interpretation type
@@ -141,6 +158,9 @@ class ChatService {
                 new HumanMessage(userMessage), // Add the current user message
             ];
 
+            // Save user message to DB before streaming AI response
+            await this.saveChatMessage(dreamId, userId, 'user', userMessage);
+
             const stream = await chat.stream(messages, { signal: signal });
 
             let assistantResponse = '';
@@ -163,13 +183,8 @@ class ChatService {
                         if (signal?.aborted) {
                             controller.enqueue(encoder.encode(JSON.stringify({ final: true, message: 'Chat aborted.' }) + '\n'));
                         } else {
-                            // Save updated history
-                            const updatedHistory = [
-                                ...history,
-                                { role: 'user', content: userMessage },
-                                { role: 'assistant', content: assistantResponse }
-                            ];
-                            await ChatService.getInstance().saveChatHistory(dreamId, userId, updatedHistory);
+                            // Save AI response to DB
+                            await ChatService.getInstance().saveChatMessage(dreamId, userId, 'assistant', assistantResponse);
                             controller.enqueue(encoder.encode(JSON.stringify({ final: true }) + '\n'));
                         }
                     } catch (error) {
