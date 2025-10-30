@@ -59,74 +59,76 @@ export class StreamProcessor { // Renamed class
             if (message.finalStatus === DreamStatus.ANALYSIS_FAILED && message.message === 'Analysis cancelled by user.') { // Still specific to DreamStatus
                 console.log(`Stream ${this.streamId}: Processor received cancellation signal.`);
                 this.isCancelled = true;
-                this.abortController.abort(new Error('Processing cancelled by user.')); // Abort internal operations
+                // Abort internal operations. This will cause the pipeTo promise to reject.
+                this.abortController.abort(new Error('Processing cancelled by user.'));
             }
         });
 
-        try {
-            const decoder = new TextDecoder();
-            let jsonBuffer = '';
-            const streamId = this.streamId;
-            const processChunk = this.processChunk.bind(this); // Bind 'this' for the WritableStream context
-            const signal = this.abortController.signal; // Get the signal from the internal controller
+        const decoder = new TextDecoder();
+        let jsonBuffer = '';
+        const streamId = this.streamId;
+        const processChunk = this.processChunk.bind(this); // Bind 'this' for the WritableStream context
+        const signal = this.abortController.signal; // Get the signal from the internal controller
 
-            const backgroundProcessingPromise = sourceStream.pipeTo(new WritableStream({
-                start: (controller) => {
-                    // Listen for external abort signals to stop the WritableStream
-                    signal.addEventListener('abort', () => {
-                        console.log(`Stream ${streamId}: WritableStream aborted by internal signal.`);
-                        controller.error(signal.reason);
-                    });
-                },
-                async write(chunk) {
-                    if (signal.aborted) { // Check if the signal has been aborted
-                        console.log(`Stream ${streamId}: WritableStream stopping write due to signal abort.`);
-                        throw signal.reason; // Propagate the reason for abort
-                    }
-
-                    jsonBuffer += decoder.decode(chunk, { stream: true });
-
-                    let boundary = jsonBuffer.indexOf('\n');
-                    while (boundary !== -1) {
-                        const line = jsonBuffer.substring(0, boundary).trim();
-                        jsonBuffer = jsonBuffer.substring(boundary + 1);
-
-                        if (line) {
-                            try {
-                                const parsedChunk: AnalysisStreamChunk = JSON.parse(line);
-                                await processChunk(parsedChunk);
-                            } catch (e) {
-                                console.warn(`Stream ${streamId}: Processor failed to parse stream line or process chunk: ${line}`, e);
-                            }
-                        }
-                        boundary = jsonBuffer.indexOf('\n');
-                    }
-                },
-                close: async () => {
-                    await this.handleStreamClose();
-                },
-                abort: async (reason) => {
-                    await this.handleStreamAbort(reason);
-                }
-            })); // Explicitly bind 'this' for the WritableStream callbacks
-
-            // Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
-            if (this.platform?.context?.waitUntil) {
-                this.platform.context.waitUntil(backgroundProcessingPromise);
-            } else {
-                // For Node.js environments, just await it or let it run in the background.
-                backgroundProcessingPromise.catch(e => {
-                    if (e.message !== 'Processing cancelled by user.') {
-                        console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
-                    } else {
-                        console.log(`Stream ${this.streamId}: Background processing pipeTo aborted by user cancellation.`);
-                    }
+        const backgroundProcessingPromise = sourceStream.pipeTo(new WritableStream({
+            start: (controller) => {
+                // Listen for external abort signals to stop the WritableStream
+                signal.addEventListener('abort', () => {
+                    console.log(`Stream ${streamId}: WritableStream aborted by internal signal.`);
+                    controller.error(signal.reason); // Propagate the abort reason to the WritableStream
                 });
-            }
+            },
+            async write(chunk) {
+                if (signal.aborted) { // Check if the signal has been aborted
+                    console.log(`Stream ${streamId}: WritableStream stopping write due to signal abort.`);
+                    throw signal.reason; // Propagate the reason for abort
+                }
 
-        } catch (e) {
-            console.error(`Stream ${this.streamId}: Error initiating background stream processing:`, e);
-            await this.handleStreamAbort(e); // Treat initiation errors as an abort
+                jsonBuffer += decoder.decode(chunk, { stream: true });
+
+                let boundary = jsonBuffer.indexOf('\n');
+                while (boundary !== -1) {
+                    const line = jsonBuffer.substring(0, boundary).trim();
+                    jsonBuffer = jsonBuffer.substring(boundary + 1);
+
+                    if (line) {
+                        try {
+                            const parsedChunk: AnalysisStreamChunk = JSON.parse(line);
+                            await processChunk(parsedChunk);
+                        } catch (e) {
+                            console.warn(`Stream ${streamId}: Processor failed to parse stream line or process chunk: ${line}`, e);
+                        }
+                    }
+                    boundary = jsonBuffer.indexOf('\n');
+                }
+            },
+            close: async () => {
+                await this.handleStreamClose();
+            },
+            abort: async (reason) => {
+                await this.handleStreamAbort(reason);
+            }
+        }, { signal: signal })); // Pass the signal to the WritableStream options
+
+        // Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
+        if (this.platform?.context?.waitUntil) {
+            this.platform.context.waitUntil(backgroundProcessingPromise.catch(e => {
+                // Catch and log errors from the pipeTo promise, including cancellation errors
+                if (e.message !== 'Processing cancelled by user.') {
+                    console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
+                } else {
+                    console.log(`Stream ${this.streamId}: Background processing pipeTo aborted by user cancellation.`);
+                }
+            }));
+        } else {
+            // For Node.js environments, ensure the promise rejection is caught.
+            backgroundProcessingPromise.catch(e => {
+                if (e.message !== 'Processing cancelled by user.') {
+                    console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
+                } else {
+                    console.log(`Stream ${this.streamId}: Background processing pipeTo aborted by user cancellation.`);
+                }
+            });
         }
     }
 
@@ -178,7 +180,9 @@ export class StreamProcessor { // Renamed class
             console.log(`Stream ${this.streamId}: Processor finished, status set to COMPLETED in DB.`);
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.COMPLETED, message: 'Processing completed.' }); // Publish final status
         }
-        await this.streamStateStore.clearStreamState(this.streamId); // Renamed method
+        // The Redis state is now cleared by publishCancellation or by the normal flow.
+        // No need to clear it again here if it was already handled by cancellation.
+        // await this.streamStateStore.clearStreamState(this.streamId);
     }
 
     private async handleStreamAbort(reason: any): Promise<void> {
@@ -194,7 +198,9 @@ export class StreamProcessor { // Renamed class
             console.log(`Stream ${this.streamId}: Processor aborted, status set to ANALYSIS_FAILED in DB.`);
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: `Processing aborted: ${errorMessage}` }); // Publish final status
         }
-        await this.streamStateStore.clearStreamState(this.streamId); // Renamed method
+        // The Redis state is now cleared by publishCancellation or by the normal flow.
+        // No need to clear it again here if it was already handled by cancellation.
+        // await this.streamStateStore.clearStreamState(this.streamId);
     }
 
     private async updateResultInDb(status: DreamStatus): Promise<void> { // Renamed method, still specific to DreamStatus
