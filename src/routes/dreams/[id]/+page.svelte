@@ -153,6 +153,36 @@
 		analysisService.startStream();
 	}
 
+	async function cancelStream() {
+		if (!dream.id) return;
+
+		if (!confirm('Are you sure you want to cancel the ongoing analysis?')) {
+			return;
+		}
+
+		analysisService?.closeStream(); // Close client-side stream immediately
+		isLoadingStream = false; // Update UI
+		streamError = 'Analysis cancelled by user.'; // Set a message
+
+		// Trigger server action to update status and notify background process
+		const formData = new FormData();
+		formData.append('dreamId', dream.id);
+
+		const response = await fetch('?/cancelAnalysis', {
+			method: 'POST',
+			body: formData
+		});
+
+		if (response.ok) {
+			console.log('Analysis cancellation initiated on server.');
+			await invalidate('dream'); // Re-fetch dream data to update status
+		} else {
+			const errorData = await response.json();
+			console.error('Failed to cancel analysis on server:', errorData.error);
+			streamError = errorData.error || 'Failed to cancel analysis on server.';
+		}
+	}
+
 	function handleBackClick() {
 		goto('/dreams');
 	}
@@ -244,7 +274,6 @@
 								<select
 									name="status"
 									class="select-bordered select select-sm"
-									onchange={() => this.submit()}
 								>
 									<option value="" disabled selected>{m.change_status_option()}</option>
 									<option value="analysis_failed">{m.reset_to_failed_analysis_option()}</option>
@@ -367,6 +396,11 @@
 										{m.regenerate_analysis_button()}
 									</button>
 								</form>
+							{/if}
+							{#if currentDreamStatus === 'pending_analysis' && isLoadingStream}
+								<button onclick={cancelStream} class="btn btn-sm btn-warning">
+									{m.cancel_analysis_button()}
+								</button>
 							{/if}
 						</div>
 					</div>
