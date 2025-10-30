@@ -4,8 +4,8 @@ import type { AnalysisStreamChunk } from '$lib/server/n8nService';
 import { DreamStatus } from '@prisma/client'; // Keep for now, but will be replaced by generic StreamStatus
 
 const REDIS_PREFIX = 'stream_state:';
-const REDIS_EXPIRATION_SECONDS = 60 * 60; // 1 hour
-const REDIS_STALL_THRESHOLD_SECONDS = 60 * 5; // 5 minutes
+const REDIS_EXPIRATION_SECONDS = 60 * 3;
+const REDIS_STALL_THRESHOLD_SECONDS = 15;
 
 // NEW: Define a generic StreamStatus enum
 export enum StreamStatus {
