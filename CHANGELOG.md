@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.18.0](https://github.com/MohammadBnei/dream-analyst/compare/0.17.0...0.18.0) (2025-10-30)
+
+
+### Features
+
+* Implement promptType selection and persistence for dream analysis ([892828f](https://github.com/MohammadBnei/dream-analyst/commit/892828f846a4e6c348971bc5fc101cd13241cb9d))
+
 # [0.17.0](https://github.com/MohammadBnei/dream-analyst/compare/0.16.1...0.17.0) (2025-10-30)
 
 
