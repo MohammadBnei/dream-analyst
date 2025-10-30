@@ -1,5 +1,17 @@
 # Changelog
 
+# [0.17.0](https://github.com/MohammadBnei/dream-analyst/compare/0.16.1...0.17.0) (2025-10-30)
+
+
+### Bug Fixes
+
+* Adjust dream analysis credit cost to 2 ([a7f6267](https://github.com/MohammadBnei/dream-analyst/commit/a7f6267c9800829ef957fda0016664459a684439))
+
+
+### Features
+
+* Use environment variables for credit costs and daily limits ([9254aae](https://github.com/MohammadBnei/dream-analyst/commit/9254aae3801fa9368060d98e8c5ec2ba01e88a79))
+
 ## [0.16.1](https://github.com/MohammadBnei/dream-analyst/compare/0.16.0...0.16.1) (2025-10-30)
 
 # [0.16.0](https://github.com/MohammadBnei/dream-analyst/compare/0.15.0...0.16.0) (2025-10-30)
