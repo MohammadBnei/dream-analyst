@@ -181,7 +181,7 @@ class StreamStateStore {
 
     /**
      * Checks if a stream is currently ongoing and not stalled.
-     * If stalled, it will update the state to FAILED and publish a message.
+     * If stalled, it will return false.
      * @param streamId The ID of the stream.
      * @returns True if stream is ongoing, false otherwise.
      */
@@ -190,17 +190,8 @@ class StreamStateStore {
         if (state && (state.status === StreamStatus.PENDING || state.status === StreamStatus.IN_PROGRESS)) {
             const now = Date.now();
             if ((now - state.lastUpdate) / 1000 > REDIS_STALL_THRESHOLD_SECONDS) {
-                console.warn(`Stream ${streamId}: Detected stalled stream (last update ${state.lastUpdate}). Marking as FAILED.`);
-                // NEW: Mark as FAILED and publish
-                await this.updateStreamState(streamId, {
-                    finalStatus: 'ANALYSIS_FAILED', // Using n8nService's finalStatus type for consistency
-                    message: 'Stream stalled due to inactivity.'
-                }, true);
-                await this.publishUpdate(streamId, {
-                    finalStatus: 'ANALYSIS_FAILED',
-                    message: 'Stream stalled due to inactivity.'
-                });
-                return false;
+                console.warn(`Stream ${streamId}: Detected stalled stream (last update ${state.lastUpdate}).`);
+                return false; // Simply return false if stalled, don't update state or publish
             }
             return true;
         }
@@ -225,7 +216,7 @@ class StreamStateStore {
     /**
      * Clears the stream state from Redis.
      * This method only deletes the key, it does not publish a final message.
-     * Final messages should be published by the entity that determines the final state (e.g., StreamProcessor or publishCancellation).
+     * Final messages should be published by the entity that determines the final state (e.g., StreamProcessor).
      * @param streamId The ID of the stream.
      */
     async clearStreamState(streamId: string): Promise<void> {
@@ -242,31 +233,6 @@ class StreamStateStore {
     async publishUpdate(streamId: string, chunk: AnalysisStreamChunk): Promise<void> {
         const channel = this.getChannel(streamId);
         await this.publisher.publish(channel, JSON.stringify(chunk));
-    }
-
-    /**
-     * Publishes a cancellation signal to the Redis Pub/Sub channel for a specific stream.
-     * Also updates the stream state to CANCELLED and clears it from Redis immediately.
-     * This is the primary method for external cancellation.
-     * @param streamId The ID of the stream to cancel.
-     */
-    async publishCancellation(streamId: string): Promise<void> {
-        const channel = this.getChannel(streamId);
-        const cancellationMessage: AnalysisStreamChunk = {
-            finalStatus: 'ANALYSIS_FAILED', // Use n8nService's finalStatus type
-            message: 'Stream cancelled by user.'
-        };
-
-        // NEW: Update the Redis state to CANCELLED before publishing and clearing
-        await this.updateStreamState(streamId, {
-            finalStatus: 'ANALYSIS_FAILED',
-            message: 'Stream cancelled by user.'
-        }, true); // Mark as final
-
-        await this.publisher.publish(channel, JSON.stringify(cancellationMessage));
-        console.log(`Stream ${streamId}: Published cancellation signal and updated state to CANCELLED.`);
-        // Immediately clear the Redis state upon cancellation
-        await this.clearStreamState(streamId);
     }
 
     /**

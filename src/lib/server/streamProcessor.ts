@@ -24,14 +24,14 @@ export class StreamProcessor { // Renamed class
     private accumulatedInterpretation: string = ''; // These fields are still specific to 'analysis', will need to be generalized if truly generic
     private accumulatedTags: string[] = [];
     private resultUpdatedInDb: boolean = false; // Renamed property
-    private isCancelled: boolean = false;
+    // private isCancelled: boolean = false; // Removed cancellation flag
     private cancellationSubscriber: AisRedis | null = null;
-    private abortController: AbortController; // New AbortController for internal cancellation
+    // private abortController: AbortController; // Removed AbortController
 
     constructor(streamId: string, platform: App.Platform | undefined) { // Renamed parameter
         this.streamId = streamId;
         this.platform = platform;
-        this.abortController = new AbortController(); // Initialize AbortController
+        // this.abortController = new AbortController(); // Removed AbortController initialization
     }
 
     /**
@@ -53,37 +53,19 @@ export class StreamProcessor { // Renamed class
             throw new Error('StreamProcessor not initialized. Call init() first.');
         }
 
-        // Subscribe to the stream's channel to listen for cancellation signals
-        this.cancellationSubscriber = this.streamStateStore.subscribeToUpdates(this.streamId, (message) => {
-            // Check for the specific cancellation message
-            if (message.finalStatus === DreamStatus.ANALYSIS_FAILED && message.message === 'Analysis cancelled by user.') { // Still specific to DreamStatus
-                console.log(`Stream ${this.streamId}: Processor received cancellation signal.`);
-                this.isCancelled = true;
-                // Abort internal operations. This will cause the pipeTo promise to reject.
-                this.abortController.abort(new Error('Processing cancelled by user.'));
-            }
-        });
+        // Removed subscription to cancellation signals
 
         const decoder = new TextDecoder();
         let jsonBuffer = '';
         const streamId = this.streamId;
         const processChunk = this.processChunk.bind(this); // Bind 'this' for the WritableStream context
-        const signal = this.abortController.signal; // Get the signal from the internal controller
+        // const signal = this.abortController.signal; // Removed signal
 
         const backgroundProcessingPromise = sourceStream.pipeTo(new WritableStream({
-            start: (controller) => {
-                // Listen for external abort signals to stop the WritableStream
-                signal.addEventListener('abort', () => {
-                    console.log(`Stream ${streamId}: WritableStream aborted by internal signal.`);
-                    controller.error(signal.reason); // Propagate the abort reason to the WritableStream
-                });
-            },
+            // Removed start method with signal listener
             async write(chunk) {
-                if (signal.aborted) { // Check if the signal has been aborted
-                    console.log(`Stream ${streamId}: WritableStream stopping write due to signal abort.`);
-                    throw signal.reason; // Propagate the reason for abort
-                }
-
+                // Removed signal.aborted check
+                
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
@@ -108,26 +90,18 @@ export class StreamProcessor { // Renamed class
             abort: async (reason) => {
                 await this.handleStreamAbort(reason);
             }
-        }, { signal: signal })); // Pass the signal to the WritableStream options
+        })); // Removed signal from WritableStream options
 
         // Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
         if (this.platform?.context?.waitUntil) {
             this.platform.context.waitUntil(backgroundProcessingPromise.catch(e => {
-                // Catch and log errors from the pipeTo promise, including cancellation errors
-                if (e.message !== 'Processing cancelled by user.') {
-                    console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
-                } else {
-                    console.log(`Stream ${this.streamId}: Background processing pipeTo aborted by user cancellation.`);
-                }
+                // Catch and log errors from the pipeTo promise
+                console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
             }));
         } else {
             // For Node.js environments, ensure the promise rejection is caught.
             backgroundProcessingPromise.catch(e => {
-                if (e.message !== 'Processing cancelled by user.') {
-                    console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
-                } else {
-                    console.log(`Stream ${this.streamId}: Background processing pipeTo aborted by user cancellation.`);
-                }
+                console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
             });
         }
     }
@@ -169,25 +143,23 @@ export class StreamProcessor { // Renamed class
     private async handleStreamClose(): Promise<void> {
         if (this.cancellationSubscriber) {
             await this.streamStateStore.unsubscribeFromUpdates(this.cancellationSubscriber, this.streamId);
+            this.cancellationSubscriber = null; // Clear the subscriber
         }
 
-        if (this.isCancelled) {
-            console.log(`Stream ${this.streamId}: Processor closed after cancellation.`);
-            // The DB status should have been updated by the DELETE endpoint or the abort handler
-        } else if (!this.resultUpdatedInDb) { // Renamed property
+        // Removed isCancelled check
+        if (!this.resultUpdatedInDb) { // Renamed property
             // If the stream closed without an explicit finalStatus and no error was reported, assume completion
             await this.updateResultInDb(DreamStatus.COMPLETED); // Renamed method, still specific to DreamStatus
             console.log(`Stream ${this.streamId}: Processor finished, status set to COMPLETED in DB.`);
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.COMPLETED, message: 'Processing completed.' }); // Publish final status
         }
-        // The Redis state is now cleared by publishCancellation or by the normal flow.
-        // No need to clear it again here if it was already handled by cancellation.
-        // await this.streamStateStore.clearStreamState(this.streamId);
+        await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on close
     }
 
     private async handleStreamAbort(reason: any): Promise<void> {
         if (this.cancellationSubscriber) {
             await this.streamStateStore.unsubscribeFromUpdates(this.cancellationSubscriber, this.streamId);
+            this.cancellationSubscriber = null; // Clear the subscriber
         }
 
         const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
@@ -198,9 +170,7 @@ export class StreamProcessor { // Renamed class
             console.log(`Stream ${this.streamId}: Processor aborted, status set to ANALYSIS_FAILED in DB.`);
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: `Processing aborted: ${errorMessage}` }); // Publish final status
         }
-        // The Redis state is now cleared by publishCancellation or by the normal flow.
-        // No need to clear it again here if it was already handled by cancellation.
-        // await this.streamStateStore.clearStreamState(this.streamId);
+        await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on abort
     }
 
     private async updateResultInDb(status: DreamStatus): Promise<void> { // Renamed method, still specific to DreamStatus
@@ -239,8 +209,8 @@ export async function getOrCreateStreamProcessor(streamId: string, rawText: stri
     await processor.init(); // Initialize the processor
     activeStreamProcessors.set(streamId, processor);
 
-    // Create the n8n stream here, and pass it to the processor's AbortSignal
-    const n8nStream = await initiateStreamedDreamAnalysis(streamId, rawText, processor.abortController.signal);
+    // Create the n8n stream here, without passing an AbortSignal
+    const n8nStream = await initiateStreamedDreamAnalysis(streamId, rawText);
 
     // Start the processing in the background.
     // The processor itself will handle its lifecycle and removal from the map
