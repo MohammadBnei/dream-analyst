@@ -111,5 +111,7 @@
 	"transcription_failed_message": "Transcription failed: {message}",
 	"microphone_access_error": "Could not access microphone. Please ensure it is connected and permissions are granted.",
 	"recording_failed_error": "Recording failed: {message}",
-	"cancel_analysis_button": "Cancel Analysis"
+	"cancel_analysis_button": "Cancel Analysis",
+	"app_description": "Your personal companion for exploring the depths of your dreams with Jungian psychology and AI.",
+	"dreams_page_description": "View and manage all your recorded dreams. Access Jungian analyses, symbolic tags, and track your progress."
 }

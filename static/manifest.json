@@ -1,0 +1,21 @@
+{
+    "name": "Dream Journal AI",
+    "short_name": "DreamJournal",
+    "description": "Your personal companion for exploring the depths of your dreams with Jungian psychology and AI.",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#3b82f6",
+    "icons": [
+        {
+            "src": "/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

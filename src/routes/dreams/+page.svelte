@@ -44,6 +44,17 @@
 	}
 </script>
 
+<svelte:head>
+	<title>{m.your_dreams_title()} - {m.app_name()}</title>
+	<meta name="description" content={m.dreams_page_description()} />
+	<!-- Open Graph / Facebook -->
+	<meta property="og:title" content={m.your_dreams_title()} />
+	<meta property="og:description" content={m.dreams_page_description()} />
+	<!-- Twitter -->
+	<meta property="twitter:title" content={m.your_dreams_title()} />
+	<meta property="twitter:description" content={m.dreams_page_description()} />
+</svelte:head>
+
 <div class="container mx-auto max-w-4xl p-4">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-3xl font-bold">{m.your_dreams_title()}</h1>

@@ -5,6 +5,17 @@
 	let { data } = $props();
 </script>
 
+<svelte:head>
+	<title>{m.home_page_title()} - {m.app_name()}</title>
+	<meta name="description" content={m.home_page_intro()} />
+	<!-- Open Graph / Facebook -->
+	<meta property="og:title" content={m.home_page_title()} />
+	<meta property="og:description" content={m.home_page_intro()} />
+	<!-- Twitter -->
+	<meta property="twitter:title" content={m.home_page_title()} />
+	<meta property="twitter:description" content={m.home_page_intro()} />
+</svelte:head>
+
 <div class="container mx-auto p-4">
 	<div class="hero bg-base-200 rounded-lg shadow-xl mb-8">
 		<div class="hero-content text-center">
