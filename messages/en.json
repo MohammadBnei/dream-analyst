@@ -117,5 +117,6 @@
 	"install_app_button": "Install App",
 	"previous_dream_button": "Previous Dream",
 	"next_dream_button": "Next Dream",
-	"dream_date_label": "Dream Date:"
+	"dream_date_label": "Dream Date:",
+	"chat_with_ai_heading": "Chat with AI"
 }
