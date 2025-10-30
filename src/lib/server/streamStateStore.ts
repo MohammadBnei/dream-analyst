@@ -203,6 +203,7 @@ class StreamStateStore { // Renamed class
         const key = this.getKey(streamId);
         const channel = this.getChannel(streamId);
         await this.publisher.del(key);
+        // Publish a final message indicating the state has been cleared
         await this.publisher.publish(channel, JSON.stringify({ finalStatus: DreamStatus.COMPLETED, message: 'Stream state cleared from Redis.' })); // Still specific to DreamStatus
         console.log(`Stream ${streamId}: Stream state cleared from Redis.`);
     }
@@ -219,6 +220,7 @@ class StreamStateStore { // Renamed class
 
     /**
      * Publishes a cancellation signal to the Redis Pub/Sub channel for a specific stream.
+     * Also clears the stream state from Redis immediately.
      * @param streamId The ID of the stream to cancel.
      */
     async publishCancellation(streamId: string): Promise<void> {
@@ -229,6 +231,8 @@ class StreamStateStore { // Renamed class
         };
         await this.publisher.publish(channel, JSON.stringify(cancellationMessage));
         console.log(`Stream ${streamId}: Published cancellation signal.`);
+        // Immediately clear the Redis state upon cancellation
+        await this.clearStreamState(streamId);
     }
 
     /**
