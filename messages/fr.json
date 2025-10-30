@@ -113,5 +113,6 @@
 	"recording_failed_error": "Échec de l'enregistrement : {message}",
 	"cancel_analysis_button": "Annuler l'Analyse",
 	"app_description": "Votre compagnon personnel pour explorer les profondeurs de vos rêves grâce à la psychologie jungienne et à l'IA.",
-	"dreams_page_description": "Visualisez et gérez tous vos rêves enregistrés. Accédez à des analyses jungiennes, des balises symboliques et suivez vos progrès."
+	"dreams_page_description": "Visualisez et gérez tous vos rêves enregistrés. Accédez à des analyses jungiennes, des balises symboliques et suivez vos progrès.",
+	"install_app_button": "Installer l'application"
 }
