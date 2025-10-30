@@ -121,5 +121,6 @@
 	"chat_with_ai_heading": "Discuter avec l'IA",
 	"type_your_message_placeholder": "Tapez votre message...",
 	"send_button": "Envoyer",
-	"delete_chat_message_button": "Supprimer le message"
+	"delete_chat_message_button": "Supprimer le message",
+	"confirm_delete_chat_message": "Êtes-vous sûr de vouloir supprimer ce message de chat ? Cette action est irréversible."
 }
