@@ -62,11 +62,18 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
         // Listen for the abort signal to cancel the internal WritableStream
         signal?.addEventListener('abort', async () => {
             console.log(`Dream ${dreamId}: n8nService received abort signal. Aborting internal writable stream.`);
-            await writer.abort(signal.reason); // Abort the writer with the reason from the signal
+            // Abort the writer with the reason from the signal. This will cause the WritableStream's abort method to be called.
+            await writer.abort(signal.reason);
         });
 
         response.body.pipeTo(new WritableStream({
             async write(chunk) {
+                // Explicitly check if the signal has been aborted before processing the chunk
+                if (signal?.aborted) {
+                    console.log(`Dream ${dreamId}: n8nService WritableStream stopping write due to signal abort.`);
+                    throw signal.reason; // Propagate the reason for abort
+                }
+
                 console.log(`Dream ${dreamId}: Received chunk from n8nResponseStream. Size: ${chunk.length}`);
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
