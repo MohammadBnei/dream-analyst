@@ -11,7 +11,7 @@ const encoder = new TextEncoder();
 export async function GET({ params, locals, platform, request }) {
     const dreamId = params.id;
     const sessionUser = locals.user;
-    const signal = request.signal; // Get the AbortSignal from the request
+    // const signal = request.signal; // Removed AbortSignal from request
 
     if (!sessionUser) {
         throw error(401, 'Unauthorized');
@@ -124,20 +124,7 @@ export async function GET({ params, locals, platform, request }) {
                     }
                 });
 
-                // Cleanup on client disconnect (HTTP connection aborts)
-                signal.addEventListener('abort', async () => {
-                    console.log(`Dream ${dreamId}: Client disconnected from stream (HTTP abort).`);
-                    if (subscriberClient) {
-                        await streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-                        subscriberClient = null;
-                    }
-                    if (!streamClosed) {
-                        controller.close(); // Ensure controller is closed
-                        streamClosed = true;
-                    }
-                    // Publish a cancellation signal to the StreamProcessor
-                    await streamStateStore.publishCancellation(dreamId);
-                });
+                // Removed signal.addEventListener('abort')
             },
             async cancel() {
                 console.log(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
@@ -148,8 +135,7 @@ export async function GET({ params, locals, platform, request }) {
                 // Mark as closed to prevent further actions, but don't call controller.close() here
                 // as the stream is already being cancelled.
                 streamClosed = true;
-                // Publish a cancellation signal to the StreamProcessor
-                await streamStateStore.publishCancellation(dreamId);
+                // Removed publishCancellation
             }
         });
 

@@ -13,7 +13,7 @@ export enum StreamStatus {
     IN_PROGRESS = 'IN_PROGRESS',
     COMPLETED = 'COMPLETED',
     FAILED = 'FAILED',
-    CANCELLED = 'CANCELLED',
+    // CANCELLED = 'CANCELLED', // Removed CANCELLED status
     STALLED = 'STALLED', // New status for detected stalled streams
 }
 

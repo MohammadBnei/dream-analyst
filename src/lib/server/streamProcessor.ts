@@ -25,7 +25,7 @@ export class StreamProcessor { // Renamed class
     private accumulatedTags: string[] = [];
     private resultUpdatedInDb: boolean = false; // Renamed property
     // private isCancelled: boolean = false; // Removed cancellation flag
-    private cancellationSubscriber: AisRedis | null = null;
+    // private cancellationSubscriber: AisRedis | null = null; // Removed cancellationSubscriber
     // private abortController: AbortController; // Removed AbortController
 
     constructor(streamId: string, platform: App.Platform | undefined) { // Renamed parameter
@@ -141,10 +141,7 @@ export class StreamProcessor { // Renamed class
     }
 
     private async handleStreamClose(): Promise<void> {
-        if (this.cancellationSubscriber) {
-            await this.streamStateStore.unsubscribeFromUpdates(this.cancellationSubscriber, this.streamId);
-            this.cancellationSubscriber = null; // Clear the subscriber
-        }
+        // Removed cancellationSubscriber logic
 
         // Removed isCancelled check
         if (!this.resultUpdatedInDb) { // Renamed property
@@ -157,10 +154,7 @@ export class StreamProcessor { // Renamed class
     }
 
     private async handleStreamAbort(reason: any): Promise<void> {
-        if (this.cancellationSubscriber) {
-            await this.streamStateStore.unsubscribeFromUpdates(this.cancellationSubscriber, this.streamId);
-            this.cancellationSubscriber = null; // Clear the subscriber
-        }
+        // Removed cancellationSubscriber logic
 
         const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
         console.error(`Stream ${this.streamId}: Processor aborted:`, errorMessage);
