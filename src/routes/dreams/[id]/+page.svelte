@@ -18,7 +18,7 @@
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>(dream.tags || []);
-	let currentDreamStatus = $state<DreamStatus>(dream.status); // Use DreamStatus enum
+	let currentDreamStatus = $derived<DreamStatus>(dream.status); // Use DreamStatus enum
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -123,6 +123,7 @@
 
 		isLoadingStream = true;
 		streamError = null;
+		// currentDreamStatus is derived, so no direct assignment needed here
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -175,9 +176,10 @@
 		streamError = 'Analysis cancelled by user.'; // Set a message
 
 		// Trigger server action to update status and notify background process
-		// The dreamId is already in the URL params, so no need to send it in formData
+		// Send an empty FormData object to ensure it's treated as a form submission
 		const response = await fetch('?/cancelAnalysis', {
-			method: 'POST'
+			method: 'POST',
+			body: new FormData() // Explicitly send an empty FormData
 		});
 
 		if (response.ok) {
