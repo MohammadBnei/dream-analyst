@@ -29,6 +29,7 @@ model Dream {
   interpretation String? 
   status        DreamStatus @default(PENDING_ANALYSIS)
   tags          Json?
+  dreamDate     DateTime    @default(now()) @map("dream_date") // New field for the actual dream date
   createdAt     DateTime    @default(now()) @map("created_at")
   updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
 

@@ -11,6 +11,8 @@
 	let { data, form } = $props();
 
 	let dream = $state(data.dream);
+	let nextDreamId = $state(data.nextDreamId);
+	let prevDreamId = $state(data.prevDreamId);
 
 	// Define DreamStatus locally based on the dream object's status type
 	type DreamStatus = typeof dream.status;
@@ -35,6 +37,11 @@
 	let isSavingInterpretationEdit = $state(false);
 	let interpretationEditError = $state<string | null>(null);
 
+	let isEditingDreamDate = $state(false);
+	let editedDreamDate = $state(dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '');
+	let isSavingDreamDate = $state(false);
+	let dreamDateEditError = $state<string | null>(null);
+
 	let analysisService: DreamAnalysisService | null = null;
 
 	// Reference to the hidden form for cancelling analysis
@@ -47,6 +54,8 @@
 		// We compare `updatedAt` as a simple way to check if the dream object itself has changed.
 		if (data.dream && dream.updatedAt !== data.dream.updatedAt) {
 			dream = data.dream;
+			nextDreamId = data.nextDreamId;
+			prevDreamId = data.prevDreamId;
 			// Only update streamed content if it's not actively streaming
 			if (!isLoadingStream) {
 				streamedInterpretation = dream.interpretation || '';
@@ -55,6 +64,7 @@
 			// dream.status is derived, so no direct assignment needed here
 			editedRawText = dream.rawText;
 			editedInterpretationText = dream.interpretation || '';
+			editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
 		}
 	});
 
@@ -77,6 +87,8 @@
 				editError = form.error;
 			} else if (form.interpretation !== undefined) {
 				interpretationEditError = form.error;
+			} else if (form.dreamDate !== undefined) {
+				dreamDateEditError = form.error;
 			} else if (form.error && form.error.includes('delete')) {
 				deleteError = form.error;
 			} else {
@@ -87,6 +99,7 @@
 		// Reset saving states
 		isSavingEdit = false;
 		isSavingInterpretationEdit = false;
+		isSavingDreamDate = false;
 		isDeleting = false;
 	});
 
@@ -219,6 +232,24 @@
 	function handleInterpretationInput(value: string) {
 		editedInterpretationText = value;
 	}
+
+	function toggleDreamDateEditMode() {
+		isEditingDreamDate = !isEditingDreamDate;
+		if (isEditingDreamDate) {
+			editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
+			dreamDateEditError = null;
+		}
+	}
+
+	function handleCancelDreamDateEdit() {
+		isEditingDreamDate = false;
+		editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
+		dreamDateEditError = null;
+	}
+
+	function handleDreamDateInput(event: Event) {
+		editedDreamDate = (event.target as HTMLInputElement).value;
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -248,9 +279,27 @@
 		<div class="card bg-base-100 p-6 shadow-xl">
 			<div class="card-body p-0">
 				<div class="mb-4 flex items-center justify-between">
-					<h2 class="card-title text-2xl">
-						{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
-					</h2>
+					<div class="flex items-center gap-2">
+						{#if prevDreamId}
+							<a href="/dreams/{prevDreamId}" class="btn btn-sm btn-outline">
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+								</svg>
+								{m.previous_dream_button()}
+							</a>
+						{/if}
+						<h2 class="card-title text-2xl">
+							{m.dream_on_date({ date: new Date(dream.dreamDate).toLocaleDateString() })}
+						</h2>
+						{#if nextDreamId}
+							<a href="/dreams/{nextDreamId}" class="btn btn-sm btn-outline">
+								{m.next_dream_button()}
+								<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+								</svg>
+							</a>
+						{/if}
+					</div>
 					<div class="flex items-center gap-2">
 						<span class="badge {getStatusBadgeClass(dream.status)}"
 							>{dream.status?.replace('_', ' ')}</span
@@ -266,6 +315,76 @@
 							</form>
 						{/if}
 					</div>
+				</div>
+
+				<div class="mb-6">
+					<div class="mb-2 flex items-center justify-between">
+						<h3 class="text-lg font-semibold">{m.dream_date_label()}</h3>
+						{#if !isEditingDreamDate}
+							<button onclick={toggleDreamDateEditMode} class="btn btn-ghost btn-sm">
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									class="h-5 w-5"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+									/>
+								</svg>
+								{m.edit_button()}
+							</button>
+						{/if}
+					</div>
+					{#if isEditingDreamDate}
+						<form
+							method="POST"
+							action="?/updateDreamDate"
+							use:enhance={() => {
+								isSavingDreamDate = true;
+								return async ({ update }) => {
+									await update();
+									isEditingDreamDate = false; // Exit edit mode on success or failure
+								};
+							}}
+						>
+							<input
+								type="date"
+								name="dreamDate"
+								class="input input-bordered w-full"
+								bind:value={editedDreamDate}
+								oninput={handleDreamDateInput}
+							/>
+							{#if dreamDateEditError}
+								<div class="mt-1 text-sm text-error">{dreamDateEditError}</div>
+							{/if}
+							<div class="mt-2 flex justify-end gap-2">
+								<button onclick={handleCancelDreamDateEdit} type="button" class="btn btn-ghost btn-sm"
+									>{m.cancel_button()}</button
+								>
+								<button
+									type="submit"
+									class="btn btn-sm btn-primary"
+									disabled={isSavingDreamDate}
+								>
+									{#if isSavingDreamDate}
+										<span class="loading loading-spinner"></span>
+										{m.save_button()}
+									{:else}
+										{m.save_button()}
+									{/if}
+								</button>
+							</div>
+						</form>
+					{:else}
+						<p class="leading-relaxed whitespace-pre-wrap text-base-content/80">
+							{new Date(dream.dreamDate).toLocaleDateString()}
+						</p>
+					{/if}
 				</div>
 
 				<div class="mb-6">

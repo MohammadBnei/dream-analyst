@@ -19,6 +19,10 @@ const UpdateStatusSchema = v.object({
     status: v.picklist([DreamStatus.PENDING_ANALYSIS, DreamStatus.COMPLETED, DreamStatus.ANALYSIS_FAILED])
 });
 
+const UpdateDreamDateSchema = v.object({
+    dreamDate: v.pipe(v.string(), v.check((s) => !isNaN(new Date(s).getTime()), 'Invalid date format'))
+});
+
 export const load: PageServerLoad = async ({ params, locals }) => {
     const dreamId = params.id;
     const sessionUser = locals.user;
@@ -51,8 +55,47 @@ export const load: PageServerLoad = async ({ params, locals }) => {
             tags: dream.tags ? (dream.tags as string[]) : null
         };
 
+        // Fetch next and previous dreams for navigation
+        const nextDream = await prisma.dream.findFirst({
+            where: {
+                userId: sessionUser.id,
+                dreamDate: {
+                    gte: dream.dreamDate // Use gte to include dreams on the same date, then order by createdAt
+                },
+                id: {
+                    not: dream.id // Exclude the current dream
+                }
+            },
+            orderBy: [
+                { dreamDate: 'asc' },
+                { createdAt: 'asc' }
+            ],
+            select: { id: true },
+            take: 1
+        });
+
+        const prevDream = await prisma.dream.findFirst({
+            where: {
+                userId: sessionUser.id,
+                dreamDate: {
+                    lte: dream.dreamDate // Use lte to include dreams on the same date, then order by createdAt
+                },
+                id: {
+                    not: dream.id // Exclude the current dream
+                }
+            },
+            orderBy: [
+                { dreamDate: 'desc' },
+                { createdAt: 'desc' }
+            ],
+            select: { id: true },
+            take: 1
+        });
+
         return {
-            dream: dreamWithParsedTags
+            dream: dreamWithParsedTags,
+            nextDreamId: nextDream?.id || null,
+            prevDreamId: prevDream?.id || null,
         };
     } catch (e: any) {
         console.error(`Error fetching dream ${dreamId}:`, e);
@@ -147,6 +190,49 @@ export const actions: Actions = {
         } catch (e) {
             console.error('Error updating dream interpretation:', e);
             return fail(500, { interpretation, error: 'Failed to update dream interpretation due to a server error.' });
+        }
+    },
+
+    updateDreamDate: async ({ request, params, locals }) => {
+        const dreamId = params.id;
+        const sessionUser = locals.user;
+        if (!sessionUser) {
+            return fail(401, { message: 'Unauthorized' });
+        }
+
+        const formData = await request.formData();
+        const dreamDate = formData.get('dreamDate');
+
+        let validatedData;
+        try {
+            validatedData = v.parse(UpdateDreamDateSchema, { dreamDate });
+        } catch (e: any) {
+            const issues = e.issues.map((issue: any) => issue.message);
+            return fail(400, { dreamDate, error: issues.join(', ') });
+        }
+
+        const prisma = await getPrismaClient();
+
+        try {
+            const existingDream = await prisma.dream.findUnique({
+                where: { id: dreamId }
+            });
+
+            if (!existingDream || existingDream.userId !== sessionUser.id) {
+                return fail(403, { error: 'Forbidden: You do not own this dream or it does not exist.' });
+            }
+
+            const updatedDream = await prisma.dream.update({
+                where: { id: dreamId },
+                data: {
+                    dreamDate: new Date(validatedData.dreamDate as string),
+                    updatedAt: new Date()
+                }
+            });
+            return { success: true, dream: updatedDream };
+        } catch (e) {
+            console.error('Error updating dream date:', e);
+            return fail(500, { dreamDate, error: 'Failed to update dream date due to a server error.' });
         }
     },
 
