@@ -1,4 +1,6 @@
+import { browser } from '$app/environment';
 import type { AnalysisStreamChunk } from '$lib/server/langchainService'; // Import the shared type
+import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst'; // Import DreamPromptType
 
 interface StreamCallbacks {
     onMessage: (data: AnalysisStreamChunk) => void;
@@ -19,7 +21,13 @@ export class DreamAnalysisService {
         this.callbacks = callbacks;
     }
 
-    public async startStream(): Promise<void> {
+    public async startStream(promptType: DreamPromptType = 'jungian'): Promise<void> { // Add promptType parameter
+        if (!browser) {
+            console.warn('DreamAnalysisService can only run in the browser.');
+            this.callbacks.onError('DreamAnalysisService can only run in the browser.');
+            return;
+        }
+
         if (this.abortController) {
             this.closeStream(); // Ensure any existing stream is closed
         }
@@ -29,7 +37,9 @@ export class DreamAnalysisService {
         this.jsonBuffer = ''; // Reset buffer for new stream
 
         try {
-            const response = await fetch(`/api/dreams/${this.dreamId}/stream-analysis`, {
+            // Append promptType to the URL
+            const url = `/api/dreams/${this.dreamId}/stream-analysis?promptType=${promptType}`;
+            const response = await fetch(url, {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/x-ndjson'

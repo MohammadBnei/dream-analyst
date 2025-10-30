@@ -1,7 +1,8 @@
 import { DreamStatus } from '@prisma/client';
-import { getStreamStateStore } from '$lib/server/streamStateStore'; // Renamed import
+import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
-import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/langchainService'; // Keep for the factory function
+import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/langchainService';
+import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
 
 /**
  * Manages the lifecycle of a single stream processing task.
@@ -13,23 +14,20 @@ import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/se
  * - Updating the database with final results.
  * - Handling cancellation and errors.
  */
-export class StreamProcessor { // Renamed class
-    private streamId: string; // Renamed property
+export class StreamProcessor {
+    private streamId: string;
     private platform: App.Platform | undefined;
-    private streamStateStore: Awaited<ReturnType<typeof getStreamStateStore>>; // Renamed property
+    private streamStateStore: Awaited<ReturnType<typeof getStreamStateStore>>;
     private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
 
-    private accumulatedInterpretation: string = ''; // These fields are still specific to 'analysis', will need to be generalized if truly generic
+    private accumulatedInterpretation: string = '';
     private accumulatedTags: string[] = [];
-    private resultUpdatedInDb: boolean = false; // Renamed property
-    // private isCancelled: boolean = false; // Removed cancellation flag
-    // private cancellationSubscriber: AisRedis | null = null; // Removed cancellationSubscriber
-    // private abortController: AbortController; // Removed AbortController
+    private resultUpdatedInDb: boolean = false;
+    private promptType: DreamPromptType = 'jungian'; // Added promptType property
 
-    constructor(streamId: string, platform: App.Platform | undefined) { // Renamed parameter
+    constructor(streamId: string, platform: App.Platform | undefined) {
         this.streamId = streamId;
         this.platform = platform;
-        // this.abortController = new AbortController(); // Removed AbortController initialization
     }
 
     /**
@@ -37,8 +35,16 @@ export class StreamProcessor { // Renamed class
      * Must be called before `startProcessing`.
      */
     public async init() {
-        this.streamStateStore = await getStreamStateStore(); // Renamed function call
+        this.streamStateStore = await getStreamStateStore();
         this.prisma = await getPrismaClient();
+    }
+
+    /**
+     * Sets the prompt type for this stream processing task.
+     * @param type The DreamPromptType to use.
+     */
+    public setPromptType(type: DreamPromptType): void {
+        this.promptType = type;
     }
 
     /**
@@ -46,24 +52,18 @@ export class StreamProcessor { // Renamed class
      * This method should be called once per stream processing task.
      * @param sourceStream The ReadableStream containing the chunks to process.
      */
-    public async startProcessing(sourceStream: ReadableStream<Uint8Array>): Promise<void> { // Renamed method and parameter
+    public async startProcessing(sourceStream: ReadableStream<Uint8Array>): Promise<void> {
         if (!this.streamStateStore || !this.prisma) {
             throw new Error('StreamProcessor not initialized. Call init() first.');
         }
-
-        // Removed subscription to cancellation signals
 
         const decoder = new TextDecoder();
         let jsonBuffer = '';
         const streamId = this.streamId;
         const processChunk = this.processChunk.bind(this); // Bind 'this' for the WritableStream context
-        // const signal = this.abortController.signal; // Removed signal
 
         const backgroundProcessingPromise = sourceStream.pipeTo(new WritableStream({
-            // Removed start method with signal listener
             async write(chunk) {
-                // Removed signal.aborted check
-                
                 jsonBuffer += decoder.decode(chunk, { stream: true });
 
                 let boundary = jsonBuffer.indexOf('\n');
@@ -88,7 +88,7 @@ export class StreamProcessor { // Renamed class
             abort: async (reason) => {
                 await this.handleStreamAbort(reason);
             }
-        })); // Removed signal from WritableStream options
+        }));
 
         // Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
         if (this.platform?.context?.waitUntil) {
@@ -119,18 +119,18 @@ export class StreamProcessor { // Renamed class
             tags: parsedChunk.tags,
             status: parsedChunk.status || DreamStatus.PENDING_ANALYSIS // Still specific to DreamStatus
         };
-        await this.streamStateStore.updateStreamState(this.streamId, redisUpdateChunk, false); // Renamed method
+        await this.streamStateStore.updateStreamState(this.streamId, redisUpdateChunk, false);
         await this.streamStateStore.publishUpdate(this.streamId, redisUpdateChunk);
 
         // Database update only on finalStatus or ANALYSIS_FAILED
-        if (parsedChunk.finalStatus && !this.resultUpdatedInDb) { // Renamed property
-            await this.updateResultInDb(parsedChunk.finalStatus); // Renamed method
+        if (parsedChunk.finalStatus && !this.resultUpdatedInDb) {
+            await this.updateResultInDb(parsedChunk.finalStatus);
             this.resultUpdatedInDb = true;
             console.debug(`Stream ${this.streamId}: Processor updated final status to ${parsedChunk.finalStatus} in DB.`);
             await this.streamStateStore.updateStreamState(this.streamId, { finalStatus: parsedChunk.finalStatus }, true); // Update Redis with final status
             await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: parsedChunk.finalStatus }); // Publish final status
-        } else if (parsedChunk.status === DreamStatus.ANALYSIS_FAILED && !this.resultUpdatedInDb) { // Still specific to DreamStatus
-            await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED); // Renamed method
+        } else if (parsedChunk.status === DreamStatus.ANALYSIS_FAILED && !this.resultUpdatedInDb) {
+            await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED);
             this.resultUpdatedInDb = true;
             console.debug(`Stream ${this.streamId}: Processor updated final status to ANALYSIS_FAILED (from chunk status) in DB.`);
             await this.streamStateStore.updateStreamState(this.streamId, { finalStatus: DreamStatus.ANALYSIS_FAILED }, true); // Update Redis with final status
@@ -139,40 +139,36 @@ export class StreamProcessor { // Renamed class
     }
 
     private async handleStreamClose(): Promise<void> {
-        // Removed cancellationSubscriber logic
-
-        // Removed isCancelled check
-        if (!this.resultUpdatedInDb) { // Renamed property
+        if (!this.resultUpdatedInDb) {
             // If the stream closed without an explicit finalStatus and no error was reported, assume completion
-            await this.updateResultInDb(DreamStatus.COMPLETED); // Renamed method, still specific to DreamStatus
+            await this.updateResultInDb(DreamStatus.COMPLETED);
             console.debug(`Stream ${this.streamId}: Processor finished, status set to COMPLETED in DB.`);
-            await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.COMPLETED, message: 'Processing completed.' }); // Publish final status
+            await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: 'COMPLETED', message: 'Processing completed.' }); // Publish final status
         }
         await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on close
     }
 
     private async handleStreamAbort(reason: any): Promise<void> {
-        // Removed cancellationSubscriber logic
-
         const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
         console.error(`Stream ${this.streamId}: Processor aborted:`, errorMessage);
 
-        if (!this.resultUpdatedInDb) { // Renamed property
-            await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED); // Renamed method, still specific to DreamStatus
+        if (!this.resultUpdatedInDb) {
+            await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED);
             console.debug(`Stream ${this.streamId}: Processor aborted, status set to ANALYSIS_FAILED in DB.`);
-            await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: `Processing aborted: ${errorMessage}` }); // Publish final status
+            await this.streamStateStore.publishUpdate(this.streamId, { finalStatus: 'ANALYSIS_FAILED', message: `Processing aborted: ${errorMessage}` }); // Publish final status
         }
         await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on abort
     }
 
-    private async updateResultInDb(status: DreamStatus): Promise<void> { // Renamed method, still specific to DreamStatus
+    private async updateResultInDb(status: DreamStatus): Promise<void> {
         try {
             await this.prisma.dream.update({
-                where: { id: this.streamId }, // This is still specific to 'dreamId'
+                where: { id: this.streamId },
                 data: {
                     status: status,
                     interpretation: this.accumulatedInterpretation,
-                    tags: this.accumulatedTags
+                    tags: this.accumulatedTags,
+                    promptType: this.promptType, // Save the prompt type
                 }
             });
         } catch (updateError) {
@@ -182,7 +178,7 @@ export class StreamProcessor { // Renamed class
 }
 
 // A map to keep track of active processors to prevent duplicate background processes
-const activeStreamProcessors = new Map<string, StreamProcessor>(); // Renamed map
+const activeStreamProcessors = new Map<string, StreamProcessor>();
 
 /**
  * Initiates or retrieves an existing StreamProcessor for a given stream.
@@ -190,24 +186,31 @@ const activeStreamProcessors = new Map<string, StreamProcessor>(); // Renamed ma
  * @param streamId The ID of the stream.
  * @param rawText The raw text of the stream (specific to dream analysis).
  * @param platform The SvelteKit platform object.
+ * @param promptType The type of prompt to use for analysis.
  * @returns The StreamProcessor instance.
  */
-export async function getOrCreateStreamProcessor(streamId: string, rawText: string, platform: App.Platform | undefined): Promise<StreamProcessor> { // Renamed function
+export async function getOrCreateStreamProcessor(
+    streamId: string,
+    rawText: string,
+    platform: App.Platform | undefined,
+    promptType: DreamPromptType // Added promptType parameter
+): Promise<StreamProcessor> {
     if (activeStreamProcessors.has(streamId)) {
         return activeStreamProcessors.get(streamId)!;
     }
 
-    const processor = new StreamProcessor(streamId, platform); // Renamed class
-    await processor.init(); // Initialize the processor
+    const processor = new StreamProcessor(streamId, platform);
+    await processor.init();
+    processor.setPromptType(promptType); // Set the prompt type on the processor
     activeStreamProcessors.set(streamId, processor);
 
-    // Create the n8n stream here, without passing an AbortSignal
-    const n8nStream = await initiateStreamedDreamAnalysis(streamId, rawText);
+    // Create the LangChain stream here
+    const llmStream = await initiateStreamedDreamAnalysis(streamId, rawText, promptType);
 
     // Start the processing in the background.
     // The processor itself will handle its lifecycle and removal from the map
     // once the processing is truly complete or failed.
-    processor.startProcessing(n8nStream).finally(() => { // Renamed method
+    processor.startProcessing(llmStream).finally(() => {
         // Remove from map once the processing process (including DB updates and Redis cleanup) is done
         activeStreamProcessors.delete(streamId);
     });

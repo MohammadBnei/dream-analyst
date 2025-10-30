@@ -4,7 +4,6 @@ import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { promptService } from './prompts/promptService'; // Import the prompt service
 import type { DreamPromptType } from './prompts/dreamAnalyst'; // Import the type
-// Removed: import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // No longer needed here
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
@@ -55,15 +54,9 @@ export async function initiateStreamedDreamAnalysis(
             new HumanMessage(`My dream: ${rawText}`),
         ];
 
-        // Removed: Conditionally add Jungian knowledge if the prompt type is Jungian
-        // This logic is now encapsulated within promptService.getSystemPrompt()
-
         const stream = await chat.stream(messages, {
             signal: signal // Pass the abort signal directly to the stream method
         });
-
-        let currentContent = '';
-        let currentTags: string[] = [];
 
         const readableStream = new ReadableStream<Uint8Array>({
             async start(controller) {
@@ -76,25 +69,28 @@ export async function initiateStreamedDreamAnalysis(
 
                         const content = chunk.content;
                         if (content) {
-                            currentContent += content;
-                            // Send content in small, frequent chunks
-                            controller.enqueue(encoder.encode(JSON.stringify({ content: content }) + '\n'));
+                            // LangChain's stream provides content directly.
+                            // We need to parse it to extract tags if the prompt is designed to output them.
+                            // For now, we'll assume the prompt outputs JSON lines as specified in the prompt.
+                            // This part needs to be robust to handle partial JSON or non-JSON output.
+                            try {
+                                const parsed = JSON.parse(content); // Attempt to parse if it's a full JSON object
+                                if (parsed.content) {
+                                    controller.enqueue(encoder.encode(JSON.stringify({ content: parsed.content }) + '\n'));
+                                }
+                                if (parsed.tags) {
+                                    controller.enqueue(encoder.encode(JSON.stringify({ tags: parsed.tags }) + '\n'));
+                                }
+                            } catch (e) {
+                                // If it's not a full JSON object, treat it as raw content
+                                controller.enqueue(encoder.encode(JSON.stringify({ content: content }) + '\n'));
+                            }
                         }
-
-                        // LangChain's stream doesn't directly provide tags or status in this format.
-                        // This part would require more advanced prompt engineering or post-processing
-                        // if you want to extract tags dynamically during the stream.
-                        // For now, we'll simulate a final tag output.
                     }
 
                     if (signal?.aborted) {
-                        // If aborted, send a failed status
                         controller.enqueue(encoder.encode(JSON.stringify({ finalStatus: 'ANALYSIS_FAILED', message: 'Analysis aborted.' }) + '\n'));
                     } else {
-                        // Simulate final tags and completion
-                        // In a real scenario, you might have a separate call or a more complex prompt
-                        // to extract tags at the end or during the process.
-                        // For this example, let's just send a completion status.
                         controller.enqueue(encoder.encode(JSON.stringify({ finalStatus: 'COMPLETED' }) + '\n'));
                     }
                 } catch (error) {
@@ -106,7 +102,6 @@ export async function initiateStreamedDreamAnalysis(
             },
             cancel(reason) {
                 console.debug(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel). Reason:`, reason);
-                // The signal passed to chat.stream should handle the actual LLM cancellation.
             }
         });
 
@@ -114,7 +109,6 @@ export async function initiateStreamedDreamAnalysis(
 
     } catch (error) {
         console.error('Error initiating LangChain streamed dream analysis:', error);
-        // Create a readable stream that immediately errors out
         return new ReadableStream({
             start(controller) {
                 controller.enqueue(encoder.encode(JSON.stringify({ message: `Failed to initiate streamed dream analysis service: ${(error as Error).message}`, finalStatus: 'ANALYSIS_FAILED' }) + '\n'));

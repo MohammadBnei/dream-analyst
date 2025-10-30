@@ -11,27 +11,28 @@ datasource db {
 }
 
 model User {
-  id               String            @id @default(uuid()) @map("id")
-  username         String            @unique
-  email            String            @unique
-  passwordHash     String            @map("password_hash")
-  dreams           Dream[]
+  id           String  @id @default(uuid()) @map("id")
+  username     String  @unique
+  email        String  @unique
+  passwordHash String  @map("password_hash")
+  dreams       Dream[]
 
   @@map("user")
 }
 
 model Dream {
-  id            String      @id @default(uuid())
-  userId        String      @map("user_id")
-  user          User?       @relation(fields: [userId], references: [id])
-  rawText       String      @map("raw_text")
-  analysisText  String?     @map("analysis_text")
-  interpretation String? 
-  status        DreamStatus @default(PENDING_ANALYSIS)
-  tags          Json?
-  dreamDate     DateTime    @default(now()) @map("dream_date") // New field for the actual dream date
-  createdAt     DateTime    @default(now()) @map("created_at")
-  updatedAt     DateTime    @default(now()) @updatedAt @map("updated_at")
+  id             String      @id @default(uuid())
+  userId         String      @map("user_id")
+  user           User?       @relation(fields: [userId], references: [id])
+  rawText        String      @map("raw_text")
+  analysisText   String?     @map("analysis_text")
+  interpretation String?
+  status         DreamStatus @default(PENDING_ANALYSIS)
+  tags           Json?
+  dreamDate      DateTime    @default(now()) @map("dream_date") // New field for the actual dream date
+  promptType     String?     @default("jungian") // Added promptType field
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @default(now()) @updatedAt @map("updated_at")
 
   @@map("dreams")
 }

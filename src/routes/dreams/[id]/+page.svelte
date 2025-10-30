@@ -6,7 +6,8 @@
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import { enhance } from '$app/forms';
-	// Removed: import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+	import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst'; // Import DreamPromptType
+	import { promptService } from '$lib/server/prompts/promptService'; // Import promptService to get available types
 
 	let { data, form } = $props();
 
@@ -18,12 +19,11 @@
 	type DreamStatus = typeof dream.status;
 
 	let streamedInterpretation = $state(dream.interpretation || '');
-	let streamedTags = $state<string[]>(dream.tags || []);
+	let streamedTags = $state<string[]>(dream.tags as string[] || []); // Cast tags to string[]
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
 
-	// Removed showDeleteModal state as it's replaced by checkbox
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 
@@ -44,6 +44,10 @@
 
 	let analysisService: DreamAnalysisService | null = null;
 
+	// State for prompt type selection
+	let selectedPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
+	const availablePromptTypes: DreamPromptType[] = promptService.getAvailablePromptTypes();
+
 	// Reference to the hidden form for cancelling analysis
 	let cancelAnalysisForm: HTMLFormElement;
 
@@ -59,12 +63,12 @@
 			// Only update streamed content if it's not actively streaming
 			if (!isLoadingStream) {
 				streamedInterpretation = dream.interpretation || '';
-				streamedTags = dream.tags || [];
+				streamedTags = dream.tags as string[] || [];
 			}
-			// dream.status is derived, so no direct assignment needed here
 			editedRawText = dream.rawText;
 			editedInterpretationText = dream.interpretation || '';
 			editedDreamDate = dream.dreamDate ? new Date(dream.dreamDate).toISOString().split('T')[0] : '';
+			selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian'; // Update selected prompt type
 		}
 	});
 
@@ -104,9 +108,9 @@
 	});
 
 	onMount(() => {
-		if (dream.status === 'PENDING_ANALYSIS') { // Use string literal
+		if (dream.status === 'PENDING_ANALYSIS') {
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
-			startStream();
+			startStream(selectedPromptType);
 		}
 	});
 
@@ -116,20 +120,19 @@
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: DreamStatus) {
-		// Use DreamStatus enum
 		switch (status) {
-			case 'COMPLETED': // Use string literal
+			case 'COMPLETED':
 				return 'badge-success';
-			case 'PENDING_ANALYSIS': // Use string literal
+			case 'PENDING_ANALYSIS':
 				return 'badge-info';
-			case 'ANALYSIS_FAILED': // Use string literal
+			case 'ANALYSIS_FAILED':
 				return 'badge-error';
 			default:
 				return 'badge-neutral';
 		}
 	}
 
-	function startStream() {
+	function startStream(promptType: DreamPromptType) {
 		if (!dream.id) {
 			console.warn('Cannot start stream: dream ID is not available.');
 			return;
@@ -137,11 +140,9 @@
 
 		isLoadingStream = true;
 		streamError = null;
-		// dream.status is derived, so no direct assignment needed here
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
-				// isLoadingStream remains true until onEnd or onError
 				if (data.content) {
 					streamedInterpretation += data.content;
 				}
@@ -149,7 +150,6 @@
 					streamedTags = data.tags;
 				}
 				if (data.status) {
-					// Update dream status directly if it comes from the stream
 					dream.status = data.status as DreamStatus;
 				}
 			},
@@ -166,25 +166,24 @@
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				dream.status = 'ANALYSIS_FAILED'; // Use string literal
+				dream.status = 'ANALYSIS_FAILED';
 				streamError = errorMsg;
 			},
 			onClose: () => {
 				console.log('Analysis service stream closed.');
-				isLoadingStream = false; // Ensure loading is false when stream closes
+				isLoadingStream = false;
 			}
 		});
-		analysisService.startStream();
+		analysisService.startStream(promptType); // Pass the selected prompt type
 	}
 
 	async function cancelStream() {
 		if (!dream.id) return;
 
-		analysisService?.closeStream(); // Close client-side stream immediately
-		isLoadingStream = false; // Update UI
-		streamError = 'Analysis cancelled by user.'; // Set a message
+		analysisService?.closeStream();
+		isLoadingStream = false;
+		streamError = 'Analysis cancelled by user.';
 
-		// Programmatically submit the hidden form to trigger the server action
 		if (cancelAnalysisForm) {
 			cancelAnalysisForm.requestSubmit();
 		}
@@ -246,6 +245,10 @@
 
 	function handleDreamDateInput(event: Event) {
 		editedDreamDate = (event.target as HTMLInputElement).value;
+	}
+
+	function handlePromptTypeChange(event: Event) {
+		selectedPromptType = (event.target as HTMLSelectElement).value as DreamPromptType;
 	}
 </script>
 
@@ -473,6 +476,18 @@
 									{m.edit_button()}
 								</button>
 							{/if}
+							<!-- Prompt Type Selector -->
+							<select
+								class="select select-bordered select-sm"
+								bind:value={selectedPromptType}
+								onchange={handlePromptTypeChange}
+								disabled={isLoadingStream}
+							>
+								{#each availablePromptTypes as type}
+									<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+								{/each}
+							</select>
+
 							{#if dream.status === 'COMPLETED' || dream.status === 'ANALYSIS_FAILED'}
 								<form
 									method="POST"
@@ -486,7 +501,7 @@
 										return async ({ update, result }) => {
 											await update(); // Update page data from server response
 											if (result.type === 'success') {
-												startStream(); // Start the stream if reset was successful
+												startStream(selectedPromptType); // Start the stream if reset was successful
 											} else {
 												isLoadingStream = false; // Reset loading on error
 											}
@@ -512,7 +527,6 @@
 									</button>
 								</form>
 							{/if}
-							<!-- Removed the cancel analysis button as requested -->
 						</div>
 					</div>
 
@@ -594,7 +608,7 @@
 								<span>{m.ANALYSIS_FAILED_message()}</span>
 							</div>
 						</div>
-						<button onclick={startStream} class="btn mt-4 btn-primary"
+						<button onclick={() => startStream(selectedPromptType)} class="btn mt-4 btn-primary"
 							>{m.retry_analysis_button()}</button
 						>
 					{:else if !streamedInterpretation && !streamedTags.length && !isLoadingStream && !streamError}
