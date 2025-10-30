@@ -1,5 +1,32 @@
 # Changelog
 
+# [0.15.0](https://github.com/MohammadBnei/dream-analyst/compare/0.14.3...0.15.0) (2025-10-30)
+
+
+### Bug Fixes
+
+* Correctly call deleteMessage in deleteChatMessage function ([4bed0c4](https://github.com/MohammadBnei/dream-analyst/commit/4bed0c4942b694e159a9174a59e36fb287138681))
+* Use App.ChatMessage type and implement delete message functionality ([2d603e3](https://github.com/MohammadBnei/dream-analyst/commit/2d603e39fd6ecb87014021544366a9b5e398152b))
+* Use ORIGIN environment variable for OpenRouter site URL ([a7716a9](https://github.com/MohammadBnei/dream-analyst/commit/a7716a9a3705553c2d85acc7fe11b6bfbc2428a2))
+
+
+### Features
+
+* add 'type_your_message_placeholder' translation ([4c0d3e4](https://github.com/MohammadBnei/dream-analyst/commit/4c0d3e493dfbb1b7ad0b61a6e2434c55706f0f3b))
+* Add API endpoint for dream chat interpretation ([1090425](https://github.com/MohammadBnei/dream-analyst/commit/10904256ffde422177697dd2e9984f335ebdbc41))
+* Add chat interface and interpretation editing to dream details page ([ff8123c](https://github.com/MohammadBnei/dream-analyst/commit/ff8123c80f0a886160ebc62ac54c9c119418cde3))
+* Add chat_with_ai_heading translation ([5baa946](https://github.com/MohammadBnei/dream-analyst/commit/5baa946e920b03e0332accc7504a7858e347f372))
+* Add confirm delete chat message translation ([c32b470](https://github.com/MohammadBnei/dream-analyst/commit/c32b470cbd50b6cf37c5894c612a0649db0d305e))
+* Add delete chat message button translation ([8ce3042](https://github.com/MohammadBnei/dream-analyst/commit/8ce304295e80fc6e8cd4f1f078020db866cb414b))
+* Add multiple dream analysis prompt types and selection logic ([be11ee1](https://github.com/MohammadBnei/dream-analyst/commit/be11ee150b13ed103fe46ba71955f6eaa4b781f4))
+* Add send button translation ([92c7db7](https://github.com/MohammadBnei/dream-analyst/commit/92c7db7ed2b1a5812217079e6aa2770207f952e1))
+* Add Streamdown component for chat message animation ([9e1b971](https://github.com/MohammadBnei/dream-analyst/commit/9e1b971d96623a11d0ff7506f55435cb8025d6ff))
+* Allow users to select interpretation type and enable AI chat ([8471ea3](https://github.com/MohammadBnei/dream-analyst/commit/8471ea33f93362c187c84fc048bba1c69ebc218d))
+* Implement chat message deletion functionality ([55cde64](https://github.com/MohammadBnei/dream-analyst/commit/55cde64c205670af2583e07458fdeb53bbba71f4))
+* Implement persistent chat history using Prisma `DreamChat` model ([60e16c9](https://github.com/MohammadBnei/dream-analyst/commit/60e16c9f2d9a230c84e2a0c399a50d165d739561))
+* Implement server-side chat service for dream interpretation ([ebf61a6](https://github.com/MohammadBnei/dream-analyst/commit/ebf61a600b6717610851209ebf8828d7959656f3))
+* Replace n8n dream analysis with LangChain and OpenRouter service ([d3cf203](https://github.com/MohammadBnei/dream-analyst/commit/d3cf20397e967526b03e495e3ad3288ba58d28ee))
+
 ## [0.14.3](https://github.com/MohammadBnei/dream-analyst/compare/0.14.2...0.14.3) (2025-10-30)
 
 
