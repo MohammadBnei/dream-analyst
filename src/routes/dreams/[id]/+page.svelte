@@ -1,22 +1,21 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onDestroy } from 'svelte';
+	import { onDestroy, onMount } from 'svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
-	import { getDream, deleteDream, updateDreamStatus, resetDreamStatus, updateDream, updateDreamInterpretation } from '$lib/remote/dream.remote';
     import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the RichTextInput component
 
 	let { params } = $props();
 	const dreamId = params.id;
 
-	// Fetch dream using the remote query
-	const dreamQuery = getDream(dreamId);
-	let dream = $derived(dreamQuery.current);
+	let dream: App.Dream | null = null;
+	let isLoadingDream = true;
+	let dreamError: string | null = null;
 
-	let streamedInterpretation = $state(dream?.interpretation || '');
-	let streamedTags = $state(dream?.tags || []);
-	let currentDreamStatus = $state(dream?.status);
+	let streamedInterpretation = $state('');
+	let streamedTags = $state<string[]>([]);
+	let currentDreamStatus = $state<App.Dream['status']>('pending_analysis');
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -26,16 +25,54 @@
 	let deleteError = $state<string | null>(null);
 
 	let isEditing = $state(false);
-	let editedRawText = $state(dream?.rawText || '');
+	let editedRawText = $state('');
 	let isSavingEdit = $state(false);
 	let editError = $state<string | null>(null);
 
 	let isEditingInterpretation = $state(false);
-	let editedInterpretationText = $state(dream?.interpretation || '');
+	let editedInterpretationText = $state('');
 	let isSavingInterpretationEdit = $state(false);
 	let interpretationEditError = $state<string | null>(null);
 
 	let analysisService: DreamAnalysisService | null = null;
+
+	onMount(async () => {
+		await fetchDream();
+	});
+
+	onDestroy(() => {
+		analysisService?.closeStream();
+	});
+
+	async function fetchDream() {
+		isLoadingDream = true;
+		dreamError = null;
+		try {
+			const response = await fetch(`/api/dreams/${dreamId}`);
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to fetch dream.');
+			}
+			dream = await response.json();
+			if (dream) {
+				streamedInterpretation = dream.interpretation || '';
+				streamedTags = dream.tags || [];
+				currentDreamStatus = dream.status;
+				editedRawText = dream.rawText;
+				editedInterpretationText = dream.interpretation || '';
+
+				if (dream.status === 'pending_analysis') {
+					console.log('Dream is pending analysis on mount, attempting to start stream...');
+					startStream();
+				}
+			}
+		} catch (e: any) {
+			console.error(`Error fetching dream ${dreamId}:`, e);
+			dreamError = e.message || 'An unknown error occurred while fetching the dream.';
+		} finally {
+			isLoadingDream = false;
+		}
+	}
 
 	// Function to determine badge color based on dream status
 	function getStatusBadgeClass(status: App.Dream['status']) {
@@ -43,6 +80,7 @@
 			case 'completed':
 				return 'badge-success';
 			case 'pending_analysis':
+			case 'pending_stream': // Assuming a new status for when stream is pending
 				return 'badge-info';
 			case 'analysis_failed':
 				return 'badge-error';
@@ -50,34 +88,6 @@
 				return 'badge-neutral';
 		}
 	}
-
-	onDestroy(() => {
-		analysisService?.closeStream();
-	});
-
-	// Effect to update local state when the 'dream' object changes (e.g., after invalidate)
-	$effect(() => {
-		if (dream) {
-			streamedInterpretation = dream.interpretation || '';
-			streamedTags = dream.tags || [];
-			currentDreamStatus = dream.status;
-			editedRawText = dream.rawText; // Update edited text when dream data changes
-			editedInterpretationText = dream.interpretation || ''; // Update edited interpretation text
-			// Reset stream-related states if dream is no longer pending
-			if (dream.status !== 'pending_analysis') {
-				isLoadingStream = false;
-				streamError = null;
-			}
-		}
-	});
-
-	// Effect to start stream when component mounts if dream is pending analysis
-	$effect(() => {
-		if ($effect.tracking() && dream && dream.status === 'pending_analysis') {
-			console.log('Dream is pending analysis on mount, attempting to start stream...');
-			startStream();
-		}
-	});
 
 	function startStream() {
 		if (!dream?.id) {
@@ -87,14 +97,11 @@
 
 		isLoadingStream = true;
 		streamError = null;
-		// Do not clear streamedInterpretation/Tags here if we want to show initial state from Redis
-		// streamedInterpretation = '';
-		// streamedTags = [];
 		currentDreamStatus = 'pending_analysis'; // Optimistic update for UI
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
-				isLoadingStream = false; // Once we receive a message, we're no longer just "loading" the stream connection
+				isLoadingStream = false;
 				if (data.content) {
 					streamedInterpretation += data.content;
 				}
@@ -108,14 +115,12 @@
 			onEnd: async (data) => {
 				console.log('Stream ended:', data);
 				isLoadingStream = false;
-				// Invalidate the page data to re-fetch the dream's final status and interpretation from the server
-				await dreamQuery.refresh(); // <--- This is crucial for getting the final persisted status
-				// The currentDreamStatus will be updated by the $effect reacting to the new 'dream' data.
+				await fetchDream(); // Re-fetch dream to get the final persisted status
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				currentDreamStatus = 'analysis_failed'; // Optimistic update, will be confirmed by invalidate
+				currentDreamStatus = 'analysis_failed';
 				streamError = errorMsg;
 			},
 			onClose: () => {
@@ -128,23 +133,32 @@
 	async function regenerateAnalysis() {
 		if (!dream?.id) return;
 
-		analysisService?.closeStream(); // Close any existing stream
-		streamedInterpretation = ''; // Clear current interpretation
+		analysisService?.closeStream();
+		streamedInterpretation = '';
 		streamedTags = [];
-		streamError = null; // Clear any previous error
-		currentDreamStatus = 'pending_analysis'; // Reset status immediately for UI feedback
+		streamError = null;
+		currentDreamStatus = 'pending_analysis';
 		isLoadingStream = true;
 
 		try {
-			// Call the remote function to reset the dream status
-			await resetDreamStatus(dream.id);
-			await dreamQuery.refresh(); // Refresh to get the updated dream object
-			startStream(); // Then start the stream
-		} catch (e) {
+			const response = await fetch(`/api/dreams/${dream.id}/reset-status`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to reset analysis status.');
+			}
+
+			await fetchDream(); // Refresh to get the updated dream object
+			startStream();
+		} catch (e: any) {
 			console.error('Error regenerating analysis:', e);
-			streamError =
-				e instanceof Error ? e.message : m.unknown_error_regenerating_analysis();
-			currentDreamStatus = 'analysis_failed'; // Set status back to failed if reset fails
+			streamError = e.message || m.unknown_error_regenerating_analysis();
+			currentDreamStatus = 'analysis_failed';
 			isLoadingStream = false;
 		}
 	}
@@ -155,14 +169,22 @@
 		isDeleting = true;
 		deleteError = null;
 		try {
-			await deleteDream(dream.id);
-			await goto('/dreams'); // Redirect to the dreams list page after successful deletion
-		} catch (e) {
+			const response = await fetch(`/api/dreams/${dream.id}`, {
+				method: 'DELETE'
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to delete dream.');
+			}
+
+			await goto('/dreams');
+		} catch (e: any) {
 			console.error('Error deleting dream:', e);
-			deleteError = e instanceof Error ? e.message : m.unknown_error_deleting_dream();
+			deleteError = e.message || m.unknown_error_deleting_dream();
 		} finally {
 			isDeleting = false;
-			showDeleteModal = false; // Close modal regardless of success/failure
+			showDeleteModal = false;
 		}
 	}
 
@@ -173,15 +195,26 @@
 		if (!dream || !newStatus) return;
 
 		try {
-			await updateDreamStatus({ dreamId: dream.id, status: newStatus as App.Dream['status'] });
+			const response = await fetch(`/api/dreams/${dream.id}/update-status`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ status: newStatus })
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to update dream status.');
+			}
+
 			currentDreamStatus = newStatus as App.Dream['status'];
-			await dreamQuery.refresh(); // Refresh to ensure the server-side data is consistent
+			await fetchDream();
 			console.log('Dream status updated successfully!');
-		} catch (error) {
-			console.error('Error updating dream status:', error);
-			alert(`Error updating dream status: ${(error as Error).message}`);
-			// Revert dropdown if update failed
-			target.value = dream.status; // Revert to original status
+		} catch (e: any) {
+			console.error('Error updating dream status:', e);
+			alert(`Error updating dream status: ${e.message}`);
+			target.value = dream.status;
 		}
 	}
 
@@ -204,8 +237,8 @@
 	function toggleEditMode() {
 		isEditing = !isEditing;
 		if (isEditing) {
-			editedRawText = dream?.rawText || ''; // Initialize with current rawText
-			editError = null; // Clear any previous edit errors
+			editedRawText = dream?.rawText || '';
+			editError = null;
 		}
 	}
 
@@ -218,13 +251,25 @@
 		isSavingEdit = true;
 		editError = null;
 		try {
-			await updateDream({ dreamId: dream.id, rawText: editedRawText });
-			await dreamQuery.refresh(); // Refresh to get the updated dream object
-			isEditing = false; // Exit edit mode
+			const response = await fetch(`/api/dreams/${dream.id}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ rawText: editedRawText })
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to update dream.');
+			}
+
+			await fetchDream();
+			isEditing = false;
 			console.log('Dream raw text updated successfully!');
-		} catch (e) {
+		} catch (e: any) {
 			console.error('Error saving dream edit:', e);
-			editError = e instanceof Error ? e.message : m.unknown_error_saving_dream();
+			editError = e.message || m.unknown_error_saving_dream();
 		} finally {
 			isSavingEdit = false;
 		}
@@ -232,34 +277,46 @@
 
 	function handleCancelEdit() {
 		isEditing = false;
-		editedRawText = dream?.rawText || ''; // Revert to original text
+		editedRawText = dream?.rawText || '';
 		editError = null;
 	}
 
 	function toggleInterpretationEditMode() {
 		isEditingInterpretation = !isEditingInterpretation;
 		if (isEditingInterpretation) {
-			editedInterpretationText = dream?.interpretation || ''; // Initialize with current interpretation
-			interpretationEditError = null; // Clear any previous edit errors
+			editedInterpretationText = dream?.interpretation || '';
+			interpretationEditError = null;
 		}
 	}
 
 	async function handleSaveInterpretationEdit() {
 		if (!dream?.id || editedInterpretationText.length < 10) {
-			interpretationEditError = m.interpretation_text_too_short_error(); // New translation key needed
+			interpretationEditError = m.interpretation_text_too_short_error();
 			return;
 		}
 
 		isSavingInterpretationEdit = true;
 		interpretationEditError = null;
 		try {
-			await updateDreamInterpretation({ dreamId: dream.id, interpretation: editedInterpretationText });
-			await dreamQuery.refresh(); // Refresh to get the updated dream object
-			isEditingInterpretation = false; // Exit edit mode
+			const response = await fetch(`/api/dreams/${dream.id}/interpretation`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ interpretation: editedInterpretationText })
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to update interpretation.');
+			}
+
+			await fetchDream();
+			isEditingInterpretation = false;
 			console.log('Dream interpretation updated successfully!');
-		} catch (e) {
+		} catch (e: any) {
 			console.error('Error saving interpretation edit:', e);
-			interpretationEditError = e instanceof Error ? e.message : m.unknown_error_saving_interpretation(); // New translation key needed
+			interpretationEditError = e.message || m.unknown_error_saving_interpretation();
 		} finally {
 			isSavingInterpretationEdit = false;
 		}
@@ -267,7 +324,7 @@
 
 	function handleCancelInterpretationEdit() {
 		isEditingInterpretation = false;
-		editedInterpretationText = dream?.interpretation || ''; // Revert to original text
+		editedInterpretationText = dream?.interpretation || '';
 		interpretationEditError = null;
 	}
 
@@ -302,11 +359,11 @@
 		</div>
 	</div>
 
-	{#if dreamQuery.loading}
+	{#if isLoadingDream}
 		<div class="flex justify-center items-center h-64">
 			<span class="loading loading-spinner loading-lg"></span>
 		</div>
-	{:else if dreamQuery.error}
+	{:else if dreamError}
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
@@ -320,8 +377,8 @@
 					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
 				></path></svg
 			>
-			<span>Error loading dream: {dreamQuery.error.message}</span>
-			<button class="btn btn-sm btn-ghost" onclick={() => dreamQuery.refresh()}>Retry</button>
+			<span>Error loading dream: {dreamError}</span>
+			<button class="btn btn-sm btn-ghost" on:click={fetchDream}>Retry</button>
 		</div>
 	{:else if dream}
 		<div class="card bg-base-100 p-6 shadow-xl">
@@ -370,7 +427,7 @@
 							<button onclick={handleSaveEdit} class="btn btn-sm btn-primary" disabled={isSavingEdit || editedRawText.length < 10}>
 								{#if isSavingEdit}
 									<span class="loading loading-spinner"></span>
-									{m.saving_button()}
+									{m.save_button()}
 								{:else}
 									{m.save_button()}
 								{/if}
@@ -434,7 +491,7 @@
 							<button onclick={handleSaveInterpretationEdit} class="btn btn-sm btn-primary" disabled={isSavingInterpretationEdit || editedInterpretationText.length < 10}>
 								{#if isSavingInterpretationEdit}
 									<span class="loading loading-spinner"></span>
-									{m.saving_button()}
+									{m.save_button()}
 								{:else}
 									{m.save_button()}
 								{/if}
@@ -542,4 +599,3 @@
 		{/if}
 	{/if}
 </div>
-

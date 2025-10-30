@@ -2,7 +2,6 @@
 	import { fade } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
-	import { createDream } from '$lib/remote/dream.remote';
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte'; // Import the new component
 
 	let dreamText: string = '';
@@ -16,16 +15,27 @@
 		errorMessage = null;
 
 		try {
-			const result = await createDream({ rawText: dreamText });
+			const response = await fetch('/api/dreams', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({ rawText: dreamText })
+			});
+
+			if (!response.ok) {
+				const errorData = await response.json();
+				throw new Error(errorData.message || 'Failed to create dream.');
+			}
+
+			const result = await response.json();
 			if (result && result.dreamId) {
 				await goto(`/dreams/${result.dreamId}`);
 			} else {
 				errorMessage = m.dream_saved_no_id_error();
 			}
 		} catch (e: any) {
-			// The remote function throws an error on failure, so catch it here.
-			// The error object from SvelteKit's remote functions might have a 'message' property.
-			errorMessage = e.body?.message || e.message || m.unknown_error_occurred();
+			errorMessage = e.message || m.unknown_error_occurred();
 		} finally {
 			isSaving = false;
 		}
