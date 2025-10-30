@@ -7,12 +7,8 @@
 	// Assuming data will be passed from +page.server.ts, including user login status
 	let { data } = $props();
 
-	let deferredPrompt: Event | null = null;
+	let deferredPrompt: Event | null = $state(null);
 	let showInstallButton = $state(false);
-
-	$effect(() => {
-		console.log({ showInstallButton, deferredPrompt });
-	});
 
 	if (browser) {
 		window.addEventListener('appinstalled', () => {
@@ -50,6 +46,7 @@
 <svelte:window
 	onbeforeinstallprompt={(e) => {
 		deferredPrompt = e;
+		showInstallButton = true;
 	}}
 />
 <div class="container mx-auto p-4">
