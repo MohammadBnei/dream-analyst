@@ -27,19 +27,19 @@ export async function DELETE({ params, locals }) {
             throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
         }
 
-        if (dream.status !== 'pending_analysis') {
+        if (dream.status !== 'PENDING_ANALYSIS') {
             return json({ message: 'Analysis is not currently pending for this dream.' }, { status: 409 });
         }
 
         // Clear the analysis state from Redis and publish a cancellation message
         await analysisStore.clearAnalysis(dreamId);
-        await analysisStore.publishUpdate(dreamId, { finalStatus: 'analysis_failed', message: 'Analysis cancelled by user.' });
+        await analysisStore.publishUpdate(dreamId, { finalStatus: 'ANALYSIS_FAILED', message: 'Analysis cancelled by user.' });
 
         // Update the dream status in the database
         await prisma.dream.update({
             where: { id: dreamId },
             data: {
-                status: 'analysis_failed',
+                status: 'ANALYSIS_FAILED',
                 interpretation: dream.interpretation || '', // Keep existing interpretation if any
                 tags: dream.tags || [], // Keep existing tags if any
                 updatedAt: new Date()

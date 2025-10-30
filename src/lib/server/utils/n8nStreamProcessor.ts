@@ -3,7 +3,7 @@ import { getPrismaClient } from '$lib/server/db';
 interface N8nStreamChunk {
     content?: string;
     tags?: string[];
-    status?: 'pending_analysis' | 'completed' | 'analysis_failed';
+    status?: 'PENDING_ANALYSIS' | 'completed' | 'ANALYSIS_FAILED';
     message?: string; // For error messages or other info
 }
 
@@ -104,8 +104,8 @@ export function createN8nStreamProcessor(dreamId: string, n8nResponseStream: Rea
                     console.error(`Dream ${dreamId}: Failed to update dream in DB after analysis:`, dbError);
                     await prisma.dream.update({
                         where: { id: dreamId },
-                        data: { status: 'analysis_failed' }
-                    }).catch(e => console.error(`Dream ${dreamId}: Failed to set status to analysis_failed after DB update error:`, e));
+                        data: { status: 'ANALYSIS_FAILED' }
+                    }).catch(e => console.error(`Dream ${dreamId}: Failed to set status to ANALYSIS_FAILED after DB update error:`, e));
                 }
             }
         },
@@ -115,11 +115,11 @@ export function createN8nStreamProcessor(dreamId: string, n8nResponseStream: Rea
             n8nStreamErrored = true;
             await writer.write(encoder.encode(`event: error\ndata: {"message": "Analysis stream aborted: ${errorMessage}"}\n\n`));
             await writer.close();
-            // Update dream status to analysis_failed
+            // Update dream status to ANALYSIS_FAILED
             await prisma.dream.update({
                 where: { id: dreamId },
-                data: { status: 'analysis_failed' }
-            }).catch(e => console.error(`Dream ${dreamId}: Failed to set status to analysis_failed after abort:`, e));
+                data: { status: 'ANALYSIS_FAILED' }
+            }).catch(e => console.error(`Dream ${dreamId}: Failed to set status to ANALYSIS_FAILED after abort:`, e));
         }
     })).catch(async (e) => {
         const errorMessage = e instanceof Error ? e.message : String(e || 'Unknown error during pipeTo');
@@ -127,11 +127,11 @@ export function createN8nStreamProcessor(dreamId: string, n8nResponseStream: Rea
         n8nStreamErrored = true;
         await writer.write(encoder.encode(`event: error\ndata: {"message": "Internal server error during stream processing: ${errorMessage}"}\n\n`));
         await writer.close();
-        // Update dream status to analysis_failed
+        // Update dream status to ANALYSIS_FAILED
         await prisma.dream.update({
             where: { id: dreamId },
-            data: { status: 'analysis_failed' }
-        }).catch(updateError => console.error(`Dream ${dreamId}: Failed to set status to analysis_failed after pipe error:`, updateError));
+            data: { status: 'ANALYSIS_FAILED' }
+        }).catch(updateError => console.error(`Dream ${dreamId}: Failed to set status to ANALYSIS_FAILED after pipe error:`, updateError));
     });
 
     return readable;

@@ -1,6 +1,7 @@
 import { query, command, getRequestEvent } from '$app/server';
 import { getPrismaClient } from '$lib/server/db';import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
+import type { Dream } from '@prisma/client';
 
 // Helper to get the current user from the request event
 async function getCurrentUser() {
@@ -83,7 +84,7 @@ export const createDream = command(
                 data: {
                     userId: sessionUser.id,
                     rawText: rawText,
-                    status: 'pending_analysis'
+                    status: 'PENDING_ANALYSIS'
                 }
             });
 
@@ -204,7 +205,7 @@ export const deleteDream = command(
 export const updateDreamStatus = command(
     v.object({
         dreamId: v.string(),
-        status: v.picklist(['pending_analysis', 'completed', 'analysis_failed'])
+        status: v.picklist(['PENDING_ANALYSIS', 'completed', 'ANALYSIS_FAILED'])
     }),
     async ({ dreamId, status }) => {
         const sessionUser = await getCurrentUser();
@@ -222,7 +223,7 @@ export const updateDreamStatus = command(
             const updatedDream = await prisma.dream.update({
                 where: { id: dreamId },
                 data: {
-                    status: status as App.Dream['status'],
+                    status: status as Dream['status'],
                     updatedAt: new Date()
                 }
             });
@@ -253,12 +254,12 @@ export const resetDreamStatus = command(
             await prisma.dream.update({
                 where: { id: dreamId },
                 data: {
-                    status: 'pending_analysis',
+                    status: 'PENDING_ANALYSIS',
                     interpretation: null, // Clear previous interpretation
                     tags: null // Clear previous tags
                 }
             });
-            return { message: 'Dream status reset to pending_analysis.' };
+            return { message: 'Dream status reset to PENDING_ANALYSIS.' };
         } catch (e) {
             console.error(`Failed to reset dream status for ${dreamId}:`, e);
             error(500, 'Failed to reset dream status.');

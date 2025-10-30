@@ -38,11 +38,11 @@ The **Core Journal Workflow** lets a user create a new dream entry, optionally u
 | FR‑1 | **Text capture** – The system shall present a multiline textarea where the user can type a dream. | High |
 | FR‑2 | **Voice capture** – The system shall allow the user to press a “mic” button, record speech, and convert it to text using the browser’s Web Speech API. The resulting transcript shall populate the textarea. | High |
 | FR‑3 | **Save button** – The system shall enable a “Save” action only when the textarea contains ≥ 10 characters. | High |
-| FR‑4 | **Persist dream** – Upon Save, the backend shall store: `user_id`, `timestamp`, `raw_text`, and a status flag (`pending_analysis`). | High |
+| FR‑4 | **Persist dream** – Upon Save, the backend shall store: `user_id`, `timestamp`, `raw_text`, and a status flag (`PENDING_ANALYSIS`). | High |
 | FR‑5 | **Trigger analysis** – After persisting, the backend shall invoke an n8n workflow that sends `raw_text` to the selected LLM and receives: <br>• A comma‑separated list of symbolic tags. <br>• A 150‑200 word Jungian prose interpretation. | High |
 | FR‑6 | **Store results** – The backend shall update the record with `tags` (JSON array) and `interpretation` (text), and set status to `completed`. | High |
 | FR‑7 | **UI feedback** – While the analysis is running, show a loading spinner and a “Analyzing…” toast. When finished, display the tags (as chips) and the prose below the textarea. | Medium |
-| FR‑8 | **Error handling** – If the LLM call fails, the system shall set status to `analysis_failed` and display a retry button. | Medium |
+| FR‑8 | **Error handling** – If the LLM call fails, the system shall set status to `ANALYSIS_FAILED` and display a retry button. | Medium |
 | FR‑9 | **Accessibility** – All controls must be operable via keyboard and have ARIA labels. | Medium |
 
 ---
@@ -83,7 +83,7 @@ The **Core Journal Workflow** lets a user create a new dream entry, optionally u
 | raw_text | TEXT | Original user‑provided dream (typed or transcribed). |
 | tags | JSONB | Array of strings (e.g., `["water","flight"]`). |
 | interpretation | TEXT | AI‑generated Jungian prose. |
-| status | ENUM('pending_analysis','completed','analysis_failed') | Processing state. |
+| status | ENUM('PENDING_ANALYSIS','completed','ANALYSIS_FAILED') | Processing state. |
 
 *All columns are **NOT NULL** except `tags` and `interpretation` until analysis finishes.*
 
@@ -124,7 +124,7 @@ The **Core Journal Workflow** lets a user create a new dream entry, optionally u
 
 1. **Happy Path** – User records a dream (typed or spoken) → sees tags + interpretation within ≤ 5 s.  
 2. **Voice Fallback** – In browsers without Web Speech API, the mic button is hidden and a tooltip explains “typing only”.  
-3. **Error Path** – If n8n or LLM returns error, UI shows retry option and status is set to `analysis_failed`.  
+3. **Error Path** – If n8n or LLM returns error, UI shows retry option and status is set to `ANALYSIS_FAILED`.  
 4. **Data Integrity** – After a successful save, the `dreams` row contains non‑null `raw_text`, `tags`, `interpretation`, and `status='completed'`.  
 5. **Security** – Unauthenticated request to `/api/dreams` returns 401; authenticated request stores `user_id` correctly.  
 

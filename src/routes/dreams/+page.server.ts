@@ -60,11 +60,11 @@ export const actions: Actions = {
             // Update dream status in DB
             await prisma.dream.update({
                 where: { id: dreamId },
-                data: { status: 'analysis_failed' }
+                data: { status: 'ANALYSIS_FAILED' }
             });
 
             // Publish cancellation message to Redis
-            await analysisStore.publishUpdate(dreamId, { finalStatus: 'analysis_failed', message: 'Analysis cancelled by user.' });
+            await analysisStore.publishUpdate(dreamId, { finalStatus: 'ANALYSIS_FAILED', message: 'Analysis cancelled by user.' });
             await analysisStore.clearAnalysis(dreamId); // Clear Redis state
 
             return { success: true, message: 'Analysis cancelled successfully.' };

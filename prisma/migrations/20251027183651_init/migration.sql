@@ -15,7 +15,7 @@ CREATE TABLE "dreams" (
     "raw_text" TEXT NOT NULL,
     "analysis_text" TEXT,
     "interpretation" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'pending_analysis',
+    "status" TEXT NOT NULL DEFAULT 'PENDING_ANALYSIS',
     "tags" JSONB,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,

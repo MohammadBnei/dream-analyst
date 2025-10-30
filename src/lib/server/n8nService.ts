@@ -1,4 +1,5 @@
 import { env } from '$env/dynamic/private';
+import type { Dream } from '@prisma/client';
 
 const N8N_WEBHOOK_URL = env.N8N_WEBHOOK_URL;
 const N8N_AUDIO_TRANSCRIBE_URL = env.N8N_AUDIO_TRANSCRIBE_URL; // New environment variable for audio transcription
@@ -8,9 +9,9 @@ const N8N_AUTH = env.N8N_AUTH;
 export interface AnalysisStreamChunk {
     content?: string;
     tags?: string[];
-    status?: 'pending_analysis' | 'completed' | 'analysis_failed';
+    status?: Dream['status'];
     message?: string; // For error messages or other info
-    finalStatus?: 'completed' | 'analysis_failed'; // New field to signal final status
+    finalStatus?: 'COMPLETED' | 'ANALYSIS_FAILED'; // New field to signal final status
 }
 
 export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: string): Promise<ReadableStream<Uint8Array>> {
@@ -125,7 +126,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
                 const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
                 console.error(`Dream ${dreamId}: n8n stream aborted:`, errorMessage);
                 // Signal failure to the consumer
-                await writer.write(encoder.encode(JSON.stringify({ message: `Analysis stream aborted: ${errorMessage}`, finalStatus: 'analysis_failed' }) + '\n'));
+                await writer.write(encoder.encode(JSON.stringify({ message: `Analysis stream aborted: ${errorMessage}`, finalStatus: 'ANALYSIS_FAILED' }) + '\n'));
                 await writer.close();
             }
         }));
@@ -137,7 +138,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
         // Create a readable stream that immediately errors out
         return new ReadableStream({
             start(controller) {
-                controller.enqueue(encoder.encode(JSON.stringify({ message: `Failed to initiate streamed dream analysis service: ${(error as Error).message}`, finalStatus: 'analysis_failed' }) + '\n'));
+                controller.enqueue(encoder.encode(JSON.stringify({ message: `Failed to initiate streamed dream analysis service: ${(error as Error).message}`, finalStatus: 'ANALYSIS_FAILED' }) + '\n'));
                 controller.close();
             }
         });

@@ -32,7 +32,7 @@ export const actions: Actions = {
                 data: {
                     userId: sessionUser.id,
                     rawText: validatedData.rawText,
-                    status: 'pending_analysis'
+                    status: 'PENDING_ANALYSIS'
                 }
             });
 

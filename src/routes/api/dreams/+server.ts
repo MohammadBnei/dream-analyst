@@ -61,7 +61,7 @@ export async function POST({ request, locals }) {
             data: {
                 userId: sessionUser.id,
                 rawText: validatedData.rawText,
-                status: 'pending_analysis'
+                status: 'PENDING_ANALYSIS'
             }
         });
 

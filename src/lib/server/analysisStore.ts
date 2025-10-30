@@ -1,7 +1,7 @@
 import { getRedisClient } from './redis';
 import type { AnalysisStreamChunk } from './n8nService';
 import Redis from 'ioredis'; // Import Redis for subscriber client
-import { env } from '$env/dynamic/private'; // Import env to check for REDIS_URL
+import type { Dream } from '@prisma/client';
 
 const REDIS_PREFIX = 'dream_analysis:';
 const REDIS_EXPIRATION_SECONDS = 60 * 60 * 2; // Store analysis state for 2 hours (longer than expected analysis)
@@ -11,7 +11,7 @@ const REDIS_STALL_THRESHOLD_SECONDS = REDIS_HEARTBEAT_INTERVAL_SECONDS * 2; // I
 interface AnalysisState {
     interpretation: string;
     tags: string[];
-    status: 'pending_analysis' | 'completed' | 'analysis_failed';
+    status: Dream['status'];
     lastUpdate: number; // Timestamp of last update (milliseconds)
 }
 
@@ -57,7 +57,7 @@ class AnalysisStore {
             currentState = {
                 interpretation: '',
                 tags: [],
-                status: 'pending_analysis',
+                status: 'PENDING_ANALYSIS',
                 lastUpdate: Date.now()
             };
         }
@@ -112,7 +112,7 @@ class AnalysisStore {
      */
     async isAnalysisOngoing(dreamId: string): Promise<boolean> {
         const state = await this.getAnalysis(dreamId);
-        if (state?.status === 'pending_analysis') {
+        if (state?.status === 'PENDING_ANALYSIS') {
             const now = Date.now();
             // If the last update is too old, consider it stalled
             if ((now - state.lastUpdate) / 1000 > REDIS_STALL_THRESHOLD_SECONDS) {
@@ -134,7 +134,7 @@ class AnalysisStore {
         const initialState: AnalysisState = {
             interpretation: '',
             tags: [],
-            status: 'pending_analysis',
+            status: 'PENDING_ANALYSIS',
             lastUpdate: Date.now()
         };
         // Set with initial expiration

@@ -32,7 +32,7 @@ export async function GET({ params, locals, platform, request }) {
     }
 
     // If analysis is already completed or failed (either in DB or Redis), just return the final result
-    if (dream.status === 'completed' || dream.status === 'analysis_failed') {
+    if (dream.status === 'COMPLETED' || dream.status === 'ANALYSIS_FAILED') {
         const finalChunk: AnalysisStreamChunk = {
             content: dream.interpretation || '',
             tags: dream.tags || [],
@@ -48,8 +48,8 @@ export async function GET({ params, locals, platform, request }) {
         });
     }
 
-    // If status is pending_analysis, ensure a background process is running
-    if (dream.status === 'pending_analysis') {
+    // If status is PENDING_ANALYSIS, ensure a background process is running
+    if (dream.status === 'PENDING_ANALYSIS') {
         // Use Redis to check if analysis is already ongoing and not stalled
         const isOngoing = await analysisStore.isAnalysisOngoing(dreamId);
 
@@ -77,7 +77,7 @@ export async function GET({ params, locals, platform, request }) {
 
                 const initialContent = initialRedisState?.interpretation || initialDream?.interpretation || '';
                 const initialTags = initialRedisState?.tags || initialDream?.tags || [];
-                const initialStatus = initialRedisState?.status || initialDream?.status || 'pending_analysis';
+                const initialStatus = initialRedisState?.status || initialDream?.status || 'PENDING_ANALYSIS';
 
                 controller.enqueue(encoder.encode(JSON.stringify({
                     content: initialContent,
@@ -104,10 +104,9 @@ export async function GET({ params, locals, platform, request }) {
                     }
 
                     // If the message contains a finalStatus, signal end of stream
-                    const parsedMessage = JSON.parse(message);
-                    if (parsedMessage.finalStatus) {
-                        controller.enqueue(encoder.encode(JSON.stringify(parsedMessage) + '\n'));
-                        console.log(`Dream ${dreamId}: Client stream ending due to finalStatus: ${parsedMessage.finalStatus}`);
+                    if (message.finalStatus) {
+                        controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
+                        console.log(`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`);
                         if (subscriberClient) {
                             analysisStore.unsubscribeFromUpdates(subscriberClient, dreamId);
                             subscriberClient = null;
@@ -118,7 +117,7 @@ export async function GET({ params, locals, platform, request }) {
                         }
                     } else {
                         // Otherwise, enqueue the update
-                        controller.enqueue(encoder.encode(JSON.stringify(parsedMessage) + '\n'));
+                        controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
                     }
                 });
 
@@ -175,8 +174,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
 
     // Subscribe to the dream's channel to listen for cancellation signals
     const cancellationSubscriber = analysisStore.subscribeToUpdates(dreamId, (message) => {
-        const parsedMessage = JSON.parse(message);
-        if (parsedMessage.finalStatus === 'analysis_failed' && parsedMessage.message === 'Analysis cancelled by user.') {
+        if (message.finalStatus === 'ANALYSIS_FAILED' && message.message === 'Analysis cancelled by user.') {
             console.log(`Dream ${dreamId}: Background process received cancellation signal.`);
             isCancelled = true;
             // No need to unsubscribe here, the pipeTo will handle aborting the stream
@@ -217,7 +215,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                             const redisUpdateChunk: AnalysisStreamChunk = {
                                 content: parsedChunk.content, // Send delta content
                                 tags: parsedChunk.tags,
-                                status: parsedChunk.status || 'pending_analysis'
+                                status: parsedChunk.status || 'PENDING_ANALYSIS'
                             };
                             // Refresh expiration periodically (heartbeat)
                             // The REDIS_HEARTBEAT_INTERVAL_SECONDS is not directly used here,
@@ -227,7 +225,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                             await analysisStore.publishUpdate(dreamId, redisUpdateChunk);
 
 
-                            // Database update only on finalStatus or analysis_failed
+                            // Database update only on finalStatus or ANALYSIS_FAILED
                             if (parsedChunk.finalStatus && !dreamStatusUpdatedInDb) {
                                 await prisma.dream.update({
                                     where: { id: dreamId },
@@ -241,19 +239,19 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                                 console.log(`Dream ${dreamId}: Background process updated final status to ${parsedChunk.finalStatus} in DB.`);
                                 await analysisStore.updateAnalysis(dreamId, { finalStatus: parsedChunk.finalStatus }, true); // Update Redis with final status
                                 await analysisStore.publishUpdate(dreamId, { finalStatus: parsedChunk.finalStatus }); // Publish final status
-                            } else if (parsedChunk.status === 'analysis_failed' && !dreamStatusUpdatedInDb) {
+                            } else if (parsedChunk.status === 'ANALYSIS_FAILED' && !dreamStatusUpdatedInDb) {
                                 await prisma.dream.update({
                                     where: { id: dreamId },
                                     data: {
-                                        status: 'analysis_failed',
+                                        status: 'ANALYSIS_FAILED',
                                         interpretation: accumulatedInterpretation,
                                         tags: accumulatedTags
                                     }
                                 }).catch(updateError => console.error(`Dream ${dreamId}: Failed to update final status in DB:`, updateError));
                                 dreamStatusUpdatedInDb = true;
-                                console.log(`Dream ${dreamId}: Background process updated final status to analysis_failed (from chunk status) in DB.`);
-                                await analysisStore.updateAnalysis(dreamId, { finalStatus: 'analysis_failed' }, true); // Update Redis with final status
-                                await analysisStore.publishUpdate(dreamId, { finalStatus: 'analysis_failed' }); // Publish final status
+                                console.log(`Dream ${dreamId}: Background process updated final status to ANALYSIS_FAILED (from chunk status) in DB.`);
+                                await analysisStore.updateAnalysis(dreamId, { finalStatus: 'ANALYSIS_FAILED' }, true); // Update Redis with final status
+                                await analysisStore.publishUpdate(dreamId, { finalStatus: 'ANALYSIS_FAILED' }); // Publish final status
                             }
 
                         } catch (e) {
@@ -267,7 +265,7 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                 // Unsubscribe from cancellation channel
                 await analysisStore.unsubscribeFromUpdates(cancellationSubscriber, dreamId);
 
-                // If cancelled, the status should already be analysis_failed
+                // If cancelled, the status should already be ANALYSIS_FAILED
                 if (isCancelled) {
                     console.log(`Dream ${dreamId}: Background process closed after cancellation.`);
                     // The DB status should have been updated by the DELETE endpoint or the abort handler
@@ -303,14 +301,14 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                     await prisma.dream.update({
                         where: { id: dreamId },
                         data: {
-                            status: 'completed',
+                            status: 'COMPLETED',
                             interpretation: accumulatedInterpretation,
                             tags: accumulatedTags
                         }
                     }).catch(updateError => console.error(`Dream ${dreamId}: Failed to update status to completed in DB:`, updateError));
                     console.log(`Dream ${dreamId}: Background process finished, status set to completed in DB.`);
-                    await analysisStore.updateAnalysis(dreamId, { finalStatus: 'completed' }, true); // Update Redis with final status
-                    await analysisStore.publishUpdate(dreamId, { finalStatus: 'completed' }); // Publish final status
+                    await analysisStore.updateAnalysis(dreamId, { finalStatus: 'COMPLETED' }, true); // Update Redis with final status
+                    await analysisStore.publishUpdate(dreamId, { finalStatus: 'COMPLETED' }); // Publish final status
                 }
                 await analysisStore.clearAnalysis(dreamId); // Clear from Redis once fully processed
             },
@@ -324,15 +322,15 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
                     await prisma.dream.update({
                         where: { id: dreamId },
                         data: {
-                            status: 'analysis_failed',
+                            status: 'ANALYSIS_FAILED',
                             interpretation: accumulatedInterpretation,
                             tags: accumulatedTags
                         }
-                    }).catch(updateError => console.error(`Dream ${dreamId}: Failed to update status to analysis_failed in DB:`, updateError));
+                    }).catch(updateError => console.error(`Dream ${dreamId}: Failed to update status to ANALYSIS_FAILED in DB:`, updateError));
                     dreamStatusUpdatedInDb = true;
-                    console.log(`Dream ${dreamId}: Background process aborted, status set to analysis_failed in DB.`);
-                    await analysisStore.updateAnalysis(dreamId, { finalStatus: 'analysis_failed' }, true); // Update Redis with final status
-                    await analysisStore.publishUpdate(dreamId, { finalStatus: 'analysis_failed' }); // Publish final status
+                    console.log(`Dream ${dreamId}: Background process aborted, status set to ANALYSIS_FAILED in DB.`);
+                    await analysisStore.updateAnalysis(dreamId, { finalStatus: 'ANALYSIS_FAILED' }, true); // Update Redis with final status
+                    await analysisStore.publishUpdate(dreamId, { finalStatus: 'ANALYSIS_FAILED' }); // Publish final status
                 }
                 await analysisStore.clearAnalysis(dreamId); // Clear from Redis on abort
             }
@@ -356,9 +354,9 @@ async function runBackgroundAnalysis(dreamId: string, rawText: string, platform:
         if (!dreamStatusUpdatedInDb) {
             await prisma.dream.update({
                 where: { id: dreamId },
-                data: { status: 'analysis_failed' }
-            }).catch(updateError => console.error(`Dream ${dreamId}: Failed to update status to analysis_failed after n8n initiation error:`, updateError));
-            await analysisStore.updateAnalysis(dreamId, { finalStatus: 'analysis_failed' }, true); // Update Redis with final status
+                data: { status: 'ANALYSIS_FAILED' }
+            }).catch(updateError => console.error(`Dream ${dreamId}: Failed to update status to ANALYSIS_FAILED after n8n initiation error:`, updateError));
+            await analysisStore.updateAnalysis(dreamId, { finalStatus: 'ANALYSIS_FAILED' }, true); // Update Redis with final status
         }
         await analysisStore.clearAnalysis(dreamId); // Clear from Redis on initiation error
     }

@@ -28,12 +28,12 @@ export async function POST({ params, locals }) {
         await prisma.dream.update({
             where: { id: dreamId },
             data: {
-                status: 'pending_analysis',
+                status: 'PENDING_ANALYSIS',
                 interpretation: null, // Clear previous interpretation
                 tags: null // Clear previous tags
             }
         });
-        return json({ message: 'Dream status reset to pending_analysis.' });
+        return json({ message: 'Dream status reset to PENDING_ANALYSIS.' });
     } catch (e) {
         console.error(`Failed to reset dream status for ${dreamId}:`, e);
         throw error(500, 'Failed to reset dream status.');

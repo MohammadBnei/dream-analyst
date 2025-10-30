@@ -1,4 +1,7 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
+
+import type { Dream } from "@prisma/client";
+
 // for information about these interfaces
 declare global {
 	namespace App {
@@ -16,19 +19,7 @@ declare global {
 		// interface PageData {}
 		// interface Platform {}
 
-		// Define the Dream type based on your Prisma schema
-		interface Dream {
-			id: string;
-			userId: string;
-			rawText: string;
-			analysisText: string | null;
-			interpretation: string | null;
-			status: 'pending_analysis' | 'completed' | 'analysis_failed';
-			tags: string[] | null; // Assuming tags are stored as JSONB array of strings
-			createdAt: Date;
-			updatedAt: Date;
-		}
 	}
 }
 
-export {};
+export { };

@@ -7,16 +7,16 @@
 		tags: string[];
 		isLoading: boolean;
 		errorMessage: string | null;
-		status: 'pending_analysis' | 'completed' | 'analysis_failed' | 'idle';
+		status: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle';
 	}>();
 
-	function getStatusBadgeClass(currentStatus: 'pending_analysis' | 'completed' | 'analysis_failed' | 'idle') {
+	function getStatusBadgeClass(currentStatus: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle') {
 		switch (currentStatus) {
-			case 'completed':
+			case 'COMPLETED':
 				return 'badge-success';
-			case 'pending_analysis':
+			case 'PENDING_ANALYSIS':
 				return 'badge-info';
-			case 'analysis_failed':
+			case 'ANALYSIS_FAILED':
 				return 'badge-error';
 			case 'idle':
 			default:

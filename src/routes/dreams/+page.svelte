@@ -3,13 +3,14 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import type { Dream } from '@prisma/client';
 
 	// Data loaded from +page.server.ts
 	let { data, form } = $props(); // Use $props() for both data and form
 
 	let dreams = $derived(data.dreams);
 
-	let clientError: string | null = null; // For errors during client-side actions like cancelAnalysis confirmation
+	let clientError: string | null = $state(null); // For errors during client-side actions like cancelAnalysis confirmation
 
 	// Handle form action responses
 	$effect(() => {
@@ -25,13 +26,13 @@
 	});
 
 	// Function to determine badge color based on dream status
-	function getStatusBadgeClass(status: App.Dream['status']) {
+	function getStatusBadgeClass(status: Dream['status']) {
 		switch (status) {
-			case 'completed':
+			case 'COMPLETED':
 				return 'badge-success';
-			case 'pending_analysis':
+			case 'PENDING_ANALYSIS':
 				return 'badge-info';
-			case 'analysis_failed':
+			case 'ANALYSIS_FAILED':
 				return 'badge-error';
 			default:
 				return 'badge-neutral';
@@ -56,7 +57,7 @@
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				class="stroke-current shrink-0 h-6 w-6"
+				class="h-6 w-6 shrink-0 stroke-current"
 				fill="none"
 				viewBox="0 0 24 24"
 				><path
@@ -67,7 +68,7 @@
 				></path></svg
 			>
 			<span>Error: {clientError}</span>
-			<button class="btn btn-sm btn-ghost" onclick={() => (clientError = null)}>Clear</button>
+			<button class="btn btn-ghost btn-sm" onclick={() => (clientError = null)}>Clear</button>
 		</div>
 	{:else if dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
@@ -109,19 +110,19 @@
 							<p class="line-clamp-3 text-sm text-base-content/70 italic">
 								{dream.interpretation}
 							</p>
-						{:else if dream.status === 'pending_analysis'}
+						{:else if dream.status === 'PENDING_ANALYSIS'}
 							<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
-						{:else if dream.status === 'analysis_failed'}
-							<p class="text-sm text-error italic">{m.analysis_failed_try_again_message()}</p>
+						{:else if dream.status === 'ANALYSIS_FAILED'}
+							<p class="text-sm text-error italic">{m.ANALYSIS_FAILED_try_again_message()}</p>
 						{/if}
 
 						<div class="mt-4 card-actions justify-end">
-							{#if dream.status === 'pending_analysis'}
+							{#if dream.status === 'PENDING_ANALYSIS'}
 								<form
 									method="POST"
 									action="?/cancelAnalysis"
-									use:enhance={() => {
-										return ({ cancel }) => {
+									use:enhance={({ cancel }) => {
+										return () => {
 											if (!confirmCancelAnalysis(dream.id)) {
 												cancel(); // Prevent form submission if confirmation fails
 											}
@@ -134,7 +135,9 @@
 									</button>
 								</form>
 							{/if}
-							<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary">{m.view_details_button()}</a>
+							<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary"
+								>{m.view_details_button()}</a
+							>
 						</div>
 					</div>
 				</div>

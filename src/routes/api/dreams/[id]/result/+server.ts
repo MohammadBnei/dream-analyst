@@ -28,14 +28,14 @@ export async function POST({ request, params }) {
         return json({ message: 'Dream analysis results updated successfully.', dream: updatedDream }, { status: 200 });
     } catch (error) {
         console.error(`Error updating dream ${dreamId} with analysis results:`, error);
-        // If update fails, set status to analysis_failed
+        // If update fails, set status to ANALYSIS_FAILED
         try {
             await prisma.dream.update({
                 where: { id: dreamId },
-                data: { status: 'analysis_failed' }
+                data: { status: 'ANALYSIS_FAILED' }
             });
         } catch (updateError) {
-            console.error(`Failed to set dream ${dreamId} status to analysis_failed after initial error:`, updateError);
+            console.error(`Failed to set dream ${dreamId} status to ANALYSIS_FAILED after initial error:`, updateError);
         }
         return json({ message: 'Failed to update dream analysis results.' }, { status: 500 });
     }

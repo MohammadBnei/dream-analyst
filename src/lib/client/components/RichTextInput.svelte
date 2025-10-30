@@ -5,6 +5,7 @@
 	export let placeholder: string = 'Start typing or record your thoughts...';
 	export let rows: number = 5;
 	export let onInput: (value: string) => void = () => {}; // Callback prop for input changes
+	export let name = 'rawText';
 
 	let isRecording = false;
 	let mediaRecorder: MediaRecorder | null = null;
@@ -121,6 +122,7 @@
 			<textarea
 				{placeholder}
 				{rows}
+				{name}
 				bind:value
 				on:input={handleInput}
 				class="textarea-bordered textarea w-full rounded-md p-2 focus:ring-2 focus:ring-primary focus:outline-none"
@@ -173,7 +175,7 @@
 
 				<select
 					bind:value={selectedLanguage}
-					class="select-bordered select select-sm w-30"
+					class="select-bordered select w-30 select-sm"
 					disabled={isRecording || isTranscribing}
 				>
 					<option value="en">{m.language_english_option()}</option>
