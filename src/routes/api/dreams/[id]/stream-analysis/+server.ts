@@ -58,6 +58,7 @@ export async function GET({ params, locals, platform, request }) {
             console.log(`Dream ${dreamId}: Initiating new background analysis process via AnalysisStreamManager.`);
             await analysisStore.markAnalysisStarted(dreamId); // Mark as started in Redis
             // Get or create the manager. It will start the analysis in the background.
+            // The rawText is passed here because this is where the n8n-specific stream is initiated.
             getOrCreateAnalysisStreamManager(dreamId, dream.rawText, platform);
         } else {
             console.log(`Dream ${dreamId}: Background analysis process already running (tracked by Redis).`);

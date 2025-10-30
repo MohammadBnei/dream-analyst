@@ -1,13 +1,14 @@
 import { DreamStatus } from '@prisma/client';
-import type { AnalysisStreamChunk } from '$lib/server/n8nService';
+import type { AnalysisStreamChunk } from '$lib/server/n8nService'; // Still need this type definition
 import { getAnalysisStore } from '$lib/server/analysisStore';
 import { getPrismaClient } from '$lib/server/db';
-import { initiateStreamedDreamAnalysis } from '$lib/server/n8nService';
+import { initiateStreamedDreamAnalysis } from '$lib/server/n8nService'; // Keep for the factory function
+import type { AisRedis } from '$lib/server/analysisStore'; // Import AisRedis type
 
 /**
  * Manages the lifecycle of a single dream analysis stream.
  * This class is responsible for:
- * - Receiving the raw stream from the analysis source (e.g., n8n).
+ * - Receiving a raw stream of analysis chunks.
  * - Parsing and accumulating chunks.
  * - Persisting intermediate and final states to Redis.
  * - Publishing updates to Redis Pub/Sub.
@@ -16,7 +17,6 @@ import { initiateStreamedDreamAnalysis } from '$lib/server/n8nService';
  */
 export class AnalysisStreamManager {
     private dreamId: string;
-    private rawText: string;
     private platform: App.Platform | undefined;
     private analysisStore: Awaited<ReturnType<typeof getAnalysisStore>>;
     private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
@@ -27,9 +27,8 @@ export class AnalysisStreamManager {
     private isCancelled: boolean = false;
     private cancellationSubscriber: AisRedis | null = null; // AisRedis is the type returned by analysisStore.subscribeToUpdates
 
-    constructor(dreamId: string, rawText: string, platform: App.Platform | undefined) {
+    constructor(dreamId: string, platform: App.Platform | undefined) {
         this.dreamId = dreamId;
-        this.rawText = rawText;
         this.platform = platform;
     }
 
@@ -43,10 +42,11 @@ export class AnalysisStreamManager {
     }
 
     /**
-     * Starts the background analysis process.
+     * Starts the background analysis process, consuming the provided ReadableStream.
      * This method should be called once per dream analysis.
+     * @param n8nStream The ReadableStream containing the analysis chunks.
      */
-    public async startAnalysis(): Promise<void> {
+    public async startAnalysis(n8nStream: ReadableStream<Uint8Array>): Promise<void> {
         if (!this.analysisStore || !this.prisma) {
             throw new Error('AnalysisStreamManager not initialized. Call init() first.');
         }
@@ -60,7 +60,6 @@ export class AnalysisStreamManager {
         });
 
         try {
-            const n8nStream = await initiateStreamedDreamAnalysis(this.dreamId, this.rawText);
             const decoder = new TextDecoder();
             let jsonBuffer = '';
 
@@ -141,8 +140,8 @@ export class AnalysisStreamManager {
             await this.updateDreamInDb(parsedChunk.finalStatus);
             this.dreamStatusUpdatedInDb = true;
             console.log(`Dream ${this.dreamId}: Manager updated final status to ${parsedChunk.finalStatus} in DB.`);
-            await this.analysisStore.updateAnalysis(this.dreamId, { finalStatus: parsedStatus }, true); // Update Redis with final status
-            await this.analysisStore.publishUpdate(this.dreamId, { finalStatus: parsedStatus }); // Publish final status
+            await this.analysisStore.updateAnalysis(this.dreamId, { finalStatus: parsedChunk.finalStatus }, true); // Update Redis with final status
+            await this.analysisStore.publishUpdate(this.dreamId, { finalStatus: parsedChunk.finalStatus }); // Publish final status
         } else if (parsedChunk.status === DreamStatus.ANALYSIS_FAILED && !this.dreamStatusUpdatedInDb) {
             await this.updateDreamInDb(DreamStatus.ANALYSIS_FAILED);
             this.dreamStatusUpdatedInDb = true;
@@ -153,7 +152,9 @@ export class AnalysisStreamManager {
     }
 
     private async handleStreamClose(): Promise<void> {
-        await this.analysisStore.unsubscribeFromUpdates(this.cancellationSubscriber!, this.dreamId); // Unsubscribe from cancellation channel
+        if (this.cancellationSubscriber) {
+            await this.analysisStore.unsubscribeFromUpdates(this.cancellationSubscriber, this.dreamId); // Unsubscribe from cancellation channel
+        }
 
         if (this.isCancelled) {
             console.log(`Dream ${this.dreamId}: Manager closed after cancellation.`);
@@ -168,7 +169,9 @@ export class AnalysisStreamManager {
     }
 
     private async handleStreamAbort(reason: any): Promise<void> {
-        await this.analysisStore.unsubscribeFromUpdates(this.cancellationSubscriber!, this.dreamId); // Unsubscribe from cancellation channel
+        if (this.cancellationSubscriber) {
+            await this.analysisStore.unsubscribeFromUpdates(this.cancellationSubscriber, this.dreamId); // Unsubscribe from cancellation channel
+        }
 
         const errorMessage = reason instanceof Error ? reason.message : String(reason || 'Unknown error');
         console.error(`Dream ${this.dreamId}: Manager aborted:`, errorMessage);
@@ -202,6 +205,7 @@ const activeAnalysisManagers = new Map<string, AnalysisStreamManager>();
 
 /**
  * Initiates or retrieves an existing AnalysisStreamManager for a given dream.
+ * This factory function is responsible for creating the source stream (e.g., from n8n).
  * @param dreamId The ID of the dream.
  * @param rawText The raw text of the dream.
  * @param platform The SvelteKit platform object.
@@ -212,14 +216,17 @@ export async function getOrCreateAnalysisStreamManager(dreamId: string, rawText:
         return activeAnalysisManagers.get(dreamId)!;
     }
 
-    const manager = new AnalysisStreamManager(dreamId, rawText, platform);
+    const manager = new AnalysisStreamManager(dreamId, platform);
     await manager.init(); // Initialize the manager
     activeAnalysisManagers.set(dreamId, manager);
+
+    // Create the n8n stream here, and pass it to the manager
+    const n8nStream = await initiateStreamedDreamAnalysis(dreamId, rawText);
 
     // Start the analysis in the background.
     // The manager itself will handle its lifecycle and removal from the map
     // once the analysis is truly complete or failed.
-    manager.startAnalysis().finally(() => {
+    manager.startAnalysis(n8nStream).finally(() => {
         // Remove from map once the analysis process (including DB updates and Redis cleanup) is done
         activeAnalysisManagers.delete(dreamId);
     });
