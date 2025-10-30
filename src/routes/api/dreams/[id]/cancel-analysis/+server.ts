@@ -1,11 +1,19 @@
 import { error, json } from '@sveltejs/kit';
-import { getStreamStateStore } from '$lib/server/streamStateStore'; // Updated import
+import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
-import { DreamStatus } from '@prisma/client'; // Ensure DreamStatus is imported
+import { DreamStatus } from '@prisma/client';
+import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor'; // Import getOrCreateStreamProcessor
 
-export async function DELETE({ params, locals }) {
+function getCurrentUser(locals: App.Locals) {
+	if (!locals.user) {
+		throw error(401, 'Unauthorized');
+	}
+	return locals.user;
+}
+
+export async function POST({ params, locals, platform }) {
 	const dreamId = params.id;
-	const sessionUser = locals.user;
+	const sessionUser = getCurrentUser(locals);
 
 	if (!sessionUser) {
 		throw error(401, 'Unauthorized');
@@ -16,7 +24,7 @@ export async function DELETE({ params, locals }) {
 	}
 
 	const prisma = await getPrismaClient();
-	const streamStateStore = await getStreamStateStore(); // Updated function call
+	const streamStateStore = await getStreamStateStore();
 
 	try {
 		const dream = await prisma.dream.findUnique({
@@ -27,30 +35,31 @@ export async function DELETE({ params, locals }) {
 			throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
 		}
 
-		if (dream.status !== DreamStatus.PENDING_ANALYSIS) {
-			// Use DreamStatus enum
-			return json(
-				{ message: 'Analysis is not currently pending for this dream.' },
-				{ status: 409 }
-			);
+		// Get the existing processor. We pass the dream and platform just in case
+		// it needs to be created (though it should already exist if analysis is pending).
+		const processor = getOrCreateStreamProcessor(dream, platform);
+
+		if (processor) {
+			console.log(`Received cancel request for dream ${dreamId} from user ${sessionUser.id}. Signaling processor to cancel.`);
+			processor.cancelStream(); // This will trigger the AbortController in StreamProcessor
+			// The StreamProcessor's handleStreamAbort will then update the DB status to ANALYSIS_FAILED
+			// and clear its own Redis state.
+		} else {
+			console.log(`No active StreamProcessor found for dream ${dreamId}.`);
+			// If no processor is found, ensure the dream status is updated in DB if it's still PENDING_ANALYSIS
+			if (dream.status === DreamStatus.PENDING_ANALYSIS) {
+				await prisma.dream.update({
+					where: { id: dreamId },
+					data: { status: DreamStatus.ANALYSIS_FAILED } // Mark as failed if cancelled before completion
+				});
+			}
 		}
 
-		// Publish a cancellation signal. This method now also clears the Redis state.
+		// Clear the Redis state for this stream ID to ensure no client tries to re-subscribe to it
+		// and to remove any lingering state if the processor wasn't found or hadn't fully started.
 		await streamStateStore.clearStreamState(dreamId);
 
-		// Update the dream status in the database to reflect cancellation
-		await prisma.dream.update({
-			where: { id: dreamId },
-			data: {
-				status: DreamStatus.ANALYSIS_FAILED, // Set status to failed upon cancellation
-				interpretation: dream.interpretation || '', // Keep existing interpretation if any
-				tags: dream.tags || [], // Keep existing tags if any
-				updatedAt: new Date()
-			}
-		});
-
-		console.debug(`Dream ${dreamId}: Analysis cancelled by user ${sessionUser.id}.`);
-		return json({ message: 'Analysis cancelled successfully.' }, { status: 200 });
+		return json({ message: 'Analysis cancellation initiated successfully.' }, { status: 200 });
 	} catch (e) {
 		console.error(`Error cancelling analysis for dream ${dreamId}:`, e);
 		throw error(500, `Failed to cancel analysis: ${(e as Error).message}`);
