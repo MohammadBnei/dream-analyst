@@ -6,6 +6,7 @@ import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
 import { DreamStatus } from '@prisma/client';
 import type Redis from 'ioredis';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import { getCreditService } from '$lib/server/creditService'; // Import credit service
 
 const encoder = new TextEncoder();
 
@@ -30,6 +31,7 @@ export async function GET({ params, locals, platform, request }) {
 
     const streamStateStore = await getStreamStateStore();
     const prisma = await getPrismaClient();
+    const creditService = getCreditService();
 
     const dream = await prisma.dream.findUnique({
         where: { id: dreamId }

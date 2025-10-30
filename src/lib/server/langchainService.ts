@@ -4,6 +4,7 @@ import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import type { DreamPromptType } from '../prompts/dreamAnalyst'; // Import the type
 import { promptService } from '$lib/prompts/promptService';
+import { getCreditService } from '$lib/server/creditService'; // Import credit service
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
@@ -20,6 +21,7 @@ export interface AnalysisStreamChunk {
 
 export async function initiateStreamedDreamAnalysis(
     dreamId: string,
+    userId: string, // Added userId to deduct credits
     rawText: string,
     promptType: DreamPromptType = 'jungian', // Add promptType parameter with a default
     signal?: AbortSignal
@@ -30,6 +32,32 @@ export async function initiateStreamedDreamAnalysis(
 
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
+    const creditService = getCreditService();
+
+    // Deduct credits for dream analysis
+    const cost = creditService.getCost('DREAM_ANALYSIS');
+    let transactionId: string | undefined; // To store the ID of the credit transaction
+
+    try {
+        // Check if user has enough credits before starting the LLM call
+        const hasCredits = await creditService.checkCredits(userId, cost);
+        if (!hasCredits) {
+            throw new Error('Insufficient credits for dream analysis or daily limit exceeded.');
+        }
+        // Deduct credits and get the new balance (transaction is recorded internally)
+        await creditService.deductCredits(userId, cost, 'DREAM_ANALYSIS', dreamId);
+        // Note: The deductCredits method records the transaction. We don't need its ID here directly
+        // unless we wanted to link it to the stream itself, which is more complex.
+        // For now, linking to dreamId is sufficient.
+    } catch (creditError) {
+        console.error(`Credit deduction failed for dream ${dreamId}, user ${userId}:`, creditError);
+        return new ReadableStream({
+            start(controller) {
+                controller.enqueue(encoder.encode(JSON.stringify({ message: `Credit error: ${(creditError as Error).message}`, finalStatus: 'ANALYSIS_FAILED' }) + '\n'));
+                controller.close();
+            }
+        });
+    }
 
     try {
         const chat = new ChatOpenAI(

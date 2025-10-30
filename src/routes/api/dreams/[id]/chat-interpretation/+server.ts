@@ -1,7 +1,8 @@
 import { error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import { getChatService } from '$lib/chatService';
+import { getChatService } from '$lib/server/chatService';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import { getCreditService } from '$lib/server/creditService'; // Import credit service
 
 const encoder = new TextEncoder();
 
@@ -17,6 +18,7 @@ export async function POST({ params, locals, request }) {
     const sessionUser = getCurrentUser(locals);
     const prisma = await getPrismaClient();
     const chatService = getChatService();
+    const creditService = getCreditService();
 
     if (!dreamId) {
         throw error(400, 'Dream ID is required.');
@@ -42,6 +44,8 @@ export async function POST({ params, locals, request }) {
     const dreamPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 
     try {
+        // The credit deduction for chat messages is now handled inside chatService.chatWithAI
+        // This ensures the user message is saved and linked to the credit transaction before LLM call.
         const aiStream = await chatService.chatWithAI(
             dreamId,
             sessionUser.id,
@@ -62,6 +66,10 @@ export async function POST({ params, locals, request }) {
 
     } catch (e) {
         console.error(`Error in chat-interpretation endpoint for dream ${dreamId}:`, e);
+        // If the error is due to insufficient credits, return a specific error message
+        if ((e as Error).message.includes('Insufficient credits') || (e as Error).message.includes('Daily credit limit exceeded')) {
+            throw error(402, (e as Error).message); // 402 Payment Required
+        }
         throw error(500, `Failed to initiate chat: ${(e as Error).message}`);
     }
 }
