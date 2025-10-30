@@ -108,7 +108,7 @@ export class StreamProcessor { // Renamed class
                 abort: async (reason) => {
                     await this.handleStreamAbort(reason);
                 }
-            }, { this: this })); // Explicitly bind 'this' for the WritableStream callbacks
+            })); // Explicitly bind 'this' for the WritableStream callbacks
 
             // Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
             if (this.platform?.context?.waitUntil) {
