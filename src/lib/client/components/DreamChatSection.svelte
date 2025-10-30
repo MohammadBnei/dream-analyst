@@ -4,6 +4,7 @@
 	import type { ChatMessage } from '$lib/chatService';
 	import { onMount } from 'svelte';
 	import { ClientChatService } from '../services/chatService';
+	import { Streamdown } from 'svelte-streamdown';
 
 	let { dreamId } = $props();
 
@@ -20,44 +21,44 @@
 
 	onMount(async () => {
 		chatService = new ClientChatService(dreamId, {
-				onMessage: (data) => {
-					// Update the last message if it's from the assistant and still streaming
-					if (
-						chatMessages.length > 0 &&
-						chatMessages[chatMessages.length - 1].role === 'assistant' &&
-						!data.final
-					) {
-						chatMessages[chatMessages.length - 1].content += data.content || '';
-						chatMessages = [...chatMessages]; // Trigger reactivity
-					} else if (data.content) {
-						// Add new assistant message if it's the first chunk or previous was final
-						chatMessages = [...chatMessages, { role: 'assistant', content: data.content }];
-					}
-					scrollToBottom();
-				},
-				onEnd: async (data) => {
-					isSendingChatMessage = false;
-					if (data.message) {
-						chatError = data.message;
-					}
-					await invalidate('dream'); // Invalidate to ensure latest DB state (including chat history) is fetched
-					await loadChatHistory(); // Reload history to get the saved messages
-					scrollToBottom();
-				},
-				onError: (errorMsg) => {
-					console.error('Chat stream error:', errorMsg);
-					isSendingChatMessage = false;
-					chatError = errorMsg;
-					scrollToBottom();
-				},
-				onClose: () => {
-					console.log('Chat service stream closed.');
-					isSendingChatMessage = false;
+			onMessage: (data) => {
+				// Update the last message if it's from the assistant and still streaming
+				if (
+					chatMessages.length > 0 &&
+					chatMessages[chatMessages.length - 1].role === 'assistant' &&
+					!data.final
+				) {
+					chatMessages[chatMessages.length - 1].content += data.content || '';
+					chatMessages = [...chatMessages]; // Trigger reactivity
+				} else if (data.content) {
+					// Add new assistant message if it's the first chunk or previous was final
+					chatMessages = [...chatMessages, { role: 'assistant', content: data.content }];
 				}
-			});
+				scrollToBottom();
+			},
+			onEnd: async (data) => {
+				isSendingChatMessage = false;
+				if (data.message) {
+					chatError = data.message;
+				}
+				await invalidate('dream'); // Invalidate to ensure latest DB state (including chat history) is fetched
+				await loadChatHistory(); // Reload history to get the saved messages
+				scrollToBottom();
+			},
+			onError: (errorMsg) => {
+				console.error('Chat stream error:', errorMsg);
+				isSendingChatMessage = false;
+				chatError = errorMsg;
+				scrollToBottom();
+			},
+			onClose: () => {
+				console.log('Chat service stream closed.');
+				isSendingChatMessage = false;
+			}
+		});
 
-			chatMessages = await chatService.loadHistory();
-	})
+		chatMessages = await chatService.loadHistory();
+	});
 
 	async function loadChatHistory() {
 		if (chatService) {
@@ -107,7 +108,10 @@
 		{#each chatMessages as msg, i (msg.id || i)}
 			<div class="chat {msg.role === 'user' ? 'chat-end' : 'chat-start'}">
 				<div class="chat-bubble {msg.role === 'user' ? 'chat-bubble-primary' : ''}">
-					{msg.content}
+					<Streamdown
+						animation={{ animateOnMount: true, enabled: isSendingChatMessage, type: 'blur' }}
+						content={msg.content || ''}
+					/>
 				</div>
 			</div>
 		{/each}
