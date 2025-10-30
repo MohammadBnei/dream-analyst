@@ -1,6 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
+import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 // Helper to get the current user from the request event
 function getCurrentUser(locals: App.Locals) {

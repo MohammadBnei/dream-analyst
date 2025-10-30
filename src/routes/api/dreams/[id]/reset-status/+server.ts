@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
+import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 export async function POST({ params, locals }) {
     const dreamId = params.id;
@@ -28,7 +29,7 @@ export async function POST({ params, locals }) {
         await prisma.dream.update({
             where: { id: dreamId },
             data: {
-                status: 'PENDING_ANALYSIS',
+                status: DreamStatus.PENDING_ANALYSIS, // Use enum
                 interpretation: null, // Clear previous interpretation
                 tags: null // Clear previous tags
             }

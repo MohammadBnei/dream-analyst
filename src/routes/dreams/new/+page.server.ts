@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { Actions } from './$types';
+import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 const CreateDreamSchema = v.object({
     rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.'))
@@ -32,7 +33,7 @@ export const actions: Actions = {
                 data: {
                     userId: sessionUser.id,
                     rawText: validatedData.rawText,
-                    status: 'PENDING_ANALYSIS'
+                    status: DreamStatus.PENDING_ANALYSIS // Use enum
                 }
             });
 

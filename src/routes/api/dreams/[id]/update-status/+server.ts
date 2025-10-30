@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot'; // Import valibot for validation
-import type { Dream } from '@prisma/client';
+import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 export async function POST({ request, params, locals }) {
     const dreamId = params.id;
@@ -16,7 +16,7 @@ export async function POST({ request, params, locals }) {
     }
 
     const UpdateStatusSchema = v.object({
-        status: v.picklist(['PENDING_ANALYSIS', 'completed', 'ANALYSIS_FAILED'])
+        status: v.picklist([DreamStatus.PENDING_ANALYSIS, DreamStatus.COMPLETED, DreamStatus.ANALYSIS_FAILED])
     });
 
     let validatedData;
@@ -43,7 +43,7 @@ export async function POST({ request, params, locals }) {
         const updatedDream = await prisma.dream.update({
             where: { id: dreamId },
             data: {
-                status: validatedData.status as Dream['status'], // Use validated status
+                status: validatedData.status as DreamStatus, // Use validated status
                 updatedAt: new Date()
             }
         });

@@ -6,7 +6,7 @@
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import { enhance } from '$app/forms';
-	import type { Dream } from '@prisma/client';
+	import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 	let { data, form } = $props();
 
@@ -18,7 +18,7 @@
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>(dream.tags || []);
-	let currentDreamStatus = $derived<Dream['status']>(dream.status);
+	let currentDreamStatus = $derived<DreamStatus>(dream.status); // Use DreamStatus enum
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -51,7 +51,7 @@
 				streamedInterpretation = dream.interpretation || '';
 				streamedTags = dream.tags || [];
 			}
-			currentDreamStatus = dream.status as Dream['status'];
+			currentDreamStatus = dream.status;
 			editedRawText = dream.rawText;
 			editedInterpretationText = dream.interpretation || '';
 		}
@@ -90,7 +90,7 @@
 	});
 
 	onMount(() => {
-		if (dream.status === 'PENDING_ANALYSIS') {
+		if (dream.status === DreamStatus.PENDING_ANALYSIS) { // Use enum
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			startStream();
 		}
@@ -101,13 +101,14 @@
 	});
 
 	// Function to determine badge color based on dream status
-	function getStatusBadgeClass(status: Dream['status']) {
+	function getStatusBadgeClass(status: DreamStatus) { // Use DreamStatus enum
 		switch (status) {
-			case 'COMPLETED':
+			case DreamStatus.COMPLETED:
 				return 'badge-success';
-			case 'PENDING_ANALYSIS':
+			case DreamStatus.PENDING_ANALYSIS:
+			case 'pending_stream': // Assuming a new status for when stream is pending
 				return 'badge-info';
-			case 'ANALYSIS_FAILED':
+			case DreamStatus.ANALYSIS_FAILED:
 				return 'badge-error';
 			default:
 				return 'badge-neutral';
@@ -122,6 +123,7 @@
 
 		isLoadingStream = true;
 		streamError = null;
+		// currentDreamStatus = DreamStatus.PENDING_ANALYSIS; // This is derived, so don't set directly
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -133,23 +135,25 @@
 					streamedTags = data.tags;
 				}
 				if (data.status) {
-					currentDreamStatus = data.status as Dream['status'];
+					// Update dream status directly if it comes from the stream
+					dream.status = data.status as DreamStatus;
 				}
 			},
 			onEnd: async (data) => {
 				console.log('Stream ended:', data);
 				isLoadingStream = false;
 				if (data.status) {
-					currentDreamStatus = data.status as Dream['status'];
+					dream.status = data.status as DreamStatus;
 				}
 				if (data.message) {
 					streamError = data.message;
 				}
+				await invalidate('dream'); // Invalidate to ensure latest DB state is fetched
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				currentDreamStatus = 'ANALYSIS_FAILED';
+				dream.status = DreamStatus.ANALYSIS_FAILED; // Use enum
 				streamError = errorMsg;
 			},
 			onClose: () => {
@@ -161,6 +165,10 @@
 
 	async function cancelStream() {
 		if (!dream.id) return;
+
+		if (!confirm('Are you sure you want to cancel the ongoing analysis?')) {
+			return;
+		}
 
 		analysisService?.closeStream(); // Close client-side stream immediately
 		isLoadingStream = false; // Update UI
@@ -271,11 +279,11 @@
 						<span class="badge {getStatusBadgeClass(currentDreamStatus)}"
 							>{currentDreamStatus?.replace('_', ' ')}</span
 						>
-						{#if currentDreamStatus === 'PENDING_ANALYSIS'}
+						{#if currentDreamStatus === DreamStatus.PENDING_ANALYSIS}
 							<form method="POST" action="?/updateStatus" use:enhance>
 								<select name="status" class="select-bordered select select-sm">
 									<option value="" disabled selected>{m.change_status_option()}</option>
-									<option value="ANALYSIS_FAILED">{m.reset_to_failed_analysis_option()}</option>
+									<option value={DreamStatus.ANALYSIS_FAILED}>{m.reset_to_failed_analysis_option()}</option>
 								</select>
 							</form>
 						{/if}
@@ -375,7 +383,7 @@
 									{m.edit_button()}
 								</button>
 							{/if}
-							{#if currentDreamStatus === 'completed' || currentDreamStatus === 'ANALYSIS_FAILED'}
+							{#if currentDreamStatus === DreamStatus.COMPLETED || currentDreamStatus === DreamStatus.ANALYSIS_FAILED}
 								<form
 									method="POST"
 									action="?/resetAnalysis"
@@ -384,7 +392,7 @@
 										streamedInterpretation = ''; // Clear previous interpretation
 										streamedTags = []; // Clear previous tags
 										streamError = null; // Clear previous error
-										currentDreamStatus = 'PENDING_ANALYSIS'; // Optimistically set status
+										dream.status = DreamStatus.PENDING_ANALYSIS; // Optimistically set status
 										return async ({ update, result }) => {
 											await update(); // Update page data from server response
 											if (result.type === 'success') {
@@ -395,11 +403,6 @@
 										};
 									}}
 								>
-									{#if isLoadingStream}
-										<button onclick={cancelStream} type="button" class="btn btn-sm btn-warning">
-											{m.cancel_analysis_button()}
-										</button>
-									{/if}
 									<button type="submit" class="btn btn-sm btn-primary" disabled={isLoadingStream}>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
@@ -418,6 +421,11 @@
 										{m.regenerate_analysis_button()}
 									</button>
 								</form>
+							{/if}
+							{#if currentDreamStatus === DreamStatus.PENDING_ANALYSIS && isLoadingStream}
+								<button onclick={cancelStream} class="btn btn-sm btn-warning">
+									{m.cancel_analysis_button()}
+								</button>
 							{/if}
 						</div>
 					</div>
@@ -464,7 +472,7 @@
 								</button>
 							</div>
 						</form>
-					{:else if currentDreamStatus === 'PENDING_ANALYSIS' && !isLoadingStream && !streamError}
+					{:else if currentDreamStatus === DreamStatus.PENDING_ANALYSIS && !isLoadingStream && !streamError}
 						<div class="alert alert-info shadow-lg">
 							<div>
 								<svg
@@ -482,7 +490,7 @@
 								<span>{m.analysis_pending_message()}</span>
 							</div>
 						</div>
-					{:else if currentDreamStatus === 'ANALYSIS_FAILED' && !isLoadingStream && !streamError}
+					{:else if currentDreamStatus === DreamStatus.ANALYSIS_FAILED && !isLoadingStream && !streamError}
 						<div class="alert alert-error shadow-lg">
 							<div>
 								<svg

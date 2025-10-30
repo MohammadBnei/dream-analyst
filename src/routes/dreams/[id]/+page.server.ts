@@ -4,7 +4,7 @@ import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types';
 import { error } from '@sveltejs/kit';
 import { getAnalysisStore } from '$lib/server/analysisStore';
-import type { Dream } from '@prisma/client';
+import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 // Schemas for validation
 const UpdateDreamSchema = v.object({
@@ -16,7 +16,7 @@ const UpdateInterpretationSchema = v.object({
 });
 
 const UpdateStatusSchema = v.object({
-    status: v.picklist(['PENDING_ANALYSIS', 'completed', 'ANALYSIS_FAILED'])
+    status: v.picklist([DreamStatus.PENDING_ANALYSIS, DreamStatus.COMPLETED, DreamStatus.ANALYSIS_FAILED])
 });
 
 export const load: PageServerLoad = async ({ params, locals }) => {
@@ -208,7 +208,7 @@ export const actions: Actions = {
             await prisma.dream.update({
                 where: { id: dreamId },
                 data: {
-                    status: 'PENDING_ANALYSIS',
+                    status: DreamStatus.PENDING_ANALYSIS, // Use enum
                     interpretation: null, // Clear previous interpretation
                     tags: null // Clear previous tags
                 }
@@ -252,7 +252,7 @@ export const actions: Actions = {
             const updatedDream = await prisma.dream.update({
                 where: { id: dreamId },
                 data: {
-                    status: validatedData.status as Dream['status'],
+                    status: validatedData.status as DreamStatus, // Use enum
                     updatedAt: new Date()
                 }
             });
@@ -285,11 +285,11 @@ export const actions: Actions = {
             // Update dream status in DB
             await prisma.dream.update({
                 where: { id: dreamId },
-                data: { status: 'ANALYSIS_FAILED' }
+                data: { status: DreamStatus.ANALYSIS_FAILED } // Use enum
             });
 
             // Publish cancellation message to Redis
-            await analysisStore.publishUpdate(dreamId, { finalStatus: 'ANALYSIS_FAILED', message: 'Analysis cancelled by user.' });
+            await analysisStore.publishUpdate(dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: 'Analysis cancelled by user.' });
             await analysisStore.clearAnalysis(dreamId); // Clear Redis state
 
             return { success: true, message: 'Analysis cancelled successfully.' };

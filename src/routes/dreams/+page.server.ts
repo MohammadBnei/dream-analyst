@@ -2,6 +2,7 @@ import { getPrismaClient } from '$lib/server/db/index.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { getAnalysisStore } from '$lib/server/analysisStore';
+import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 export const load: PageServerLoad = async ({ locals }) => {
   const sessionUser = locals.user;
@@ -60,11 +61,11 @@ export const actions: Actions = {
             // Update dream status in DB
             await prisma.dream.update({
                 where: { id: dreamId },
-                data: { status: 'ANALYSIS_FAILED' }
+                data: { status: DreamStatus.ANALYSIS_FAILED } // Use enum
             });
 
             // Publish cancellation message to Redis
-            await analysisStore.publishUpdate(dreamId, { finalStatus: 'ANALYSIS_FAILED', message: 'Analysis cancelled by user.' });
+            await analysisStore.publishUpdate(dreamId, { finalStatus: DreamStatus.ANALYSIS_FAILED, message: 'Analysis cancelled by user.' });
             await analysisStore.clearAnalysis(dreamId); // Clear Redis state
 
             return { success: true, message: 'Analysis cancelled successfully.' };

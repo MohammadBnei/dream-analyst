@@ -3,7 +3,7 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import type { Dream } from '@prisma/client';
+	import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
 	// Data loaded from +page.server.ts
 	let { data, form } = $props(); // Use $props() for both data and form
@@ -26,13 +26,13 @@
 	});
 
 	// Function to determine badge color based on dream status
-	function getStatusBadgeClass(status: Dream['status']) {
+	function getStatusBadgeClass(status: DreamStatus) { // Use DreamStatus enum
 		switch (status) {
-			case 'COMPLETED':
+			case DreamStatus.COMPLETED:
 				return 'badge-success';
-			case 'PENDING_ANALYSIS':
+			case DreamStatus.PENDING_ANALYSIS:
 				return 'badge-info';
-			case 'ANALYSIS_FAILED':
+			case DreamStatus.ANALYSIS_FAILED:
 				return 'badge-error';
 			default:
 				return 'badge-neutral';
@@ -57,7 +57,7 @@
 		<div role="alert" class="alert alert-error">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6 shrink-0 stroke-current"
+				class="stroke-current shrink-0 h-6 w-6"
 				fill="none"
 				viewBox="0 0 24 24"
 				><path
@@ -68,7 +68,7 @@
 				></path></svg
 			>
 			<span>Error: {clientError}</span>
-			<button class="btn btn-ghost btn-sm" onclick={() => (clientError = null)}>Clear</button>
+			<button class="btn btn-sm btn-ghost" onclick={() => (clientError = null)}>Clear</button>
 		</div>
 	{:else if dreams.length === 0}
 		<div class="hero rounded-box bg-base-200 p-8">
@@ -89,7 +89,7 @@
 							<h2 class="card-title text-lg">
 								{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
 							</h2>
-							<span class="badge {getStatusBadgeClass(dream.status as App.Dream['status'])}"
+							<span class="badge {getStatusBadgeClass(dream.status as DreamStatus)}"
 								>{dream.status.replace('_', ' ')}</span
 							>
 						</div>
@@ -110,14 +110,14 @@
 							<p class="line-clamp-3 text-sm text-base-content/70 italic">
 								{dream.interpretation}
 							</p>
-						{:else if dream.status === 'PENDING_ANALYSIS'}
+						{:else if dream.status === DreamStatus.PENDING_ANALYSIS}
 							<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
-						{:else if dream.status === 'ANALYSIS_FAILED'}
+						{:else if dream.status === DreamStatus.ANALYSIS_FAILED}
 							<p class="text-sm text-error italic">{m.ANALYSIS_FAILED_try_again_message()}</p>
 						{/if}
 
 						<div class="mt-4 card-actions justify-end">
-							{#if dream.status === 'PENDING_ANALYSIS'}
+							{#if dream.status === DreamStatus.PENDING_ANALYSIS}
 								<form
 									method="POST"
 									action="?/cancelAnalysis"
