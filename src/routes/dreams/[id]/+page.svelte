@@ -15,7 +15,7 @@
 
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>(dream.tags || []);
-	let currentDreamStatus = $state<App.Dream['status']>(dream.status);
+	let currentDreamStatus = $derived<App.Dream['status']>(dream.status);
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
