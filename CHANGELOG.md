@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.14.0](https://github.com/MohammadBnei/dream-analyst/compare/0.13.2...0.14.0) (2025-10-30)
+
+
+### Features
+
+* Add dream date editing and next/previous dream navigation ([452fdd3](https://github.com/MohammadBnei/dream-analyst/commit/452fdd3a516db253cf15bce93b3e58b198dcb72d))
+
 ## [0.13.2](https://github.com/MohammadBnei/dream-analyst/compare/0.13.1...0.13.2) (2025-10-30)
 
 ## [0.13.1](https://github.com/MohammadBnei/dream-analyst/compare/0.13.0...0.13.1) (2025-10-30)
