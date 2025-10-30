@@ -10,13 +10,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// New UserRole enum
+enum UserRole {
+  BASIC
+  VIP
+  ADMIN
+}
+
+// New CreditActionType enum
+enum CreditActionType {
+  DREAM_ANALYSIS
+  CHAT_MESSAGE
+  DAILY_GRANT
+  ADMIN_GRANT
+  ADMIN_DEDUCT
+}
+
 model User {
-  id           String  @id @default(uuid()) @map("id")
-  username     String  @unique
-  email        String  @unique
-  passwordHash String  @map("password_hash")
-  dreams       Dream[]
-  chatMessages DreamChat[] 
+  id                String             @id @default(uuid()) @map("id")
+  username          String             @unique
+  email             String             @unique
+  passwordHash      String             @map("password_hash")
+  role              UserRole           @default(BASIC) // Added role field
+  credits           Int                @default(0)     // Added credits field
+  dreams            Dream[]
+  chatMessages      DreamChat[]
+  creditTransactions CreditTransaction[] // Link to credit transactions
 
   @@map("user")
 }
@@ -39,7 +58,6 @@ model Dream {
   @@map("dreams")
 }
 
-// New model for chat messages related to a dream
 model DreamChat {
   id        String   @id @default(uuid())
   dreamId   String   @map("dream_id")
@@ -51,7 +69,26 @@ model DreamChat {
   promptType String? // Added promptType to DreamChat
   createdAt DateTime @default(now()) @map("created_at")
 
+  creditTransaction CreditTransaction? // Optional link to a credit transaction
   @@map("dream_chat")
+}
+
+// New model for tracking credit transactions
+model CreditTransaction {
+  id            String           @id @default(uuid())
+  userId        String           @map("user_id")
+  user          User             @relation(fields: [userId], references: [id])
+  amount        Int              // Positive for grants, negative for deductions
+  actionType    CreditActionType // Type of action (e.g., DREAM_ANALYSIS, CHAT_MESSAGE, DAILY_GRANT)
+  relatedDreamId String?         @map("related_dream_id") // Optional: Link to a dream
+  relatedChatMessageId String?   @unique @map("related_chat_message_id") // Optional: Link to a chat message
+  createdAt     DateTime         @default(now()) @map("created_at")
+
+  // Optional relations to link to specific actions
+  dream         Dream?           @relation(fields: [relatedDreamId], references: [id])
+  chatMessage   DreamChat?       @relation(fields: [relatedChatMessageId], references: [id])
+
+  @@map("credit_transaction")
 }
 
 enum DreamStatus {
