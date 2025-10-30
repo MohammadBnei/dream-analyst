@@ -1,6 +1,6 @@
 <script lang="ts">
 	import '../app.css';
-	import favicon from '$lib/assets/favicon.svg';
+	import favicon from '$lib/assets/favicon.ico';
 	import * as m from '$lib/paraglide/messages';
 	import type { LayoutProps } from './$types';
 	import { onMount } from 'svelte';
