@@ -3,6 +3,7 @@
 	import dreamerLogo from '$lib/assets/dreamer-logo.png';
 	import darkDreamerLogo from '$lib/assets/dark-dreamer-logo.png';
 	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
 
 	// Assuming data will be passed from +page.server.ts, including user login status
 	let { data } = $props();
@@ -11,21 +12,23 @@
 	let showInstallButton = $state(false);
 
 	onMount(() => {
-		window.addEventListener('beforeinstallprompt', (e) => {
-			// Prevent the mini-infobar from appearing on mobile
-			e.preventDefault();
-			// Stash the event so it can be triggered later.
-			deferredPrompt = e;
-			// Update UI notify the user they can install the PWA
-			showInstallButton = true;
-			console.log('beforeinstallprompt fired');
-		});
+		if (browser) { // Ensure this runs only in the browser
+			window.addEventListener('beforeinstallprompt', (e) => {
+				// Prevent the mini-infobar from appearing on mobile
+				e.preventDefault();
+				// Stash the event so it can be triggered later.
+				deferredPrompt = e;
+				// Update UI notify the user they can install the PWA
+				showInstallButton = true;
+				console.log('beforeinstallprompt fired');
+			});
 
-		window.addEventListener('appinstalled', () => {
-			// Hide the install button
-			showInstallButton = false;
-			console.log('PWA was installed');
-		});
+			window.addEventListener('appinstalled', () => {
+				// Hide the install button
+				showInstallButton = false;
+				console.log('PWA was installed');
+			});
+		}
 	});
 
 	async function installPWA() {
@@ -82,10 +85,12 @@
 		</div>
 	</div>
 
-	{#if showInstallButton}
-		<section class="mb-8 text-center">
-			<button onclick={installPWA} class="btn btn-lg btn-secondary"> Install App </button>
-		</section>
+	{#if browser}
+		{#if showInstallButton}
+			<section class="mb-8 text-center">
+				<button onclick={installPWA} class="btn btn-lg btn-secondary"> Install App </button>
+			</section>
+		{/if}
 	{/if}
 
 	<section class="py-8">
