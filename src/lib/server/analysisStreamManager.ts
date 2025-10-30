@@ -62,11 +62,14 @@ export class AnalysisStreamManager {
         try {
             const decoder = new TextDecoder();
             let jsonBuffer = '';
+            const canceled = this.isCancelled;
+            const dreamId = this.dreamId;
+            const processChunk = this.processChunk.bind(this);
 
             const backgroundProcessingPromise = n8nStream.pipeTo(new WritableStream({
                 async write(chunk) {
-                    if (this.isCancelled) {
-                        console.log(`Dream ${this.dreamId}: Manager stopping write due to cancellation.`);
+                    if (canceled) {
+                        console.log(`Dream ${dreamId}: Manager stopping write due to cancellation.`);
                         // Throwing here will cause the pipeTo to abort
                         throw new Error('Analysis cancelled by user.');
                     }
@@ -81,9 +84,9 @@ export class AnalysisStreamManager {
                         if (line) {
                             try {
                                 const parsedChunk: AnalysisStreamChunk = JSON.parse(line);
-                                await this.processChunk(parsedChunk);
+                                await processChunk(parsedChunk);
                             } catch (e) {
-                                console.warn(`Dream ${this.dreamId}: Manager failed to parse n8nService stream line or process chunk: ${line}`, e);
+                                console.warn(`Dream ${dreamId}: Manager failed to parse n8nService stream line or process chunk: ${line}`, e);
                             }
                         }
                         boundary = jsonBuffer.indexOf('\n');
@@ -95,7 +98,7 @@ export class AnalysisStreamManager {
                 abort: async (reason) => {
                     await this.handleStreamAbort(reason);
                 }
-            }, { this: this })); // Bind 'this' context for write, close, abort
+            })); // Bind 'this' context for write, close, abort
 
             // Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
             if (this.platform?.context?.waitUntil) {

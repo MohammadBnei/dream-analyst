@@ -66,7 +66,7 @@ export function getRedisSubscriber(): Redis {
 }
 
 // Type alias for the Redis client returned by getRedisSubscriber
-type AisRedis = ReturnType<typeof getRedisSubscriber>;
+export type AisRedis = ReturnType<typeof getRedisSubscriber>;
 
 
 class AnalysisStore {
