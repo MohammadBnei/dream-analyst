@@ -92,12 +92,8 @@
 	async function deleteChatMessage(messageId: string) {
 		if (!chatService) return;
 
-		if (!confirm(m.confirm_delete_chat_message())) {
-			return;
-		}
-
 		try {
-			await chatService.deleteMessage(messageId);
+			await chatService.(messageId);
 			chatMessages = chatMessages.filter((msg) => msg.id !== messageId);
 			// Optionally, invalidate 'dream' if deleting a message should trigger a full data refresh
 			// await invalidate('dream');
