@@ -1,7 +1,7 @@
 import { getPrismaClient } from '$lib/server/db';
-import type { UserRole, CreditActionType } from '@prisma/client'; // Import new enums
+import type { UserRole } from '@prisma/client'; // Import new enums
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
-import { env } from '$env/static/private'; // Import env
+import { env } from '$env/dynamic/private'; // Import env
 
 // Define credit costs and daily limits per role
 const CREDIT_COSTS = {
