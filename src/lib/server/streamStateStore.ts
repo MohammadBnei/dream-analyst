@@ -259,7 +259,7 @@ class StreamStateStore { // Renamed class
     async unsubscribeFromUpdates(subscriber: AisRedis, streamId: string): Promise<void> { // Renamed parameter
         const channel = this.getChannel(streamId);
         try {
-            if (subscriber.status === 'connected') {
+            if (subscriber.status === 'connect') {
                 await subscriber.unsubscribe(channel);
                 await subscriber.quit();
                 console.log(`Unsubscribed from Redis channel: ${channel} and quit client.`);
