@@ -15,7 +15,7 @@ export interface AnalysisStreamChunk { // Keeping this name for now to avoid cas
     finalStatus?: 'COMPLETED' | 'ANALYSIS_FAILED'; // New field to signal final status
 }
 
-export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: string): Promise<ReadableStream<Uint8Array>> {
+export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
     if (!N8N_WEBHOOK_URL) {
         throw new Error("N8N_WEBHOOK_URL is not defined");
     }
@@ -32,7 +32,8 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
         const response = await fetch(N8N_WEBHOOK_URL, {
             method: 'POST',
             headers: headers,
-            body: JSON.stringify({ dreamId, rawText })
+            body: JSON.stringify({ dreamId, rawText }),
+            signal: signal // Pass the AbortSignal to the fetch request
         });
 
         if (!response.ok) {
@@ -57,6 +58,12 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
         const writer = writable.getWriter();
 
         let jsonBuffer = '';
+
+        // Listen for the abort signal to cancel the internal WritableStream
+        signal?.addEventListener('abort', async () => {
+            console.log(`Dream ${dreamId}: n8nService received abort signal. Aborting internal writable stream.`);
+            await writer.abort(signal.reason); // Abort the writer with the reason from the signal
+        });
 
         response.body.pipeTo(new WritableStream({
             async write(chunk) {

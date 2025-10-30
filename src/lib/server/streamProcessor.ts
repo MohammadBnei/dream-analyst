@@ -26,11 +26,12 @@ export class StreamProcessor { // Renamed class
     private resultUpdatedInDb: boolean = false; // Renamed property
     private isCancelled: boolean = false;
     private cancellationSubscriber: AisRedis | null = null;
-    private writableStreamController: WritableStreamDefaultController | null = null; // Reference to the WritableStream's controller
+    private abortController: AbortController; // New AbortController for internal cancellation
 
     constructor(streamId: string, platform: App.Platform | undefined) { // Renamed parameter
         this.streamId = streamId;
         this.platform = platform;
+        this.abortController = new AbortController(); // Initialize AbortController
     }
 
     /**
@@ -58,10 +59,7 @@ export class StreamProcessor { // Renamed class
             if (message.finalStatus === DreamStatus.ANALYSIS_FAILED && message.message === 'Analysis cancelled by user.') { // Still specific to DreamStatus
                 console.log(`Stream ${this.streamId}: Processor received cancellation signal.`);
                 this.isCancelled = true;
-                // Abort the writable stream to stop processing
-                if (this.writableStreamController) {
-                    this.writableStreamController.error(new Error('Processing cancelled by user.'));
-                }
+                this.abortController.abort(new Error('Processing cancelled by user.')); // Abort internal operations
             }
         });
 
@@ -70,16 +68,20 @@ export class StreamProcessor { // Renamed class
             let jsonBuffer = '';
             const streamId = this.streamId;
             const processChunk = this.processChunk.bind(this); // Bind 'this' for the WritableStream context
+            const signal = this.abortController.signal; // Get the signal from the internal controller
 
             const backgroundProcessingPromise = sourceStream.pipeTo(new WritableStream({
                 start: (controller) => {
-                    this.writableStreamController = controller; // Store controller reference
+                    // Listen for external abort signals to stop the WritableStream
+                    signal.addEventListener('abort', () => {
+                        console.log(`Stream ${streamId}: WritableStream aborted by internal signal.`);
+                        controller.error(signal.reason);
+                    });
                 },
                 async write(chunk) {
-                    if (this.isCancelled) { // Check this.isCancelled directly
-                        console.log(`Stream ${streamId}: Processor stopping write due to cancellation.`);
-                        // Throwing here will cause the pipeTo to abort
-                        throw new Error('Processing cancelled by user.');
+                    if (signal.aborted) { // Check if the signal has been aborted
+                        console.log(`Stream ${streamId}: WritableStream stopping write due to signal abort.`);
+                        throw signal.reason; // Propagate the reason for abort
                     }
 
                     jsonBuffer += decoder.decode(chunk, { stream: true });
@@ -231,8 +233,8 @@ export async function getOrCreateStreamProcessor(streamId: string, rawText: stri
     await processor.init(); // Initialize the processor
     activeStreamProcessors.set(streamId, processor);
 
-    // Create the n8n stream here, and pass it to the processor
-    const n8nStream = await initiateStreamedDreamAnalysis(streamId, rawText);
+    // Create the n8n stream here, and pass it to the processor's AbortSignal
+    const n8nStream = await initiateStreamedDreamAnalysis(streamId, rawText, processor.abortController.signal);
 
     // Start the processing in the background.
     // The processor itself will handle its lifecycle and removal from the map
