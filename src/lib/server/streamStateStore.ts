@@ -2,7 +2,7 @@ import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
 import type { AnalysisStreamChunk } from '$lib/server/langchainService';
 import { DreamStatus } from '@prisma/client';
-import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst'; // Import DreamPromptType
+import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
 
 const REDIS_PREFIX = 'stream_state:';
 const REDIS_EXPIRATION_SECONDS = 60 * 3;

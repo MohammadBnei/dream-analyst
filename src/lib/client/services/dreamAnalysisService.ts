@@ -1,6 +1,6 @@
 import { browser } from '$app/environment';
 import type { AnalysisStreamChunk } from '$lib/server/langchainService'; // Import the shared type
-import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst'; // Import DreamPromptType
+import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
 
 interface StreamCallbacks {
     onMessage: (data: AnalysisStreamChunk) => void;

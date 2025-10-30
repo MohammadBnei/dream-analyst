@@ -5,7 +5,7 @@ import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
 import { DreamStatus } from '@prisma/client';
 import type Redis from 'ioredis';
-import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
+import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 
 const encoder = new TextEncoder();
 

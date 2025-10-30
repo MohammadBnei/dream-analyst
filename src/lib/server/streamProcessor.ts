@@ -2,7 +2,7 @@ import { DreamStatus } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/langchainService';
-import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
+import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 
 /**
  * Manages the lifecycle of a single stream processing task.

@@ -4,7 +4,7 @@ import {
     DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
     type DreamPromptType
 } from './dreamAnalyst';
-import { JUNGIAN_KNOWLEDGE } from '../knowledge/jungian'; // Import Jungian knowledge here
+import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // Import Jungian knowledge here
 
 /**
  * A service for managing and retrieving various system prompts.

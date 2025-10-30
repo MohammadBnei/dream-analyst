@@ -2,7 +2,7 @@ import { env } from '$env/dynamic/private';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage, AIMessage } from "@langchain/core/messages";
 import { promptService } from '$lib/server/prompts/promptService';
-import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
+import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;

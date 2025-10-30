@@ -6,8 +6,8 @@
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import { enhance } from '$app/forms';
-	import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst'; // Import DreamPromptType
-	import { promptService } from '$lib/server/prompts/promptService'; // Import promptService to get available types
+	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst.js'; // Import DreamPromptType
+	import { promptService } from '$lib/prompts/promptService.js'; // Import promptService to get available types
 
 	let { data, form } = $props();
 

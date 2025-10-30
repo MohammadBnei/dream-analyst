@@ -2,8 +2,8 @@ import { env } from '$env/dynamic/private';
 import type { Dream } from '@prisma/client';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { promptService } from './prompts/promptService'; // Import the prompt service
-import type { DreamPromptType } from './prompts/dreamAnalyst'; // Import the type
+import type { DreamPromptType } from '../prompts/dreamAnalyst'; // Import the type
+import { promptService } from '$lib/prompts/promptService';
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model

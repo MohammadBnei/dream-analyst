@@ -16,7 +16,7 @@ model User {
   email        String  @unique
   passwordHash String  @map("password_hash")
   dreams       Dream[]
-  // Removed: chatMessages DreamChat[] // Link to new chat messages
+  chatMessages DreamChat[] 
 
   @@map("user")
 }
