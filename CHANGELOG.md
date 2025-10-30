@@ -1,5 +1,34 @@
 # Changelog
 
+# [0.16.0](https://github.com/MohammadBnei/dream-analyst/compare/0.15.0...0.16.0) (2025-10-30)
+
+
+### Bug Fixes
+
+* Add fetch call to cancel analysis in closeStream method ([d28bade](https://github.com/MohammadBnei/dream-analyst/commit/d28badeb0005b86399a368497e1f4ead0dc3055b))
+* Implement all messages in profile page ([625d3e3](https://github.com/MohammadBnei/dream-analyst/commit/625d3e37ce93d2f9b5a78c0f3b9256d90515f679))
+* Implement server-side stream cancellation using internal AbortController ([4c5e185](https://github.com/MohammadBnei/dream-analyst/commit/4c5e185824c93fa341a1eee9f4dd3ba8164f02c0))
+* Prevent stream abortion on page navigation, only on explicit user cancel ([42477d3](https://github.com/MohammadBnei/dream-analyst/commit/42477d3c90fcf79421c5f529333d846749f228b5))
+* Remove request.signal from stream processor to prevent premature abortion ([cbbec4d](https://github.com/MohammadBnei/dream-analyst/commit/cbbec4d573ba3c712564a2e03dd62d1f9b7d64de))
+
+
+### Features
+
+* Add admin dashboard and action labels to translations ([e517eed](https://github.com/MohammadBnei/dream-analyst/commit/e517eed0b633a9cc42e2c9c089a7a9b39e938b41))
+* Add adminId and notes to CreditTransaction model ([d6d0ab7](https://github.com/MohammadBnei/dream-analyst/commit/d6d0ab71075b4a6953bcb0931a7fb8b03a629edf))
+* Add adminId and reason to admin credit grant/deduct methods ([b393d31](https://github.com/MohammadBnei/dream-analyst/commit/b393d31876ba9e37a09adba39953598a36fb95a0))
+* Add chat service for server-side operations ([178b46c](https://github.com/MohammadBnei/dream-analyst/commit/178b46cae45af9ea0b30c6038cb226e0f876c6c1))
+* Add CreditTransaction model and link to User and Dream models ([4aa71fe](https://github.com/MohammadBnei/dream-analyst/commit/4aa71fe3fc4cad502644c354e682f6f35320dca3))
+* add profile and account details translations ([2a1908e](https://github.com/MohammadBnei/dream-analyst/commit/2a1908ef4840f76d44b3e4d88c79efea4dff6f1b))
+* Add profile and admin link translation keys ([7cb3ca5](https://github.com/MohammadBnei/dream-analyst/commit/7cb3ca5270ca7e5321fddfe62fa850779544df67))
+* Add submit button translation ([3daea7c](https://github.com/MohammadBnei/dream-analyst/commit/3daea7cdbba79cd2f634067d1f72b54104ccd696))
+* Implement admin dashboard and refactor profile page with $state/$effect ([a45a602](https://github.com/MohammadBnei/dream-analyst/commit/a45a60209c037bd68cca107d206fb3ebfdf3e30e))
+* Implement adminGrantCredits and adminDeductCredits methods ([cc00e40](https://github.com/MohammadBnei/dream-analyst/commit/cc00e40096d0113a89eb0e4db12c65173944f4ed))
+* Implement chat message cancellation functionality ([13ffe20](https://github.com/MohammadBnei/dream-analyst/commit/13ffe202ac5e5e0b9233b255c5375c28ffb480de))
+* Implement credit deduction for dream analysis and chat messages ([d74efc2](https://github.com/MohammadBnei/dream-analyst/commit/d74efc2322ce122bd901a4b97d1382b66d32be98))
+* Implement credit system with user roles and daily limits ([d3697fd](https://github.com/MohammadBnei/dream-analyst/commit/d3697fde7bf375728eced880b72013fc8fb2906b))
+* Implement user profile page with edit functionality ([b191c36](https://github.com/MohammadBnei/dream-analyst/commit/b191c36cd6a6575a6d9bfdecff133c7548424b43))
+
 # [0.15.0](https://github.com/MohammadBnei/dream-analyst/compare/0.14.3...0.15.0) (2025-10-30)
 
 
