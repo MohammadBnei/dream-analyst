@@ -26,6 +26,7 @@ export class StreamProcessor { // Renamed class
     private resultUpdatedInDb: boolean = false; // Renamed property
     private isCancelled: boolean = false;
     private cancellationSubscriber: AisRedis | null = null;
+    private writableStreamController: WritableStreamDefaultController | null = null; // Reference to the WritableStream's controller
 
     constructor(streamId: string, platform: App.Platform | undefined) { // Renamed parameter
         this.streamId = streamId;
@@ -53,23 +54,31 @@ export class StreamProcessor { // Renamed class
 
         // Subscribe to the stream's channel to listen for cancellation signals
         this.cancellationSubscriber = this.streamStateStore.subscribeToUpdates(this.streamId, (message) => {
+            // Check for the specific cancellation message
             if (message.finalStatus === DreamStatus.ANALYSIS_FAILED && message.message === 'Analysis cancelled by user.') { // Still specific to DreamStatus
                 console.log(`Stream ${this.streamId}: Processor received cancellation signal.`);
                 this.isCancelled = true;
+                // Abort the writable stream to stop processing
+                if (this.writableStreamController) {
+                    this.writableStreamController.error(new Error('Processing cancelled by user.'));
+                }
             }
         });
 
         try {
             const decoder = new TextDecoder();
             let jsonBuffer = '';
-            const canceled = this.isCancelled;
             const streamId = this.streamId;
             const processChunk = this.processChunk.bind(this); // Bind 'this' for the WritableStream context
 
             const backgroundProcessingPromise = sourceStream.pipeTo(new WritableStream({
+                start: (controller) => {
+                    this.writableStreamController = controller; // Store controller reference
+                },
                 async write(chunk) {
-                    if (canceled) {
+                    if (this.isCancelled) { // Check this.isCancelled directly
                         console.log(`Stream ${streamId}: Processor stopping write due to cancellation.`);
+                        // Throwing here will cause the pipeTo to abort
                         throw new Error('Processing cancelled by user.');
                     }
 

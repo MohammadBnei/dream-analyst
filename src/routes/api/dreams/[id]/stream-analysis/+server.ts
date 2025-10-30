@@ -135,6 +135,8 @@ export async function GET({ params, locals, platform, request }) {
                         controller.close(); // Ensure controller is closed
                         streamClosed = true;
                     }
+                    // Publish a cancellation signal to the StreamProcessor
+                    await streamStateStore.publishCancellation(dreamId);
                 });
             },
             async cancel() {
@@ -146,6 +148,8 @@ export async function GET({ params, locals, platform, request }) {
                 // Mark as closed to prevent further actions, but don't call controller.close() here
                 // as the stream is already being cancelled.
                 streamClosed = true;
+                // Publish a cancellation signal to the StreamProcessor
+                await streamStateStore.publishCancellation(dreamId);
             }
         });
 

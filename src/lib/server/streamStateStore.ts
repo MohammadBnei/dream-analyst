@@ -218,6 +218,20 @@ class StreamStateStore { // Renamed class
     }
 
     /**
+     * Publishes a cancellation signal to the Redis Pub/Sub channel for a specific stream.
+     * @param streamId The ID of the stream to cancel.
+     */
+    async publishCancellation(streamId: string): Promise<void> {
+        const channel = this.getChannel(streamId);
+        const cancellationMessage: AnalysisStreamChunk = {
+            finalStatus: DreamStatus.ANALYSIS_FAILED, // Using ANALYSIS_FAILED to indicate a non-successful termination
+            message: 'Analysis cancelled by user.'
+        };
+        await this.publisher.publish(channel, JSON.stringify(cancellationMessage));
+        console.log(`Stream ${streamId}: Published cancellation signal.`);
+    }
+
+    /**
      * Subscribes to stream updates for a specific stream.
      * Returns a dedicated Redis client instance for this subscription.
      * @param streamId The ID of the stream.
@@ -259,7 +273,7 @@ class StreamStateStore { // Renamed class
     async unsubscribeFromUpdates(subscriber: AisRedis, streamId: string): Promise<void> { // Renamed parameter
         const channel = this.getChannel(streamId);
         try {
-            if (subscriber.status === 'connect') {
+            if (subscriber.status === 'connect') { // Changed from 'connected' to 'connect' to match ioredis status
                 await subscriber.unsubscribe(channel);
                 await subscriber.quit();
                 console.log(`Unsubscribed from Redis channel: ${channel} and quit client.`);
