@@ -80,9 +80,7 @@
 		}
 	});
 
-	onDestroy(() => {
-		analysisService?.closeStream();
-	});
+	// Removed onDestroy hook to prevent stream abortion on page navigation
 
 	function startStream(promptType: DreamPromptType) {
 		if (!dream.id) {
@@ -133,7 +131,7 @@
 	}
 
 	function handleCancelAnalysis() {
-		analysisService?.closeStream();
+		analysisService?.closeStream(); // This will now explicitly abort the stream and call onClose
 		isLoadingStream = false;
 		streamError = 'Analysis cancelled by user.';
 		// The form submission for cancelling analysis is now handled by DreamInterpretationSection

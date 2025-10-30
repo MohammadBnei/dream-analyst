@@ -30,7 +30,7 @@ export class DreamAnalysisService {
 		}
 
 		if (this.abortController) {
-			this.closeStream(); // Ensure any existing stream is closed
+			this.closeStream(true); // Ensure any existing stream is closed silently
 		}
 
 		this.abortController = new AbortController();
@@ -94,7 +94,7 @@ export class DreamAnalysisService {
 									// Check for finalStatus from the server
 									if (parsed.finalStatus) {
 										this.callbacks.onEnd({ status: parsed.finalStatus, message: parsed.message });
-										this.closeStream(); // Close the client stream
+										this.closeStream(true); // Close the client stream silently
 										return; // Exit readStream
 									}
 									this.callbacks.onMessage(parsed);
@@ -107,10 +107,12 @@ export class DreamAnalysisService {
 						}
 					}
 				} catch (error) {
-					if (signal.aborted) {
+					// Only call onClose if the abortController is null, meaning it was explicitly closed by user
+					// If abortController is not null, it means the browser aborted it (e.g., page navigation)
+					if (signal.aborted && !this.abortController) {
 						console.debug('Stream aborted by user for dream:', this.dreamId);
 						this.callbacks.onClose?.();
-					} else {
+					} else if (!signal.aborted) {
 						console.error('Stream reading error for dream:', this.dreamId, error);
 						this.callbacks.onError(`Stream error: ${(error as Error).message}`);
 					}
@@ -122,10 +124,10 @@ export class DreamAnalysisService {
 
 			readStream();
 		} catch (error) {
-			if (signal.aborted) {
+			if (signal.aborted && !this.abortController) {
 				console.debug('Fetch aborted by user for dream:', this.dreamId);
 				this.callbacks.onClose?.();
-			} else {
+			} else if (!signal.aborted) {
 				console.error('Fetch initiation error for dream:', this.dreamId, error);
 				this.callbacks.onError(`Failed to connect to analysis stream: ${(error as Error).message}`);
 				this.abortController = null;
@@ -133,12 +135,14 @@ export class DreamAnalysisService {
 		}
 	}
 
-	public closeStream(): void {
+	public closeStream(silent: boolean = false): void {
 		if (this.abortController) {
 			this.abortController.abort();
-			this.abortController = null;
+			this.abortController = null; // Clear the controller reference immediately
 			console.debug('Stream manually closed for dream:', this.dreamId);
-			this.callbacks.onClose?.();
+			if (!silent) {
+				this.callbacks.onClose?.();
+			}
 		}
 		if (this.intervalId) {
 			// Clear any polling interval if it was set
