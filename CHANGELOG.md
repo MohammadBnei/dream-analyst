@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/MohammadBnei/dream-analyst/compare/0.9.0...0.9.1) (2025-10-30)
+
+
+### Bug Fixes
+
+* Remove @prisma/client reference from client-side Svelte component ([7abc651](https://github.com/MohammadBnei/dream-analyst/commit/7abc651608d7bac8b1b235cbd13fe2cbc9690713))
+
 # [0.9.0](https://github.com/MohammadBnei/dream-analyst/compare/0.8.0...0.9.0) (2025-10-30)
 
 
