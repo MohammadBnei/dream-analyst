@@ -2,8 +2,8 @@ import { env } from '$env/dynamic/private';
 import type { Dream } from '@prisma/client';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { DREAM_INTERPRETATION_SYSTEM_PROMPT } from './prompts/dreamAnalyst'; // Import the prompt
-import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian';
+import { getDreamInterpretationPrompt, type DreamPromptType } from './prompts/dreamAnalyst'; // Import the prompt getter and type
+import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // Assuming this is still relevant for Jungian, might need to be conditional
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
@@ -18,7 +18,12 @@ export interface AnalysisStreamChunk {
     finalStatus?: 'COMPLETED' | 'ANALYSIS_FAILED';
 }
 
-export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: string, signal?: AbortSignal): Promise<ReadableStream<Uint8Array>> {
+export async function initiateStreamedDreamAnalysis(
+    dreamId: string,
+    rawText: string,
+    promptType: DreamPromptType = 'jungian', // Add promptType parameter with a default
+    signal?: AbortSignal
+): Promise<ReadableStream<Uint8Array>> {
     if (!OPENROUTER_API_KEY) {
         throw new Error("OPENROUTER_API_KEY is not defined");
     }
@@ -33,8 +38,6 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
                 temperature: 0.7, // A reasonable default for creative tasks
                 streaming: true,
                 apiKey: OPENROUTER_API_KEY,
-                // LangChain's ChatOpenAI handles the AbortSignal internally if passed in the constructor options
-                // However, for streaming, we'll manage it more directly with the ReadableStream's cancel method.
                 configuration: {
                     baseURL: 'https://openrouter.ai/api/v1',
                     defaultHeaders: {
@@ -44,11 +47,18 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
             },
         );
 
-        const stream = await chat.stream([
-            new SystemMessage(DREAM_INTERPRETATION_SYSTEM_PROMPT), // Use the imported prompt
-            new SystemMessage(JUNGIAN_KNOWLEDGE),
+        const systemPrompt = getDreamInterpretationPrompt(promptType);
+        const messages = [
+            new SystemMessage(systemPrompt),
             new HumanMessage(`My dream: ${rawText}`),
-        ], {
+        ];
+
+        // Conditionally add Jungian knowledge if the prompt type is Jungian
+        if (promptType === 'jungian' && JUNGIAN_KNOWLEDGE) {
+            messages.splice(1, 0, new SystemMessage(JUNGIAN_KNOWLEDGE)); // Insert after the main system prompt
+        }
+
+        const stream = await chat.stream(messages, {
             signal: signal // Pass the abort signal directly to the stream method
         });
 
