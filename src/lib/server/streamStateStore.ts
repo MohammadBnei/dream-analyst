@@ -1,6 +1,6 @@
 import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
-import type { AnalysisStreamChunk } from '$lib/server/n8nService';
+import type { AnalysisStreamChunk } from '$lib/server/langchainService';
 import { DreamStatus } from '@prisma/client'; // Keep for now, but will be replaced by generic StreamStatus
 
 const REDIS_PREFIX = 'stream_state:';

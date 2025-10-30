@@ -1,5 +1,4 @@
 import { env } from '$env/dynamic/private';
-import type { Dream } from '@prisma/client'; // Keep if Dream type is used elsewhere, otherwise can remove
 
 // Removed N8N_WEBHOOK_URL and N8N_AUTH as they are no longer used for analysis streaming
 const N8N_AUDIO_TRANSCRIBE_URL = env.N8N_AUDIO_TRANSCRIBE_URL; // New environment variable for audio transcription
@@ -22,9 +21,9 @@ export async function initiateAudioTranscription(audioFile: Blob | File, lang: s
     // If your n8n audio transcription webhook requires authentication, you'd need to add it.
     const headers: HeadersInit = {};
     // Example if N8N_AUTH was needed for transcription:
-    // if (env.N8N_AUTH) {
-    //     headers['N8N_AUTH'] = env.N8N_AUTH;
-    // }
+    if (env.N8N_AUTH) {
+        headers['N8N_AUTH'] = env.N8N_AUTH;
+    }
 
     const url = new URL(N8N_AUDIO_TRANSCRIBE_URL);
     url.searchParams.append('lang', lang);

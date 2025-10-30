@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import type { AnalysisStreamChunk } from '$lib/server/n8nService';
+import type { AnalysisStreamChunk } from '$lib/server/langchainService';
 import { getStreamStateStore } from '$lib/server/streamStateStore'; // Renamed import
 import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor'; // Renamed import
 import { DreamStatus } from '@prisma/client';

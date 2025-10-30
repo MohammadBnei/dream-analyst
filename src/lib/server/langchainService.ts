@@ -2,7 +2,8 @@ import { env } from '$env/dynamic/private';
 import type { Dream } from '@prisma/client';
 import { ChatOpenAI } from "@langchain/openai";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { DREAM_INTERPRETATION_SYSTEM_PROMPT } from './prompts'; // Import the prompt
+import { DREAM_INTERPRETATION_SYSTEM_PROMPT } from './prompts/dreamAnalyst'; // Import the prompt
+import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian';
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
@@ -45,6 +46,7 @@ export async function initiateStreamedDreamAnalysis(dreamId: string, rawText: st
 
         const stream = await chat.stream([
             new SystemMessage(DREAM_INTERPRETATION_SYSTEM_PROMPT), // Use the imported prompt
+            new SystemMessage(JUNGIAN_KNOWLEDGE),
             new HumanMessage(`My dream: ${rawText}`),
         ], {
             signal: signal // Pass the abort signal directly to the stream method

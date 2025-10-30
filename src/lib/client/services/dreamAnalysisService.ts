@@ -1,4 +1,4 @@
-import type { AnalysisStreamChunk } from '$lib/server/n8nService'; // Import the shared type
+import type { AnalysisStreamChunk } from '$lib/server/langchainService'; // Import the shared type
 
 interface StreamCallbacks {
     onMessage: (data: AnalysisStreamChunk) => void;

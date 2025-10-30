@@ -1,9 +1,7 @@
 import { DreamStatus } from '@prisma/client';
-import type { AnalysisStreamChunk } from '$lib/server/n8nService'; // Keeping this for now, but ideally would be a generic StreamChunk
 import { getStreamStateStore } from '$lib/server/streamStateStore'; // Renamed import
 import { getPrismaClient } from '$lib/server/db';
-import { initiateStreamedDreamAnalysis } from '$lib/server/n8nService'; // Keep for the factory function
-import type { AisRedis } from '$lib/server/streamStateStore'; // Renamed import
+import { initiateStreamedDreamAnalysis, type AnalysisStreamChunk } from '$lib/server/langchainService'; // Keep for the factory function
 
 /**
  * Manages the lifecycle of a single stream processing task.
