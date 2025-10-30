@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.3](https://github.com/MohammadBnei/dream-analyst/compare/0.14.2...0.14.3) (2025-10-30)
+
+
+### Bug Fixes
+
+* Disable dream deletion when status is PENDING_ANALYSIS ([4fb3d5f](https://github.com/MohammadBnei/dream-analyst/commit/4fb3d5f1ae35645061cd5575314b1ec207738df0))
+
 ## [0.14.2](https://github.com/MohammadBnei/dream-analyst/compare/0.14.1...0.14.2) (2025-10-30)
 
 ## [0.14.1](https://github.com/MohammadBnei/dream-analyst/compare/0.14.0...0.14.1) (2025-10-30)
