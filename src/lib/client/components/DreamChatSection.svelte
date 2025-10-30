@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { invalidate } from '$app/navigation';
-	import type { ChatMessage } from '$lib/chatService';
+	import type { ChatMessage } from '$lib/chatService'; // Re-use the server-side ChatMessage interface
 	import { onMount } from 'svelte';
 	import { ClientChatService } from '../services/chatService';
 	import { Streamdown } from 'svelte-streamdown';
@@ -89,6 +89,24 @@
 		}
 	}
 
+	async function deleteChatMessage(messageId: string) {
+		if (!chatService) return;
+
+		if (!confirm(m.confirm_delete_chat_message())) {
+			return;
+		}
+
+		try {
+			await chatService.deleteMessage(messageId);
+			chatMessages = chatMessages.filter((msg) => msg.id !== messageId);
+			// Optionally, invalidate 'dream' if deleting a message should trigger a full data refresh
+			// await invalidate('dream');
+		} catch (error) {
+			console.error('Error deleting chat message:', error);
+			chatError = `Failed to delete message: ${(error as Error).message}`;
+		}
+	}
+
 	function scrollToBottom() {
 		// Use a timeout to ensure DOM has updated before scrolling
 		setTimeout(() => {
@@ -112,6 +130,28 @@
 						animation={{ animateOnMount: true, enabled: isSendingChatMessage, type: 'blur' }}
 						content={msg.content || ''}
 					/>
+					{#if msg.id}
+						<button
+							class="btn btn-xs btn-ghost ml-2"
+							onclick={() => deleteChatMessage(msg.id as string)}
+							title={m.delete_chat_message_button()}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+								/>
+							</svg>
+						</button>
+					{/if}
 				</div>
 			</div>
 		{/each}
