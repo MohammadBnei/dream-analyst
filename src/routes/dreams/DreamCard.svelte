@@ -16,8 +16,8 @@
 	}>();
 </script>
 
-<div class="collapse collapse-arrow join-item border border-base-300 bg-base-100" transition:fade>
-	<input type="radio" name="dream-accordion-{dream.id}" />
+<div class="collapse collapse-arrow bg-base-100 border border-base-300" transition:fade>
+	<input type="checkbox" />
 	<div class="collapse-title flex items-center justify-between font-semibold">
 		<h2 class="text-lg">
 			{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
