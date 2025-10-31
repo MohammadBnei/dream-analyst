@@ -136,5 +136,6 @@
 	"admin_dashboard_title": "Tableau de bord administrateur",
 	"actions_label": "Actions",
 	"grant_button": "Accorder",
-	"deduct_button": "Déduire"
+	"deduct_button": "Déduire",
+	"search_dreams_placeholder": "Rechercher des rêves..."
 }
