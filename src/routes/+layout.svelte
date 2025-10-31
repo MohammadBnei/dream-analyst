@@ -85,18 +85,17 @@
 					<!-- Navbar menu content here -->
 					{#if isLoggedIn}
 						<li><a href="/dreams">{m.dreams_link()}</a></li>
+						<li><a href="/profile">{m.profile_link()}</a></li>
+						{#if isAdmin}
+							<li><a href="/admin">{m.admin_link()}</a></li>
+						{/if}
 						<li>
 							<form action="/logout" method="POST">
 								<button type="submit">{m.logout_link()}</button>
 							</form>
 						</li>
-						<li><a href="/profile">{m.profile_link()}</a></li>
-						{#if isAdmin}
-							<li><a href="/admin">{m.admin_link()}</a></li>
-						{/if}
 					{:else}
 						<li><a href="/login">{m.login_link()}</a></li>
-						<li><a href="/register">{m.register_link()}</a></li>
 					{/if}
 					<li>
 						<!-- Theme switch toggle -->
@@ -140,6 +139,10 @@
 			<li><a href="/">{m.home_link()}</a></li>
 			{#if isLoggedIn}
 				<li><a href="/dreams">{m.dreams_link()}</a></li>
+				<li><a href="/profile">{m.profile_link()}</a></li>
+				{#if isAdmin}
+					<li><a href="/admin">{m.admin_link()}</a></li>
+				{/if}
 				<li>
 					<form action="/logout" method="POST">
 						<button type="submit">{m.logout_link()}</button>
@@ -147,7 +150,6 @@
 				</li>
 			{:else}
 				<li><a href="/login">{m.login_link()}</a></li>
-				<li><a href="/register">{m.register_link()}</a></li>
 			{/if}
 			<li>
 				<!-- Theme switch toggle for sidebar -->
