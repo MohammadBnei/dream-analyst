@@ -154,7 +154,9 @@
 
 <div class="container mx-auto max-w-4xl p-4">
 	{#if data.dream}
-		<DreamHeader dreamStatus={dream.status} onDeleteClick={openDeleteModal} />
+		<div class="flex items-center justify-between mb-4">
+			<DreamHeader dreamStatus={dream.status} onDeleteClick={openDeleteModal} />
+		</div>
 
 		<div class="card bg-base-100 p-6 shadow-xl">
 			<div class="card-body p-0">
