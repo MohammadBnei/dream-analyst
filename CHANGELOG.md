@@ -1,5 +1,18 @@
 # Changelog
 
+# [0.21.0](https://github.com/MohammadBnei/dream-analyst/compare/0.20.7...0.21.0) (2025-10-31)
+
+
+### Bug Fixes
+
+* Convert AsyncIterable<string> to ReadableStream<Uint8Array> for stream processing ([fbc0eb6](https://github.com/MohammadBnei/dream-analyst/commit/fbc0eb69503d634f4d51712b289e9e5963cf4cad))
+
+
+### Features
+
+* Add AnalysisStreamChunk type definition ([9182ea6](https://github.com/MohammadBnei/dream-analyst/commit/9182ea6fc43b33bbbe3f0fd24e9cefd60cf41c42))
+* centralize chat logic into new server-side ChatService ([168bb47](https://github.com/MohammadBnei/dream-analyst/commit/168bb476b3ee94b7267fae3c4a180e5cf9d9f5ea))
+
 ## [0.20.7](https://github.com/MohammadBnei/dream-analyst/compare/0.20.6...0.20.7) (2025-10-31)
 
 ## [0.20.6](https://github.com/MohammadBnei/dream-analyst/compare/0.20.5...0.20.6) (2025-10-31)
