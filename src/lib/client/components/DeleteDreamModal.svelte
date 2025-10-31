@@ -45,10 +45,16 @@
 			</div>
 		{/if}
 		<div class="modal-action">
-			<label for="delete_dream_modal" class="btn btn-ghost" disabled={isDeleting}
+			<label for="delete_dream_modal" class="btn btn-ghost" class:hidden={isDeleting}
 				>{m.cancel_button()}</label
 			>
-			<form method="POST" action="?/deleteDream" use:enhance={handleDelete}>
+			<form
+				method="POST"
+				action="?/deleteDream"
+				use:enhance={() =>
+					({ update }) =>
+						handleDelete({ update })}
+			>
 				<button type="submit" class="btn btn-error" disabled={isDeleting}>
 					{#if isDeleting}
 						<span class="loading loading-spinner"></span>
