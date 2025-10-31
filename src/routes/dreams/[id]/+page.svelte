@@ -34,10 +34,8 @@
 	let clientChatService: ClientChatService | null = $state(null);
 
 	// Initialize selectedPromptType from dream data
-	let selectedPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
+	let selectedPromptType: DreamPromptType = $state((dream.promptType as DreamPromptType) || 'jungian');
 
-	// Chat specific states
-	let chatMessages = $state<any[]>([]);
 
 	// Update dream state when data from load function changes (e.g., after form action)
 	$effect(() => {
@@ -72,6 +70,7 @@
 			} else {
 				streamError = form.error; // General stream error
 			}
+			isLoadingStream = false;
 		}
 	});
 
@@ -154,7 +153,7 @@
 
 <div class="container mx-auto max-w-4xl p-4">
 	{#if data.dream}
-		<div class="flex items-center justify-between mb-4">
+		<div class="mb-4 flex items-center justify-between">
 			<DreamHeader dreamStatus={dream.status} onDeleteClick={openDeleteModal} />
 		</div>
 
@@ -175,16 +174,14 @@
 					tags={streamedTags}
 					status={dream.status}
 					promptType={selectedPromptType}
-					{isLoadingStream}
+					bind:isLoadingStream
 					{streamError}
 					onRegenerateAnalysis={startStream}
 					onCancelAnalysis={handleCancelAnalysis}
 				/>
 
 				{#if !isLoadingStream}
-					<DreamChatSection
-						dreamId={dream.id}
-					/>
+					<DreamChatSection dreamId={dream.id} />
 				{/if}
 
 				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />

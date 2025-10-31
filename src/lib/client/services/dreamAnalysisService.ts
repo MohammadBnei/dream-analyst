@@ -124,6 +124,7 @@ export class DreamAnalysisService {
 
 			readStream();
 		} catch (error) {
+			console.log({ error })
 			if (signal.aborted && !this.abortController) {
 				console.debug('Fetch aborted by user for dream:', this.dreamId);
 				this.callbacks.onClose?.();

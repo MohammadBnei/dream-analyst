@@ -61,7 +61,7 @@ export async function initiateRawStreamedDreamAnalysis(
 					break; // Exit the loop if aborted
 				}
 				if (chunk.content) {
-					yield chunk.content; // Yield raw string content
+					yield chunk.content as string; // Yield raw string content
 				}
 			}
 		})();

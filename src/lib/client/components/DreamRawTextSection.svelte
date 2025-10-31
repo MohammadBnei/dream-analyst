@@ -66,7 +66,7 @@
 		{/if}
 	</div>
 	{#if isEditing}
-		<form method="POST" action="?/updateDream" use:enhance={handleSubmit}>
+		<form method="POST" action="?/updateDream" use:enhance={() => handleSubmit}>
 			<RichTextInput
 				name="rawText"
 				placeholder={m.raw_dream_text_heading()}

@@ -11,7 +11,7 @@
 		tags,
 		status,
 		promptType, // This prop now represents the current promptType from the dream
-		isLoadingStream,
+		isLoadingStream = $bindable(),
 		streamError,
 		onRegenerateAnalysis, // This callback now expects a promptType argument
 		onCancelAnalysis
@@ -147,7 +147,7 @@
 	</div>
 
 	{#if isEditingInterpretation}
-		<form method="POST" action="?/updateInterpretation" use:enhance={handleInterpretationSubmit}>
+		<form method="POST" action="?/updateInterpretation" use:enhance={() => handleInterpretationSubmit}>
 			<RichTextInput
 				name="interpretation"
 				placeholder={m.interpretation_heading()}
