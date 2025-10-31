@@ -284,6 +284,7 @@ class CreditService {
                 createdAt: {
                     gte: startOfDay,
                 },
+                amount: { lt: 0 },
             },
             _sum: {
                 amount: true
