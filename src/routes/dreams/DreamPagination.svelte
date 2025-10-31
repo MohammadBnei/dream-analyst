@@ -1,11 +1,12 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 
-	let { currentPage, totalPages, onPageChange, totalDreams } = $props<{
+	let { currentPage, totalPages, onPageChange, totalDreams, pageSize } = $props<{
 		currentPage: number;
 		totalPages: number;
 		onPageChange: (page: number) => void;
 		totalDreams: number;
+		pageSize: number; // New prop
 	}>();
 
 	// Generate an array of page numbers to display
@@ -24,12 +25,15 @@
 		}
 		return pages;
 	});
+
+	const startDream = $derived(() => (currentPage - 1) * pageSize + 1);
+	const endDream = $derived(() => Math.min(currentPage * pageSize, totalDreams));
 </script>
 
 {#if totalDreams > 0}
 	<div class="flex flex-col items-center gap-4">
 		<div class="text-sm text-base-content/70">
-			{m.showing_total_dreams({ total: totalDreams })}
+			{m.showing_range_of_dreams({ start: startDream, end: endDream, total: totalDreams })}
 		</div>
 		<div class="join">
 			<button

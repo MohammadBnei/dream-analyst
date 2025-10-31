@@ -15,6 +15,7 @@
 	let totalPages = $derived(data.totalPages);
 	let totalDreams = $derived(data.totalDreams);
 	let sortOrder = $derived(data.sortOrder);
+	let pageSize = $derived(data.pageSize); // Get pageSize from data
 
 	let clientError: string | null = $state(null);
 	let searchQuery: string = $state(data.query || '');
@@ -106,6 +107,7 @@
 				{totalPages}
 				onPageChange={handlePageChange}
 				{totalDreams}
+				{pageSize}
 			/>
 		</div>
 	{/if}

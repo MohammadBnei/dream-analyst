@@ -140,6 +140,7 @@
 	"search_dreams_placeholder": "Rechercher des rêves...",
 	"reset_search_button": "Réinitialiser la recherche",
 	"showing_total_dreams": "Affichage de {total} rêves",
+	"showing_range_of_dreams": "Affichage de {start} - {end} sur {total} rêves",
 	"previous_button": "Précédent",
 	"next_button": "Suivant",
 	"sort_by_label": "Trier par",

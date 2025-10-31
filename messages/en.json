@@ -140,6 +140,7 @@
 	"search_dreams_placeholder": "Search dreams...",
 	"reset_search_button": "Reset Search",
 	"showing_total_dreams": "Showing {total} dreams",
+	"showing_range_of_dreams": "Showing {start} - {end} of {total} dreams",
 	"previous_button": "Previous",
 	"next_button": "Next",
 	"sort_by_label": "Sort by",
