@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		where: {
 			userId: sessionUser.id,
 			rawText: {
-				contains: searchQuery, // Use contains for simpler search in load
+				search: searchQuery,
 				mode: 'insensitive'
 			}
 		},
@@ -92,7 +92,7 @@ export const actions: Actions = {
 				where: {
 					userId: sessionUser.id,
 					rawText: {
-						contains: query || '', // Use contains for simpler search
+						search: query || '', // Use contains for simpler search
 						mode: 'insensitive'
 					}
 				},
@@ -103,7 +103,6 @@ export const actions: Actions = {
 
 			// Redirect to update the URL with the search query
 			url.searchParams.set('query', query || '');
-			throw redirect(302, url.toString());
 		} catch (error) {
 			console.error('Error searching dreams:', error);
 			return fail(500, { error: 'Failed to search dreams.' });
