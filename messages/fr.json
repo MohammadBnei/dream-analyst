@@ -115,8 +115,8 @@
 	"app_description": "Votre compagnon personnel pour explorer les profondeurs de vos rêves grâce à la psychologie jungienne et à l'IA.",
 	"dreams_page_description": "Visualisez et gérez tous vos rêves enregistrés. Accédez à des analyses jungiennes, des balises symboliques et suivez vos progrès.",
 	"install_app_button": "Installer l'application",
-	"previous_dream_button": "Rêve Précédent",
-	"next_dream_button": "Rêve Suivant",
+	"previous_dream_button": "Précédent",
+	"next_dream_button": "Suivant",
 	"dream_date_label": "Date du Rêve :",
 	"chat_with_ai_heading": "Discuter avec l'IA",
 	"type_your_message_placeholder": "Tapez votre message...",
@@ -138,5 +138,11 @@
 	"grant_button": "Accorder",
 	"deduct_button": "Déduire",
 	"search_dreams_placeholder": "Rechercher des rêves...",
-	"reset_search_button": "Réinitialiser la recherche"
+	"reset_search_button": "Réinitialiser la recherche",
+	"showing_total_dreams": "Affichage de {total} rêves",
+	"previous_button": "Précédent",
+	"next_button": "Suivant",
+	"sort_by_label": "Trier par",
+	"date_descending_option": "Date (Du plus récent au plus ancien)",
+	"date_ascending_option": "Date (Du plus ancien au plus récent)"
 }

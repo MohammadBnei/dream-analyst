@@ -138,5 +138,11 @@
 	"grant_button": "Grant",
 	"deduct_button": "Deduct",
 	"search_dreams_placeholder": "Search dreams...",
-	"reset_search_button": "Reset Search"
+	"reset_search_button": "Reset Search",
+	"showing_total_dreams": "Showing {total} dreams",
+	"previous_button": "Previous",
+	"next_button": "Next",
+	"sort_by_label": "Sort by",
+	"date_descending_option": "Date (Newest first)",
+	"date_ascending_option": "Date (Oldest first)"
 }
