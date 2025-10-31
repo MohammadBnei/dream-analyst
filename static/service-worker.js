@@ -17,34 +17,35 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+    // Check if the request is for one of the URLs we explicitly want to cache (cache-first strategy)
+    if (urlsToCache.includes(event.request.url) || urlsToCache.includes(new URL(event.request.url).pathname)) {
+        event.respondWith(
+            caches.match(event.request).then((response) => {
+                // Return cached response if found, otherwise fetch from network
+                return response || fetch(event.request).then((networkResponse) => {
+                    // Cache the new response
+                    return caches.open(CACHE_NAME).then((cache) => {
+                        cache.put(event.request, networkResponse.clone());
+                        return networkResponse;
+                    });
+                });
+            })
+        );
+        return; // Stop further processing for this request
+    }
+
+    // For all other requests (e.g., dynamic content, API calls), use a network-first strategy
+    // This ensures that the latest content is always fetched from the network if available.
     event.respondWith(
-        caches.match(event.request)
-            .then((response) => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-                // No cache hit - fetch from network
-                return fetch(event.request).then(
-                    (response) => {
-                        // Check if we received a valid response
-                        if (!response || response.status !== 200 || response.type !== 'basic') {
-                            return response;
-                        }
-
-                        // IMPORTANT: Clone the response. A response is a stream
-                        // and can only be consumed once. We need to consume it once
-                        // to send it to the browser and once to cache it.
-                        const responseToCache = response.clone();
-
-                        caches.open(CACHE_NAME)
-                            .then((cache) => {
-                                cache.put(event.request, responseToCache);
-                            });
-
-                        return response;
-                    }
-                );
+        fetch(event.request)
+            .then((networkResponse) => {
+                // If the network request is successful, return it.
+                // We don't cache these responses to avoid stale content.
+                return networkResponse;
+            })
+            .catch(() => {
+                // If network fails, try to serve from cache (if anything was cached previously)
+                return caches.match(event.request);
             })
     );
 });
