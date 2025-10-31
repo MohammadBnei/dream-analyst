@@ -2,7 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
 	import { invalidateAll } from '$app/navigation';
-	// Removed: import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+	import { enhance } from '$app/forms';
 
 	// Data loaded from +page.server.ts
 	let { data, form } = $props(); // Use $props() for both data and form
@@ -14,6 +14,7 @@
 	type DreamStatus = (typeof dreams)[number]['status'];
 
 	let clientError: string | null = $state(null); // For errors during client-side actions like cancelAnalysis confirmation
+	let searchQuery: string = $state('');
 
 	// Handle form action responses
 	$effect(() => {
@@ -24,6 +25,9 @@
 		if (form?.error) {
 			console.error('Form action error:', form.error);
 			clientError = form.error;
+		}
+		if (form?.dreams) {
+			dreams = form.dreams;
 		}
 	});
 
@@ -57,6 +61,27 @@
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-3xl font-bold">{m.your_dreams_title()}</h1>
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
+	</div>
+
+	<div class="mb-6">
+		<form method="POST" action="?/search" use:enhance>
+			<label class="input input-bordered flex items-center gap-2">
+				<input type="text" class="grow" placeholder={m.search_dreams_placeholder()} bind:value={searchQuery} name="query" />
+				<button type="submit" class="btn btn-ghost btn-sm">
+					<svg
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 16 16"
+						fill="currentColor"
+						class="h-4 w-4 opacity-70"
+						><path
+							fill-rule="evenodd"
+							d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z"
+							clip-rule="evenodd"
+						></path></svg
+					>
+				</button>
+			</label>
+		</form>
 	</div>
 
 	{#if clientError}
