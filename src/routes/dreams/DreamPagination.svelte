@@ -47,7 +47,7 @@
 			{#if pageNumbers[0] > 1}
 				<button class="btn join-item" onclick={() => onPageChange(1)}>1</button>
 				{#if pageNumbers[0] > 2}
-					<button class="btn join-item btn-disabled">...</button>
+					<button class="btn btn-disabled join-item">...</button>
 				{/if}
 			{/if}
 
@@ -62,7 +62,7 @@
 
 			{#if pageNumbers[pageNumbers.length - 1] < totalPages}
 				{#if pageNumbers[pageNumbers.length - 1] < totalPages - 1}
-					<button class="btn join-item btn-disabled">...</button>
+					<button class="btn btn-disabled join-item">...</button>
 				{/if}
 				<button class="btn join-item" onclick={() => onPageChange(totalPages)}>{totalPages}</button>
 			{/if}
