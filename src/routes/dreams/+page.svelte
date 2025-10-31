@@ -14,7 +14,7 @@
 	type DreamStatus = (typeof dreams)[number]['status'];
 
 	let clientError: string | null = $state(null); // For errors during client-side actions like cancelAnalysis confirmation
-	let searchQuery: string = $state('');
+	let searchQuery: string = $state(data.query || ''); // Initialize searchQuery with data.query
 
 	// Handle form action responses
 	$effect(() => {

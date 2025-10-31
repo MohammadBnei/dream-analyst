@@ -3,7 +3,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const load: PageServerLoad = async ({ locals, url }) => {
 	const sessionUser = locals.user;
 
 	if (!sessionUser) {
@@ -12,9 +12,15 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	const prisma = await getPrismaClient();
 
+	const searchQuery = url.searchParams.get('query') || ''; // Get query from URL
+
 	const dreams = await prisma.dream.findMany({
 		where: {
-			userId: sessionUser.id
+			userId: sessionUser.id,
+			rawText: {
+				contains: searchQuery, // Use contains for simpler search in load
+				mode: 'insensitive'
+			}
 		},
 		orderBy: {
 			createdAt: 'desc'
@@ -28,7 +34,8 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}));
 
 	return {
-		dreams: dreamsWithParsedTags
+		dreams: dreamsWithParsedTags,
+		query: searchQuery // Return the search query
 	};
 };
 
@@ -69,7 +76,7 @@ export const actions: Actions = {
 			return fail(500, { error: 'Failed to cancel analysis.' });
 		}
 	},
-	search: async ({ request, locals }) => {
+	search: async ({ request, locals, url }) => {
 		const sessionUser = locals.user;
 		if (!sessionUser) {
 			return fail(401, { message: 'Unauthorized' });
@@ -78,33 +85,25 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const query = formData.get('query')?.toString();
 
-
 		const prisma = await getPrismaClient();
 
 		try {
-			if (!query) {
-				return await prisma.dream.findMany({
-					where: {
-						userId: sessionUser.id
-					},
-					orderBy: {
-						createdAt: 'desc'
-					}
-				});
-			}
-
 			const dreams = await prisma.dream.findMany({
 				where: {
 					userId: sessionUser.id,
 					rawText: {
-						search: query
+						contains: query || '', // Use contains for simpler search
+						mode: 'insensitive'
 					}
+				},
+				orderBy: {
+					createdAt: 'desc'
 				}
 			});
 
-			return {
-				dreams
-			};
+			// Redirect to update the URL with the search query
+			url.searchParams.set('query', query || '');
+			throw redirect(302, url.toString());
 		} catch (error) {
 			console.error('Error searching dreams:', error);
 			return fail(500, { error: 'Failed to search dreams.' });
