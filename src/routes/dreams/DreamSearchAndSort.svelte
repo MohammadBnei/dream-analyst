@@ -28,6 +28,15 @@
 </script>
 
 <div class="join w-full">
+	<select
+		class="select select-bordered join-item"
+		onchange={handleSortSelectChange}
+		value={currentSortOrder}
+	>
+		<option value="desc">{m.date_descending_option()}</option>
+		<option value="asc">{m.date_ascending_option()}</option>
+	</select>
+
 	<div class="flex-grow">
 		<form onsubmit={handleSubmit} class="flex h-full">
 			<input
@@ -52,15 +61,6 @@
 			</button>
 		</form>
 	</div>
-
-	<select
-		class="select select-bordered join-item"
-		onchange={handleSortSelectChange}
-		value={currentSortOrder}
-	>
-		<option value="desc">{m.date_descending_option()}</option>
-		<option value="asc">{m.date_ascending_option()}</option>
-	</select>
 
 	{#if searchQuery}
 		<button type="button" class="btn join-item" onclick={handleResetClick}>
