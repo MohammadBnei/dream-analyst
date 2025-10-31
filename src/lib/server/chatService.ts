@@ -5,18 +5,19 @@ import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
+import type { ChatMessage } from '$lib/types/chat'; // Import the shared ChatMessage interface
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
 const YOUR_SITE_URL = env.ORIGIN;
 
-// Define a type for chat messages
-export interface ChatMessage {
-	id: string; // Added id to ChatMessage interface
-	role: 'user' | 'assistant' | 'system';
-	content: string;
-	promptType?: DreamPromptType; // Added promptType to ChatMessage interface
-}
+// The ChatMessage interface is now imported from $lib/types/chat.ts
+// export interface ChatMessage {
+// 	id: string; // Added id to ChatMessage interface
+// 	role: 'user' | 'assistant' | 'system';
+// 	content: string;
+// 	promptType?: DreamPromptType; // Added promptType to ChatMessage interface
+// }
 
 class ChatService {
 	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
