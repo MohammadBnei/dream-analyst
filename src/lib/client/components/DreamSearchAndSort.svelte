@@ -27,9 +27,9 @@
 	}
 </script>
 
-<div class="join w-full">
+<div class="join-vertical join w-full lg:join-horizontal">
 	<select
-		class="select select-bordered join-item"
+		class="select-bordered select join-item w-full lg:w-fit"
 		onchange={handleSortSelectChange}
 		value={currentSortOrder}
 	>
@@ -37,16 +37,16 @@
 		<option value="asc">{m.date_ascending_option()}</option>
 	</select>
 
-	<div class="flex-grow">
+	<div class="grow">
 		<form onsubmit={handleSubmit} class="flex h-full">
 			<input
 				type="text"
-				class="input input-bordered join-item flex-grow"
+				class="input-bordered input join-item grow"
 				placeholder={m.search_dreams_placeholder()}
 				bind:value={searchQuery}
 				name="query"
 			/>
-			<button type="submit" class="btn btn-primary join-item">
+			<button type="submit" class="btn join-item btn-primary">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 16 16"
@@ -64,7 +64,12 @@
 
 	{#if searchQuery}
 		<button type="button" class="btn join-item" onclick={handleResetClick}>
-			{m.reset_search_button()}
+			<span aria-label={m.reset_search_button()} class="h-4 w-4">
+				<svg class="h-auto w-full" viewBox="0 0 24 24">
+					<line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2" />
+					<line x1="22" y1="2" x2="2" y2="22" stroke="currentColor" stroke-width="2" />
+				</svg>
+			</span>
 		</button>
 	{/if}
 </div>

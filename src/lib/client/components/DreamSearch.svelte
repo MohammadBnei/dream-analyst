@@ -24,7 +24,7 @@
 	<label class="input-bordered input flex items-center gap-2">
 		<input
 			type="text"
-			class="grow"
+			class="min-w-10 grow"
 			placeholder={m.search_dreams_placeholder()}
 			bind:value={searchQuery}
 			name="query"
@@ -45,7 +45,12 @@
 	</label>
 	{#if searchQuery}
 		<button type="button" class="btn mt-2 btn-ghost btn-sm" onclick={handleReset}>
-			{m.reset_search_button()}
+			<span aria-label={m.reset_search_button()} class="w-2">
+				<svg width="12" height="12">
+					<line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2" />
+					<line x1="22" y1="2" x2="2" y2="22" stroke="currentColor" stroke-width="2" />
+				</svg>
+			</span>
 		</button>
 	{/if}
 </form>
