@@ -42,11 +42,11 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 						mode: 'insensitive'
 					}
 				},
-				{
-					tags: {
-						has: searchQuery // Search within tags array
-					}
-				}
+				// {
+				// 	tags: {
+				// 		has: searchQuery // Search within tags array
+				// 	}
+				// }
 			]
 		};
 	}
