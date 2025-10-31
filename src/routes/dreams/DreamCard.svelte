@@ -2,6 +2,7 @@
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
 	import StatusBadge from './StatusBadge.svelte';
+	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
 
 	let { dream } = $props<{
 		dream: {
@@ -37,9 +38,9 @@
 		{/if}
 
 		{#if dream.interpretation}
-			<p class="text-sm text-base-content/70 italic">
-				{dream.interpretation}
-			</p>
+			<div class="prose max-w-none text-sm text-base-content/70 italic">
+				<Streamdown content={dream.interpretation} />
+			</div>
 		{:else if dream.status === 'PENDING_ANALYSIS'}
 			<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
 		{:else if dream.status === 'ANALYSIS_FAILED'}
