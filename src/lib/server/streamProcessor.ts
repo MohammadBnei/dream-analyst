@@ -1,11 +1,9 @@
 import { DreamStatus, type Dream } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
-import {
-	initiateStreamedDreamAnalysis,
-	type AnalysisStreamChunk
-} from '$lib/server/langchainService';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import type { AnalysisStreamChunk } from '$lib/types/analysis';
+import { initiateRawStreamedDreamAnalysis } from './langchainService';
 
 /**
  * Manages the lifecycle of a single stream processing task.
@@ -268,7 +266,7 @@ export function getOrCreateStreamProcessor(
 		processor.setPromptType(effectivePromptType);
 
 		// Create the LangChain stream here, passing the processor's internal abort signal
-		const llmStream = await initiateStreamedDreamAnalysis(
+		const llmStream = await initiateRawStreamedDreamAnalysis(
 			dream,
 			effectivePromptType,
 			processor.abortController.signal
