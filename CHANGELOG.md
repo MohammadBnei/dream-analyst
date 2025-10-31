@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.20.6](https://github.com/MohammadBnei/dream-analyst/compare/0.20.5...0.20.6) (2025-10-31)
+
+
+### Bug Fixes
+
+* Wrap DreamHeader in flex container for responsive buttons ([5c18cb2](https://github.com/MohammadBnei/dream-analyst/commit/5c18cb2ca9fafa45a169c4823e3eca9ed7e28389))
+
 ## [0.20.5](https://github.com/MohammadBnei/dream-analyst/compare/0.20.4...0.20.5) (2025-10-31)
 
 ## [0.20.4](https://github.com/MohammadBnei/dream-analyst/compare/0.20.3...0.20.4) (2025-10-31)
