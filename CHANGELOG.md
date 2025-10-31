@@ -1,5 +1,34 @@
 # Changelog
 
+# [0.20.0](https://github.com/MohammadBnei/dream-analyst/compare/0.19.0...0.20.0) (2025-10-31)
+
+
+### Bug Fixes
+
+* Pass resolved values to message formatter in DreamPagination ([49c31a3](https://github.com/MohammadBnei/dream-analyst/commit/49c31a3cae1f276b20d22eac2a49d6c29bdfed1f))
+* Prevent default form submission behavior in search handler ([ca53df6](https://github.com/MohammadBnei/dream-analyst/commit/ca53df62e1ce0f35e84efb64e257711e7eded52c))
+* Refactor service worker to prevent stale content issues ([090f771](https://github.com/MohammadBnei/dream-analyst/commit/090f771b29fd9776fda3ca681ca2662e92756e59))
+* Use 'search' for full-text search in dream queries ([d01b6f9](https://github.com/MohammadBnei/dream-analyst/commit/d01b6f9c18d57b570fb85cbd0056d14516e4de8e))
+
+
+### Features
+
+* Add pagination and sorting components to dreams page ([ad3c0f2](https://github.com/MohammadBnei/dream-analyst/commit/ad3c0f2119f6762615805d6ca010bc6dfed66b02))
+* add pagination and sorting to dream list ([ffb70e2](https://github.com/MohammadBnei/dream-analyst/commit/ffb70e2059098a332646370bf1d80be136048592))
+* Add pagination and sorting translations ([627b478](https://github.com/MohammadBnei/dream-analyst/commit/627b478f70de7fd4534cf69ce14f0360e977f563))
+* Add reset search button to dreams page ([d8e4e53](https://github.com/MohammadBnei/dream-analyst/commit/d8e4e537ee55bd01cef366586a51c812a6de96c2))
+* Add reset_search_button translation ([42d8222](https://github.com/MohammadBnei/dream-analyst/commit/42d8222d6f50c636e4c4407b6c94e59cdbc3099a))
+* Add search_dreams_placeholder translation ([d6c2e29](https://github.com/MohammadBnei/dream-analyst/commit/d6c2e29cf320bcafae4b12bc8fd08bc437339710))
+* Display active search query in dreams page search bar ([a7d8737](https://github.com/MohammadBnei/dream-analyst/commit/a7d8737b9dbde64fef497617136fa75854ebc6f9))
+* Display current dream range in pagination ([81fdd0c](https://github.com/MohammadBnei/dream-analyst/commit/81fdd0c108287c9738407d8aadd41814451a0368))
+* Implement dream search functionality ([32331c2](https://github.com/MohammadBnei/dream-analyst/commit/32331c235bf36e9c4d7c617bb567f8cff6ab12d9))
+* Implement dream search functionality ([2610a17](https://github.com/MohammadBnei/dream-analyst/commit/2610a17483397e1818e11ef0baf57b417b6ccf16))
+* implement dream search functionality on main page ([0a925fd](https://github.com/MohammadBnei/dream-analyst/commit/0a925fdf134b75c5ec3b7b16c36ef63ad4c488c4))
+* Implement versioned service worker caching ([08671f6](https://github.com/MohammadBnei/dream-analyst/commit/08671f61a22cfdecf07e1398e42214d4341f7f52))
+* Merge search and sort components into a single flex container ([444b5d5](https://github.com/MohammadBnei/dream-analyst/commit/444b5d5dc69b00cebb4a64fa0a3b7bf204631b33))
+* Refactor DreamCard to use DaisyUI accordion component ([99ea9cd](https://github.com/MohammadBnei/dream-analyst/commit/99ea9cd37ba64c09bbab32d6161411d36df42016))
+* Render dream interpretation as markdown in DreamCard ([513e488](https://github.com/MohammadBnei/dream-analyst/commit/513e4889022af8c072a6f1c0c67d54cb08d1b9a5))
+
 # [0.19.0](https://github.com/MohammadBnei/dream-analyst/compare/0.18.1...0.19.0) (2025-10-30)
 
 
