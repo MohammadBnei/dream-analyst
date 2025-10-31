@@ -137,5 +137,6 @@
 	"actions_label": "Actions",
 	"grant_button": "Grant",
 	"deduct_button": "Deduct",
-	"search_dreams_placeholder": "Search dreams..."
+	"search_dreams_placeholder": "Search dreams...",
+	"reset_search_button": "Reset Search"
 }

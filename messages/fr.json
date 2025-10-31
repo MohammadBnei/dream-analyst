@@ -137,5 +137,6 @@
 	"actions_label": "Actions",
 	"grant_button": "Accorder",
 	"deduct_button": "Déduire",
-	"search_dreams_placeholder": "Rechercher des rêves..."
+	"search_dreams_placeholder": "Rechercher des rêves...",
+	"reset_search_button": "Réinitialiser la recherche"
 }
