@@ -2,7 +2,6 @@
 // The APP_VERSION variable is injected during the build process via Vite's define option.
 const CACHE_NAME = `dream-journal-ai-cache-v${process.env.APP_VERSION}`;
 const urlsToCache = [
-    '/',
     '/manifest.json',
     '/icon-192x192.png',
     '/icon-512x512.png'
