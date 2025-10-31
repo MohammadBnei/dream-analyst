@@ -3,6 +3,8 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
+const DEFAULT_PAGE_SIZE = 10; // Define a default page size
+
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const sessionUser = locals.user;
 
@@ -12,27 +14,56 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const prisma = await getPrismaClient();
 
-	const searchQuery = url.searchParams.get('query') || ''; // Get query from URL
-	let query = {}
+	const searchQuery = url.searchParams.get('query') || '';
+	const page = parseInt(url.searchParams.get('page') || '1');
+	const pageSize = parseInt(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE));
+	const sortOrder = url.searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'; // Default to 'desc'
+
+	const skip = (page - 1) * pageSize;
+	const take = pageSize;
+
+	let whereClause: any = {
+		userId: sessionUser.id
+	};
 
 	if (searchQuery) {
-		query = {
-			rawText: {
-				search: searchQuery,
-				mode: 'insensitive'
-			}
-		}
+		whereClause = {
+			...whereClause,
+			OR: [
+				{
+					rawText: {
+						search: searchQuery,
+						mode: 'insensitive'
+					}
+				},
+				{
+					interpretation: {
+						search: searchQuery,
+						mode: 'insensitive'
+					}
+				},
+				{
+					tags: {
+						has: searchQuery // Search within tags array
+					}
+				}
+			]
+		};
 	}
 
-	const dreams = await prisma.dream.findMany({
-		where: {
-			userId: sessionUser.id,
-			...query
-		},
-		orderBy: {
-			createdAt: 'desc'
-		}
-	});
+	const [dreams, totalDreams] = await prisma.$transaction([
+		prisma.dream.findMany({
+			where: whereClause,
+			orderBy: {
+				createdAt: sortOrder
+			},
+			skip,
+			take
+		}),
+		prisma.dream.count({
+			where: whereClause
+		})
+	]);
 
 	// Ensure tags are parsed correctly if stored as JSON string
 	const dreamsWithParsedTags = dreams.map((dream) => ({
@@ -40,9 +71,16 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		tags: dream.tags ? (dream.tags as string[]) : null // Assuming tags are stored as JSON array of strings
 	}));
 
+	const totalPages = Math.ceil(totalDreams / pageSize);
+
 	return {
 		dreams: dreamsWithParsedTags,
-		query: searchQuery // Return the search query
+		query: searchQuery,
+		currentPage: page,
+		pageSize: pageSize,
+		totalPages: totalPages,
+		totalDreams: totalDreams,
+		sortOrder: sortOrder
 	};
 };
 
