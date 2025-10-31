@@ -80,7 +80,7 @@
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
-	<div class="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+	<div class="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
 		<div class="flex-grow">
 			<DreamSearch
 				initialQuery={data.query || ''}
