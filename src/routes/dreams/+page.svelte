@@ -67,7 +67,7 @@
 	{#if dreams.length === 0}
 		<NoDreamsMessage />
 	{:else}
-		<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+		<div class="join join-vertical w-full">
 			{#each dreams as dream (dream.id)}
 				<DreamCard {dream} />
 			{/each}
