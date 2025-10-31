@@ -22,7 +22,7 @@ export class StreamProcessor {
 	private platform: App.Platform | undefined;
 	private streamStateStore: Awaited<ReturnType<typeof getStreamStateStore>>;
 	private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
-	private abortController: AbortController; // Internal AbortController for server-side cancellation
+	abortController: AbortController; // Internal AbortController for server-side cancellation
 
 	private accumulatedInterpretation: string = '';
 	private accumulatedTags: string[] = [];
