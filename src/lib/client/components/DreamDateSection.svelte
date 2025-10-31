@@ -65,7 +65,7 @@
 		{/if}
 	</div>
 	{#if isEditingDreamDate}
-		<form method="POST" action="?/updateDreamDate" use:enhance={handleSubmit}>
+		<form method="POST" action="?/updateDreamDate" use:enhance={() => handleSubmit}>
 			<input
 				type="date"
 				name="dreamDate"
