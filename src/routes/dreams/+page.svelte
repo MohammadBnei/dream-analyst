@@ -44,6 +44,15 @@
 				return 'badge-neutral';
 		}
 	}
+
+	function resetSearch() {
+		searchQuery = '';
+		// Manually submit the form to trigger the search action with an empty query
+		const formElement = document.querySelector('form[action="?/search"]') as HTMLFormElement;
+		if (formElement) {
+			formElement.requestSubmit();
+		}
+	}
 </script>
 
 <svelte:head>
@@ -81,6 +90,11 @@
 					>
 				</button>
 			</label>
+			{#if searchQuery}
+				<button type="button" class="btn btn-ghost btn-sm mt-2" onclick={resetSearch}>
+					{m.reset_search_button()}
+				</button>
+			{/if}
 		</form>
 	</div>
 
