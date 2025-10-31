@@ -10,7 +10,7 @@
 	}>();
 
 	// Generate an array of page numbers to display
-	const pageNumbers = $derived(() => {
+	const pageNumbers = $derived.by(() => {
 		const pages = [];
 		const maxPagesToShow = 5; // Number of page buttons to show
 		let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
@@ -26,14 +26,13 @@
 		return pages;
 	});
 
-	const startDream = $derived(() => (currentPage - 1) * pageSize + 1);
-	const endDream = $derived(() => Math.min(currentPage * pageSize, totalDreams));
+	const startDream = $derived((currentPage - 1) * pageSize + 1);
+	const endDream = $derived(Math.min(currentPage * pageSize, totalDreams));
 </script>
 
 {#if totalDreams > 0}
 	<div class="flex flex-col items-center gap-4">
 		<div class="text-sm text-base-content/70">
-			<!-- Pass the resolved values of startDream and endDream -->
 			{m.showing_range_of_dreams({ start: startDream, end: endDream, total: totalDreams })}
 		</div>
 		<div class="join">
