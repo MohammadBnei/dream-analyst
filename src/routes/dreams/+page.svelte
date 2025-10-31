@@ -1,12 +1,11 @@
 <script lang="ts">
 	import { invalidateAll, goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
-	import DreamSearch from './DreamSearch.svelte';
+	import DreamSearchAndSort from './DreamSearchAndSort.svelte'; // Updated import
 	import NoDreamsMessage from './NoDreamsMessage.svelte';
 	import DreamCard from './DreamCard.svelte';
 	import ErrorMessage from './ErrorMessage.svelte';
-	import DreamPagination from './DreamPagination.svelte'; // New component
-	import DreamSort from './DreamSort.svelte'; // New component
+	import DreamPagination from './DreamPagination.svelte';
 
 	// Data loaded from +page.server.ts
 	let { data, form } = $props();
@@ -80,15 +79,14 @@
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
-	<div class="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-		<div class="flex-grow">
-			<DreamSearch
-				initialQuery={data.query || ''}
-				onSearch={handleSearch}
-				onReset={handleResetSearch}
-			/>
-		</div>
-		<DreamSort currentSortOrder={sortOrder} onSortChange={handleSortChange} />
+	<div class="mb-6">
+		<DreamSearchAndSort
+			initialQuery={data.query || ''}
+			currentSortOrder={sortOrder}
+			onSearch={handleSearch}
+			onReset={handleResetSearch}
+			onSortChange={handleSortChange}
+		/>
 	</div>
 
 	<ErrorMessage bind:clientError />
