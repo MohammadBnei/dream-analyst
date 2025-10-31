@@ -15,16 +15,16 @@
 	}>();
 </script>
 
-<div class="card bg-base-100 shadow-xl" transition:fade>
-	<div class="card-body">
-		<div class="mb-2 flex items-start justify-between">
-			<h2 class="card-title text-lg">
-				{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
-			</h2>
-			<StatusBadge status={dream.status} />
-		</div>
-
-		<p class="mb-4 line-clamp-3 text-sm text-base-content/80">
+<div class="collapse collapse-arrow join-item border border-base-300 bg-base-100" transition:fade>
+	<input type="radio" name="dream-accordion-{dream.id}" />
+	<div class="collapse-title flex items-center justify-between font-semibold">
+		<h2 class="text-lg">
+			{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
+		</h2>
+		<StatusBadge status={dream.status} />
+	</div>
+	<div class="collapse-content">
+		<p class="mb-4 text-sm text-base-content/80">
 			{dream.rawText}
 		</p>
 
@@ -37,7 +37,7 @@
 		{/if}
 
 		{#if dream.interpretation}
-			<p class="line-clamp-3 text-sm text-base-content/70 italic">
+			<p class="text-sm text-base-content/70 italic">
 				{dream.interpretation}
 			</p>
 		{:else if dream.status === 'PENDING_ANALYSIS'}
@@ -46,7 +46,7 @@
 			<p class="text-sm text-error italic">{m.ANALYSIS_FAILED_try_again_message()}</p>
 		{/if}
 
-		<div class="mt-4 card-actions justify-end">
+		<div class="mt-4 flex justify-end">
 			<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary"
 				>{m.view_details_button()}</a
 			>
