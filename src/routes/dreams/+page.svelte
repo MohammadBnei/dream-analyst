@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { invalidateAll, goto } from '$app/navigation';
+	import DreamCard from '$lib/client/components/DreamCard.svelte';
+	import DreamPagination from '$lib/client/components/DreamPagination.svelte';
+	import DreamSearchAndSort from '$lib/client/components/DreamSearchAndSort.svelte';
+	import ErrorMessage from '$lib/client/components/ErrorMessage.svelte';
+	import NoDreamsMessage from '$lib/client/components/NoDreamsMessage.svelte';
 	import * as m from '$lib/paraglide/messages';
-	import DreamSearchAndSort from './DreamSearchAndSort.svelte'; // Updated import
-	import NoDreamsMessage from './NoDreamsMessage.svelte';
-	import DreamCard from './DreamCard.svelte';
-	import ErrorMessage from './ErrorMessage.svelte';
-	import DreamPagination from './DreamPagination.svelte';
 
 	// Data loaded from +page.server.ts
 	let { data, form } = $props();

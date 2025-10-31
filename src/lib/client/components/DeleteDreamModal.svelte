@@ -7,7 +7,7 @@
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 
-	async function handleDelete({ update }) {
+	async function handleDelete({ update }: any) {
 		isDeleting = true;
 		deleteError = null;
 		await update();

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
-	import StatusBadge from './StatusBadge.svelte';
 	import { Streamdown } from 'svelte-streamdown'; // Import Streamdown
+	import StatusBadge from './StatusBadge.svelte';
 
 	let { dream } = $props<{
 		dream: {
