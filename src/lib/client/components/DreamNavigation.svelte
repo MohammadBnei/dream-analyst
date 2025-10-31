@@ -4,8 +4,8 @@
 	let { dreamDate, prevDreamId, nextDreamId } = $props();
 </script>
 
-<div class="mb-4 flex items-center justify-between">
-	<div class="flex items-center gap-2">
+<div class="mb-4 flex-col items-center justify-between">
+	<div class="flex items-center gap-2 my-2">
 		{#if prevDreamId}
 			<a href="/dreams/{prevDreamId}" class="btn btn-outline btn-sm">
 				<svg
@@ -25,9 +25,7 @@
 				{m.previous_dream_button()}
 			</a>
 		{/if}
-		<h2 class="card-title text-2xl">
-			{m.dream_on_date({ date: new Date(dreamDate).toLocaleDateString() })}
-		</h2>
+
 		{#if nextDreamId}
 			<a href="/dreams/{nextDreamId}" class="btn btn-outline btn-sm">
 				{m.next_dream_button()}
@@ -48,5 +46,10 @@
 			</a>
 		{/if}
 	</div>
-	<slot name="status-badge" />
+	<div class="flex items-center gap-2">
+		<h2 class="card-title text-2xl">
+			{m.dream_on_date({ date: new Date(dreamDate).toLocaleDateString() })}
+		</h2>
+		<slot name="status-badge" />
+	</div>
 </div>

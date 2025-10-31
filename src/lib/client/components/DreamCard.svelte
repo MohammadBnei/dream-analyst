@@ -16,13 +16,14 @@
 	}>();
 </script>
 
-<div class="collapse collapse-arrow bg-base-100 border border-base-300" transition:fade>
+<div class="collapse-arrow collapse border border-base-300 bg-base-100" transition:fade>
 	<input type="checkbox" />
 	<div class="collapse-title flex items-center justify-between font-semibold">
 		<h2 class="text-lg">
 			{m.dream_on_date({ date: new Date(dream.createdAt).toLocaleDateString() })}
 		</h2>
 		<StatusBadge status={dream.status} />
+		<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary z-10">{m.view_details_button()}</a>
 	</div>
 	<div class="collapse-content">
 		<p class="mb-4 text-sm text-base-content/80">
@@ -46,11 +47,5 @@
 		{:else if dream.status === 'ANALYSIS_FAILED'}
 			<p class="text-sm text-error italic">{m.ANALYSIS_FAILED_try_again_message()}</p>
 		{/if}
-
-		<div class="mt-4 flex justify-end">
-			<a href={`/dreams/${dream.id}`} class="btn btn-sm btn-primary"
-				>{m.view_details_button()}</a
-			>
-		</div>
 	</div>
 </div>

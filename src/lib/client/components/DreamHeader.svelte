@@ -8,27 +8,29 @@
 	}
 </script>
 
-<div class="mb-6 flex items-center justify-between">
-	<button onclick={handleBackClick} class="btn btn-ghost">
-		<svg
-			xmlns="http://www.w3.org/2000/svg"
-			class="h-5 w-5"
-			fill="none"
-			viewBox="0 0 24 24"
-			stroke="currentColor"
-		>
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-		</svg>
-		{m.back_to_dreams_button()}
-	</button>
+<div class="mb-6 flex flex-col items-center justify-between w-full">
 	<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
-	<div class="w-24 text-right">
-		<button
-			onclick={onDeleteClick}
-			class="btn btn-sm btn-error"
-			class:hidden={dreamStatus === 'PENDING_ANALYSIS'}
-		>
-			{m.delete_dream_button()}
+	<div class="flex justify-between w-full mt-2">
+		<button onclick={handleBackClick} class="btn btn-ghost">
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				class="h-5 w-5"
+				fill="none"
+				viewBox="0 0 24 24"
+				stroke="currentColor"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+			</svg>
+			{m.back_to_dreams_button()}
 		</button>
+		<div class="w-24 text-right">
+			<button
+				onclick={onDeleteClick}
+				class="btn btn-sm btn-error"
+				class:hidden={dreamStatus === 'PENDING_ANALYSIS'}
+			>
+				{m.delete_dream_button()}
+			</button>
+		</div>
 	</div>
 </div>
