@@ -5,6 +5,28 @@ import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import type { AnalysisStreamChunk } from '$lib/types/analysis';
 import { initiateRawStreamedDreamAnalysis } from './langchainService';
 
+// Utility function to convert AsyncIterable<string> to ReadableStream<Uint8Array>
+function asyncIterableToReadableStream(
+	asyncIterable: AsyncIterable<string>
+): ReadableStream<Uint8Array> {
+	const encoder = new TextEncoder();
+	return new ReadableStream({
+		async start(controller) {
+			for await (const chunk of asyncIterable) {
+				// Each chunk from the asyncIterable is a string.
+				// We need to encode it and add a newline to make it a valid NDJSON chunk.
+				controller.enqueue(encoder.encode(JSON.stringify({ content: chunk }) + '\n'));
+			}
+			controller.close();
+		},
+		async cancel(reason) {
+			console.debug('ReadableStream created from AsyncIterable cancelled:', reason);
+			// If the underlying async iterable has a way to be cancelled,
+			// you might call it here. For now, just log.
+		}
+	});
+}
+
 /**
  * Manages the lifecycle of a single stream processing task.
  * This class is responsible for:
@@ -266,16 +288,19 @@ export function getOrCreateStreamProcessor(
 		processor.setPromptType(effectivePromptType);
 
 		// Create the LangChain stream here, passing the processor's internal abort signal
-		const llmStream = await initiateRawStreamedDreamAnalysis(
+		const llmAsyncIterable = await initiateRawStreamedDreamAnalysis(
 			dream,
 			effectivePromptType,
 			processor.abortController.signal
 		);
 
+		// Convert the AsyncIterable<string> to ReadableStream<Uint8Array>
+		const llmReadableStream = asyncIterableToReadableStream(llmAsyncIterable);
+
 		// Start the processing in the background.
 		// The processor itself will handle its lifecycle and removal from the map
 		// once the processing is truly complete or failed.
-		processor.startProcessing(llmStream);
+		processor.startProcessing(llmReadableStream);
 	}).catch(e => {
 		console.error(`Stream ${dream.id}: Error initializing or starting processor:`, e);
 		activeStreamProcessors.delete(dream.id); // Clean up if initialization fails
