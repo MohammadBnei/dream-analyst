@@ -68,5 +68,46 @@ export const actions: Actions = {
 			console.error(`Error cancelling analysis for dream ${dreamId}:`, e);
 			return fail(500, { error: 'Failed to cancel analysis.' });
 		}
+	},
+	search: async ({ request, locals }) => {
+		const sessionUser = locals.user;
+		if (!sessionUser) {
+			return fail(401, { message: 'Unauthorized' });
+		}
+
+		const formData = await request.formData();
+		const query = formData.get('query')?.toString();
+
+
+		const prisma = await getPrismaClient();
+
+		try {
+			if (!query) {
+				return await prisma.dream.findMany({
+					where: {
+						userId: sessionUser.id
+					},
+					orderBy: {
+						createdAt: 'desc'
+					}
+				});
+			}
+
+			const dreams = await prisma.dream.findMany({
+				where: {
+					userId: sessionUser.id,
+					rawText: {
+						search: query
+					}
+				}
+			});
+
+			return {
+				dreams
+			};
+		} catch (error) {
+			console.error('Error searching dreams:', error);
+			return fail(500, { error: 'Failed to search dreams.' });
+		}
 	}
 };
