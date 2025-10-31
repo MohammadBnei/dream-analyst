@@ -1,5 +1,5 @@
 <script lang="ts">
-	let { clientError } = $props<{ clientError: string | null }>();
+	let { clientError = $bindable() } = $props<{ clientError: string | null }>();
 </script>
 
 {#if clientError}

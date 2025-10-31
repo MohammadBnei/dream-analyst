@@ -83,7 +83,7 @@
 	<div class="mb-6">
 		<DreamSearchAndSort
 			initialQuery={data.query || ''}
-			currentSortOrder={sortOrder}
+			currentSortOrder={sortOrder as 'asc' | 'desc'}
 			onSearch={handleSearch}
 			onReset={handleResetSearch}
 			onSortChange={handleSortChange}
@@ -95,7 +95,7 @@
 	{#if dreams.length === 0}
 		<NoDreamsMessage />
 	{:else}
-		<div class="join join-vertical w-full">
+		<div class="join-vertical join w-full">
 			{#each dreams as dream (dream.id)}
 				<DreamCard {dream} />
 			{/each}
