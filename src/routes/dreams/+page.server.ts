@@ -13,14 +13,21 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const prisma = await getPrismaClient();
 
 	const searchQuery = url.searchParams.get('query') || ''; // Get query from URL
+	let query = {}
 
-	const dreams = await prisma.dream.findMany({
-		where: {
-			userId: sessionUser.id,
+	if (searchQuery) {
+		query = {
 			rawText: {
 				search: searchQuery,
 				mode: 'insensitive'
 			}
+		}
+	}
+
+	const dreams = await prisma.dream.findMany({
+		where: {
+			userId: sessionUser.id,
+			...query
 		},
 		orderBy: {
 			createdAt: 'desc'
