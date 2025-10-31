@@ -1,10 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import { getChatService } from '$lib/server/chatService';
+import { getServerChatService } from '$lib/server/services/chatService'; // Import the new service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
-
-const encoder = new TextEncoder();
 
 function getCurrentUser(locals: App.Locals) {
 	if (!locals.user) {
@@ -16,9 +13,8 @@ function getCurrentUser(locals: App.Locals) {
 export async function POST({ params, locals, request }) {
 	const dreamId = params.id;
 	const sessionUser = getCurrentUser(locals);
-	const prisma = await getPrismaClient();
-	const chatService = getChatService();
-	const creditService = getCreditService();
+	const prisma = await getPrismaClient(); // Still need prisma to fetch the dream
+	const chatService = getServerChatService(); // Get the new chat service instance
 
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');
@@ -44,8 +40,6 @@ export async function POST({ params, locals, request }) {
 	const dreamPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 
 	try {
-		// The credit deduction for chat messages is now handled inside chatService.chatWithAI
-		// This ensures the user message is saved and linked to the credit transaction before LLM call.
 		const aiStream = await chatService.chatWithAI(
 			dreamId,
 			sessionUser.id,
@@ -65,7 +59,6 @@ export async function POST({ params, locals, request }) {
 		});
 	} catch (e) {
 		console.error(`Error in chat-interpretation endpoint for dream ${dreamId}:`, e);
-		// If the error is due to insufficient credits, return a specific error message
 		if (
 			(e as Error).message.includes('Insufficient credits') ||
 			(e as Error).message.includes('Daily credit limit exceeded')
@@ -80,7 +73,7 @@ export async function POST({ params, locals, request }) {
 export async function GET({ params, locals }) {
 	const dreamId = params.id;
 	const sessionUser = getCurrentUser(locals);
-	const chatService = getChatService();
+	const chatService = getServerChatService(); // Get the new chat service instance
 
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');
@@ -103,7 +96,7 @@ export async function GET({ params, locals }) {
 export async function DELETE({ params, locals }) {
 	const dreamId = params.id;
 	const sessionUser = getCurrentUser(locals);
-	const chatService = getChatService();
+	const chatService = getServerChatService(); // Get the new chat service instance
 
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');

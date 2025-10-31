@@ -1,11 +1,11 @@
-import { getPrismaClient } from '$lib/server/db/index.js';
 import { error, json } from '@sveltejs/kit';
+import { getServerChatService } from '$lib/server/services/chatService'; // Import the new service
 
 export async function DELETE({ params, locals }) {
 	const dreamId = params.id;
 	const messageId = params.messageId;
-	const sessionUser = locals.user; // Use await as getCurrentUser is async
-	const prisma = await getPrismaClient();
+	const sessionUser = locals.user;
+	const chatService = getServerChatService(); // Get the new chat service instance
 
 	if (!sessionUser) {
 		throw error(401, 'Unauthorized');
@@ -16,30 +16,14 @@ export async function DELETE({ params, locals }) {
 	}
 
 	try {
-		// Verify the message belongs to the dream and the dream belongs to the user
-		const message = await prisma.dreamChat.findFirst({
-			where: {
-				id: messageId,
-				dreamId: dreamId,
-				dream: {
-					userId: sessionUser.id // Use sessionUser.id as per App.Locals.user
-				}
-			}
-		});
-
-		if (!message) {
-			throw error(404, 'Chat message not found or not authorized to delete.');
-		}
-
-		await prisma.dreamChat.delete({
-			where: {
-				id: messageId
-			}
-		});
-
+		await chatService.deleteChatMessage(messageId, dreamId, sessionUser.id);
 		return json({ message: 'Chat message deleted successfully' }, { status: 200 });
 	} catch (e) {
 		console.error(`Error deleting chat message ${messageId} for dream ${dreamId}:`, e);
+		// Check for specific error message from service to return 404
+		if ((e as Error).message.includes('not found or not authorized')) {
+			throw error(404, (e as Error).message);
+		}
 		throw error(500, 'Failed to delete chat message.');
 	}
 }
