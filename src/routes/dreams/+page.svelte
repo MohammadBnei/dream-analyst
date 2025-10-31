@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
-	import { invalidateAll } from '$app/navigation';
+	import { invalidateAll, goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 
 	// Data loaded from +page.server.ts
@@ -26,9 +26,6 @@
 			console.error('Form action error:', form.error);
 			clientError = form.error;
 		}
-		if (form?.dreams) {
-			dreams = form.dreams;
-		}
 	});
 
 	// Function to determine badge color based on dream status
@@ -45,13 +42,13 @@
 		}
 	}
 
+	async function handleSearch() {
+		await goto(`?query=${searchQuery}`);
+	}
+
 	function resetSearch() {
 		searchQuery = '';
-		// Manually submit the form to trigger the search action with an empty query
-		const formElement = document.querySelector('form[action="?/search"]') as HTMLFormElement;
-		if (formElement) {
-			formElement.requestSubmit();
-		}
+		handleSearch(); // Trigger search with empty query
 	}
 </script>
 
@@ -73,7 +70,7 @@
 	</div>
 
 	<div class="mb-6">
-		<form method="POST" action="?/search" use:enhance>
+		<form onsubmit|preventDefault={handleSearch}>
 			<label class="input input-bordered flex items-center gap-2">
 				<input type="text" class="grow" placeholder={m.search_dreams_placeholder()} bind:value={searchQuery} name="query" />
 				<button type="submit" class="btn btn-ghost btn-sm">
