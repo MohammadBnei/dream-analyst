@@ -42,7 +42,8 @@
 		}
 	}
 
-	async function handleSearch() {
+	async function handleSearch(e?: SubmitEvent) {
+		e?.preventDefault();
 		await goto(`?query=${searchQuery}`);
 	}
 
@@ -70,9 +71,15 @@
 	</div>
 
 	<div class="mb-6">
-		<form onsubmit|preventDefault={handleSearch}>
-			<label class="input input-bordered flex items-center gap-2">
-				<input type="text" class="grow" placeholder={m.search_dreams_placeholder()} bind:value={searchQuery} name="query" />
+		<form onsubmit={handleSearch}>
+			<label class="input-bordered input flex items-center gap-2">
+				<input
+					type="text"
+					class="grow"
+					placeholder={m.search_dreams_placeholder()}
+					bind:value={searchQuery}
+					name="query"
+				/>
 				<button type="submit" class="btn btn-ghost btn-sm">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -88,7 +95,7 @@
 				</button>
 			</label>
 			{#if searchQuery}
-				<button type="button" class="btn btn-ghost btn-sm mt-2" onclick={resetSearch}>
+				<button type="button" class="btn mt-2 btn-ghost btn-sm" onclick={resetSearch}>
 					{m.reset_search_button()}
 				</button>
 			{/if}
