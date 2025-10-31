@@ -57,6 +57,7 @@ class CreditService {
             throw new Error('User not found.');
         }
 
+
         if (user.role !== 'ADMIN') {
             // Admins bypass daily limits
             const dailyUsage = await this.getDailyCreditUsage(userId);
@@ -78,10 +79,6 @@ class CreditService {
 
                 if (!currentUser) {
                     throw new Error('User not found.');
-                }
-
-                if (user.role !== 'ADMIN' && currentUser.credits < amount) {
-                    throw new Error('Insufficient credits.');
                 }
 
                 const newBalance = currentUser.credits - amount;
@@ -289,6 +286,14 @@ class CreditService {
                 amount: true
             }
         });
+
+        if (!transactions?._sum?.amount) {
+            return 0;
+        }
+
+        if (transactions._sum.amount > 0) {
+            return - transactions._sum.amount || 0;
+        }
 
         return Math.abs(transactions._sum.amount || 0);
     }
