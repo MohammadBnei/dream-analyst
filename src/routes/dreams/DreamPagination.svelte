@@ -33,6 +33,7 @@
 {#if totalDreams > 0}
 	<div class="flex flex-col items-center gap-4">
 		<div class="text-sm text-base-content/70">
+			<!-- Pass the resolved values of startDream and endDream -->
 			{m.showing_range_of_dreams({ start: startDream, end: endDream, total: totalDreams })}
 		</div>
 		<div class="join">
