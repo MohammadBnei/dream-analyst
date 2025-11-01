@@ -34,8 +34,9 @@
 	let clientChatService: ClientChatService | null = $state(null);
 
 	// Initialize selectedPromptType from dream data
-	let selectedPromptType: DreamPromptType = $state((dream.promptType as DreamPromptType) || 'jungian');
-
+	let selectedPromptType: DreamPromptType = $state(
+		(dream.promptType as DreamPromptType) || 'jungian'
+	);
 
 	// Update dream state when data from load function changes (e.g., after form action)
 	$effect(() => {

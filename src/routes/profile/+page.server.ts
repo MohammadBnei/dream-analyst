@@ -110,7 +110,7 @@ export const actions = {
 				updatedUser.id,
 				updatedUser.username,
 				updatedUser.email,
-				updatedUser.role,
+				updatedUser.role
 			);
 			setAuthTokenCookie(cookies, newToken);
 

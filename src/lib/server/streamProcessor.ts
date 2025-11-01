@@ -2,7 +2,6 @@ import { DreamStatus, type Dream } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import type { AnalysisStreamChunk } from '$lib/types/analysis';
 import { initiateRawStreamedDreamAnalysis } from './langchainService';
 
 // Utility function to convert AsyncIterable<string> to ReadableStream<Uint8Array>
@@ -99,7 +98,7 @@ export class StreamProcessor {
 
 						if (line) {
 							try {
-								const parsedChunk: AnalysisStreamChunk = JSON.parse(line);
+								const parsedChunk: App.AnalysisStreamChunk = JSON.parse(line);
 								await processChunk(parsedChunk);
 							} catch (e) {
 								console.warn(
@@ -151,7 +150,7 @@ export class StreamProcessor {
 		this.abortController.abort('Analysis cancelled by user.');
 	}
 
-	private async processChunk(parsedChunk: AnalysisStreamChunk): Promise<void> {
+	private async processChunk(parsedChunk: App.AnalysisStreamChunk): Promise<void> {
 		// Accumulate interpretation and tags in memory
 		if (parsedChunk.content) {
 			this.accumulatedInterpretation += parsedChunk.content;
@@ -161,7 +160,7 @@ export class StreamProcessor {
 		}
 
 		// Update Redis with current progress and publish
-		const redisUpdateChunk: AnalysisStreamChunk = {
+		const redisUpdateChunk: App.AnalysisStreamChunk = {
 			content: parsedChunk.content, // Send delta content
 			tags: parsedChunk.tags,
 			status: parsedChunk.status || DreamStatus.PENDING_ANALYSIS // Still specific to DreamStatus
@@ -282,29 +281,32 @@ export function getOrCreateStreamProcessor(
 	activeStreamProcessors.set(dream.id, processor);
 
 	// Asynchronously initialize and start processing
-	processor.init().then(async () => {
-		// If promptType is not provided, try to get it from the dream object or Redis state
-		const effectivePromptType = promptType || (dream.promptType as DreamPromptType) || 'jungian';
-		processor.setPromptType(effectivePromptType);
+	processor
+		.init()
+		.then(async () => {
+			// If promptType is not provided, try to get it from the dream object or Redis state
+			const effectivePromptType = promptType || (dream.promptType as DreamPromptType) || 'jungian';
+			processor.setPromptType(effectivePromptType);
 
-		// Create the LangChain stream here, passing the processor's internal abort signal
-		const llmAsyncIterable = await initiateRawStreamedDreamAnalysis(
-			dream,
-			effectivePromptType,
-			processor.abortController.signal
-		);
+			// Create the LangChain stream here, passing the processor's internal abort signal
+			const llmAsyncIterable = await initiateRawStreamedDreamAnalysis(
+				dream,
+				effectivePromptType,
+				processor.abortController.signal
+			);
 
-		// Convert the AsyncIterable<string> to ReadableStream<Uint8Array>
-		const llmReadableStream = asyncIterableToReadableStream(llmAsyncIterable);
+			// Convert the AsyncIterable<string> to ReadableStream<Uint8Array>
+			const llmReadableStream = asyncIterableToReadableStream(llmAsyncIterable);
 
-		// Start the processing in the background.
-		// The processor itself will handle its lifecycle and removal from the map
-		// once the processing is truly complete or failed.
-		processor.startProcessing(llmReadableStream);
-	}).catch(e => {
-		console.error(`Stream ${dream.id}: Error initializing or starting processor:`, e);
-		activeStreamProcessors.delete(dream.id); // Clean up if initialization fails
-	});
+			// Start the processing in the background.
+			// The processor itself will handle its lifecycle and removal from the map
+			// once the processing is truly complete or failed.
+			processor.startProcessing(llmReadableStream);
+		})
+		.catch((e) => {
+			console.error(`Stream ${dream.id}: Error initializing or starting processor:`, e);
+			activeStreamProcessors.delete(dream.id); // Clean up if initialization fails
+		});
 
 	return processor;
 }

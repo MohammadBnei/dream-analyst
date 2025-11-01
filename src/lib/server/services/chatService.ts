@@ -262,7 +262,13 @@ class ServerChatService {
 								encoder.encode(JSON.stringify({ final: true, message: 'Chat aborted.' }) + '\n')
 							);
 						} else {
-							await saveAssistantMessage(dreamId, userId, 'assistant', assistantResponse, promptType);
+							await saveAssistantMessage(
+								dreamId,
+								userId,
+								'assistant',
+								assistantResponse,
+								promptType
+							);
 							controller.enqueue(encoder.encode(JSON.stringify({ final: true }) + '\n'));
 						}
 					} catch (error) {

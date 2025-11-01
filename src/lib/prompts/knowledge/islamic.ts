@@ -158,4 +158,4 @@ When interpreting a **Ru'ya Saliha** or a **Hulm** (after initial advice), the A
 *   **Three:** Completion, stability, often good.
 *   **Seven:** Perfection, trials, completion (e.g., seven heavens, seven days).
 *   **Twelve:** Perfect cycle, completeness.
-`
+`;

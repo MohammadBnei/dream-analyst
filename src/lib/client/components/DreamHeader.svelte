@@ -8,9 +8,9 @@
 	}
 </script>
 
-<div class="mb-6 flex flex-col items-center justify-between w-full">
+<div class="mb-6 flex w-full flex-col items-center justify-between">
 	<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
-	<div class="flex justify-between w-full mt-2">
+	<div class="mt-2 flex w-full justify-between">
 		<button onclick={handleBackClick} class="btn btn-ghost">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"

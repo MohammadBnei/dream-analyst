@@ -5,7 +5,7 @@
 </script>
 
 <div class="mb-4 flex-col items-center justify-between">
-	<div class="flex items-center gap-2 my-2">
+	<div class="my-2 flex items-center gap-2">
 		{#if prevDreamId}
 			<a href="/dreams/{prevDreamId}" class="btn btn-outline btn-sm">
 				<svg

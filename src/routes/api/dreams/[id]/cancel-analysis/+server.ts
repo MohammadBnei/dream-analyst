@@ -14,7 +14,7 @@ function getCurrentUser(locals: App.Locals) {
 export async function POST({ params, locals, platform }) {
 	const dreamId = params.id;
 	const sessionUser = getCurrentUser(locals);
-	
+
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');
 	}
@@ -36,7 +36,9 @@ export async function POST({ params, locals, platform }) {
 		const processor = getOrCreateStreamProcessor(dream, platform);
 
 		if (processor) {
-			console.log(`Received cancel request for dream ${dreamId} from user ${sessionUser.id}. Signaling processor to cancel.`);
+			console.log(
+				`Received cancel request for dream ${dreamId} from user ${sessionUser.id}. Signaling processor to cancel.`
+			);
 			processor.cancelStream(); // This will trigger the AbortController in StreamProcessor
 			// The StreamProcessor's handleStreamAbort will then update the DB status to ANALYSIS_FAILED
 			// and clear its own Redis state.

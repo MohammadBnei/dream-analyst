@@ -1,6 +1,5 @@
 import { error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import type { AnalysisStreamChunk } from '$lib/server/langchainService';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
 import { DreamStatus } from '@prisma/client';
@@ -48,7 +47,7 @@ export async function GET({ params, locals, platform, request }) {
 
 	// If analysis is already completed or failed (either in DB or Redis), just return the final result
 	if (dream.status === DreamStatus.COMPLETED || dream.status === DreamStatus.ANALYSIS_FAILED) {
-		const finalChunk: AnalysisStreamChunk = {
+		const finalChunk: App.AnalysisStreamChunk = {
 			content: dream.interpretation || '',
 			tags: (dream.tags as string[]) || [], // Cast Json? to string[]
 			status: dream.status,

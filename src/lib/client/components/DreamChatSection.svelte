@@ -1,7 +1,6 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { invalidate } from '$app/navigation';
-	import type { ChatMessage } from '$lib/chatService'; // Re-use the server-side ChatMessage interface
 	import { onMount } from 'svelte';
 	import { ClientChatService } from '../services/chatService';
 	import { Streamdown } from 'svelte-streamdown';
@@ -185,7 +184,7 @@
 		<input
 			type="text"
 			placeholder={m.type_your_message_placeholder()}
-			class="input-bordered input flex-grow"
+			class="input-bordered input grow"
 			bind:value={chatInput}
 			onkeydown={(e) => {
 				if (e.key === 'Enter' && !e.shiftKey) {

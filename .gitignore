@@ -27,3 +27,6 @@ src/lib/paraglide
 .aider*
 
 /prisma/src/generated/prisma
+
+test-results
+playwright

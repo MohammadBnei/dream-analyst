@@ -1,5 +1,4 @@
 import { browser } from '$app/environment';
-import type { ChatMessage } from '$lib/types/chat'; // Import the shared ChatMessage interface
 
 interface ChatStreamChunk {
 	content?: string;
@@ -30,7 +29,8 @@ export class ClientChatService {
 	 * Loads the chat history for the current dream from the API.
 	 * @returns A promise that resolves to an array of ChatMessage.
 	 */
-	public async loadHistory(): Promise<ChatMessage[]> { // Changed return type to ChatMessage[]
+	public async loadHistory(): Promise<App.ChatMessage[]> {
+		// Changed return type to ChatMessage[]
 		if (!browser) return [];
 
 		try {

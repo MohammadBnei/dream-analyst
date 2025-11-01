@@ -1,9 +1,8 @@
 import { browser } from '$app/environment';
-import type { AnalysisStreamChunk } from '$lib/server/langchainService'; // Import the shared type
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
 
 interface StreamCallbacks {
-	onMessage: (data: AnalysisStreamChunk) => void;
+	onMessage: (data: App.AnalysisStreamChunk) => void;
 	onEnd: (data: { status?: string; message?: string }) => void;
 	onError: (error: string) => void;
 	onClose?: () => void;
@@ -90,7 +89,7 @@ export class DreamAnalysisService {
 
 							if (line) {
 								try {
-									const parsed: AnalysisStreamChunk = JSON.parse(line);
+									const parsed: App.AnalysisStreamChunk = JSON.parse(line);
 									// Check for finalStatus from the server
 									if (parsed.finalStatus) {
 										this.callbacks.onEnd({ status: parsed.finalStatus, message: parsed.message });
@@ -124,7 +123,7 @@ export class DreamAnalysisService {
 
 			readStream();
 		} catch (error) {
-			console.log({ error })
+			console.log({ error });
 			if (signal.aborted && !this.abortController) {
 				console.debug('Fetch aborted by user for dream:', this.dreamId);
 				this.callbacks.onClose?.();

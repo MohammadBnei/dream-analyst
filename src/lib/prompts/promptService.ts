@@ -1,9 +1,9 @@
 import {
-    DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN,
-    DREAM_INTERPRETATION_SYSTEM_PROMPT_FREUDIAN,
-    DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
-    DREAM_INTERPRETATION_SYSTEM_PROMPT_ISLAMIC, // Import the new Islamic prompt
-    type DreamPromptType
+	DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN,
+	DREAM_INTERPRETATION_SYSTEM_PROMPT_FREUDIAN,
+	DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
+	DREAM_INTERPRETATION_SYSTEM_PROMPT_ISLAMIC, // Import the new Islamic prompt
+	type DreamPromptType
 } from './dreamAnalyst';
 import { JUNGIAN_KNOWLEDGE } from './knowledge/jungian'; // Import Jungian knowledge here
 import { ISLAMIC_KNOWLEDGE } from './knowledge/islamic'; // Import the Islamic knowledge base
@@ -15,60 +15,60 @@ import { ISLAMIC_KNOWLEDGE } from './knowledge/islamic'; // Import the Islamic k
  * without modifying existing client code (though this class itself would need updates).
  */
 export class PromptService {
-    private static instance: PromptService;
-    private prompts: Record<DreamPromptType, string>;
+	private static instance: PromptService;
+	private prompts: Record<DreamPromptType, string>;
 
-    private constructor() {
-        this.prompts = {
-            jungian: DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN,
-            freudian: DREAM_INTERPRETATION_SYSTEM_PROMPT_FREUDIAN,
-            simple: DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
-            islamic: DREAM_INTERPRETATION_SYSTEM_PROMPT_ISLAMIC // Initialize Islamic prompt without knowledge yet
-        };
-    }
+	private constructor() {
+		this.prompts = {
+			jungian: DREAM_INTERPRETATION_SYSTEM_PROMPT_JUNGIAN,
+			freudian: DREAM_INTERPRETATION_SYSTEM_PROMPT_FREUDIAN,
+			simple: DREAM_INTERPRETATION_SYSTEM_PROMPT_SIMPLE,
+			islamic: DREAM_INTERPRETATION_SYSTEM_PROMPT_ISLAMIC // Initialize Islamic prompt without knowledge yet
+		};
+	}
 
-    /**
-     * Gets the singleton instance of the PromptService.
-     * @returns The PromptService instance.
-     */
-    public static getInstance(): PromptService {
-        if (!PromptService.instance) {
-            PromptService.instance = new PromptService();
-        }
-        return PromptService.instance;
-    }
+	/**
+	 * Gets the singleton instance of the PromptService.
+	 * @returns The PromptService instance.
+	 */
+	public static getInstance(): PromptService {
+		if (!PromptService.instance) {
+			PromptService.instance = new PromptService();
+		}
+		return PromptService.instance;
+	}
 
-    /**
-     * Retrieves a system prompt based on its type.
-     * @param promptType The type of the dream analysis prompt to retrieve.
-     * @returns The system prompt string, potentially augmented with specific knowledge.
-     * @throws Error if the promptType is not recognized.
-     */
-    public getSystemPrompt(promptType: DreamPromptType): string {
-        let prompt = this.prompts[promptType];
-        if (!prompt) {
-            throw new Error(`Unknown dream prompt type: ${promptType}`);
-        }
+	/**
+	 * Retrieves a system prompt based on its type.
+	 * @param promptType The type of the dream analysis prompt to retrieve.
+	 * @returns The system prompt string, potentially augmented with specific knowledge.
+	 * @throws Error if the promptType is not recognized.
+	 */
+	public getSystemPrompt(promptType: DreamPromptType): string {
+		let prompt = this.prompts[promptType];
+		if (!prompt) {
+			throw new Error(`Unknown dream prompt type: ${promptType}`);
+		}
 
-        // Conditionally add Jungian knowledge if the prompt type is Jungian
-        if (promptType === 'jungian' && JUNGIAN_KNOWLEDGE) {
-            // Prepend or append the knowledge. Prepending might be better for context.
-            prompt = JUNGIAN_KNOWLEDGE + '\n\n' + prompt;
-        } else if (promptType === 'islamic' && ISLAMIC_KNOWLEDGE) {
-            // Conditionally add Islamic knowledge if the prompt type is Islamic
-            prompt = ISLAMIC_KNOWLEDGE + '\n\n' + prompt;
-        }
+		// Conditionally add Jungian knowledge if the prompt type is Jungian
+		if (promptType === 'jungian' && JUNGIAN_KNOWLEDGE) {
+			// Prepend or append the knowledge. Prepending might be better for context.
+			prompt = JUNGIAN_KNOWLEDGE + '\n\n' + prompt;
+		} else if (promptType === 'islamic' && ISLAMIC_KNOWLEDGE) {
+			// Conditionally add Islamic knowledge if the prompt type is Islamic
+			prompt = ISLAMIC_KNOWLEDGE + '\n\n' + prompt;
+		}
 
-        return prompt;
-    }
+		return prompt;
+	}
 
-    /**
-     * Returns a list of all available dream prompt types.
-     * @returns An array of DreamPromptType.
-     */
-    public getAvailablePromptTypes(): DreamPromptType[] {
-        return Object.keys(this.prompts) as DreamPromptType[];
-    }
+	/**
+	 * Returns a list of all available dream prompt types.
+	 * @returns An array of DreamPromptType.
+	 */
+	public getAvailablePromptTypes(): DreamPromptType[] {
+		return Object.keys(this.prompts) as DreamPromptType[];
+	}
 }
 
 // Export an instance for convenience, following a common pattern for services.

@@ -18,7 +18,7 @@
 	</label>
 	<select
 		id="sortOrder"
-		class="select select-bordered"
+		class="select-bordered select"
 		onchange={handleSelectChange}
 		value={currentSortOrder}
 	>

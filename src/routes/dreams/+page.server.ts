@@ -41,7 +41,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 						search: searchQuery,
 						mode: 'insensitive'
 					}
-				},
+				}
 				// {
 				// 	tags: {
 				// 		has: searchQuery // Search within tags array

@@ -1,6 +1,5 @@
 import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
-import type { AnalysisStreamChunk } from '$lib/server/langchainService';
 import { DreamStatus } from '@prisma/client';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
 
@@ -83,7 +82,7 @@ class StreamStateStore {
 
 	async updateStreamState(
 		streamId: string,
-		chunk: AnalysisStreamChunk,
+		chunk: App.AnalysisStreamChunk,
 		isFinal: boolean = false,
 		refreshExpiration: boolean = true
 	): Promise<void> {
@@ -203,12 +202,15 @@ class StreamStateStore {
 		console.log(`Stream ${streamId}: Stream state cleared from Redis.`);
 	}
 
-	async publishUpdate(streamId: string, chunk: AnalysisStreamChunk): Promise<void> {
+	async publishUpdate(streamId: string, chunk: App.AnalysisStreamChunk): Promise<void> {
 		const channel = this.getChannel(streamId);
 		await this.publisher.publish(channel, JSON.stringify(chunk));
 	}
 
-	subscribeToUpdates(streamId: string, callback: (message: AnalysisStreamChunk) => void): AisRedis {
+	subscribeToUpdates(
+		streamId: string,
+		callback: (message: App.AnalysisStreamChunk) => void
+	): AisRedis {
 		const subscriber = getRedisSubscriber();
 		const channel = this.getChannel(streamId);
 
@@ -224,7 +226,7 @@ class StreamStateStore {
 		subscriber.on('message', (ch, message) => {
 			if (ch === channel) {
 				try {
-					const parsedMessage: AnalysisStreamChunk = JSON.parse(message);
+					const parsedMessage: App.AnalysisStreamChunk = JSON.parse(message);
 					callback(parsedMessage);
 				} catch (e) {
 					console.error(`Failed to parse Pub/Sub message for ${streamId}:`, e);

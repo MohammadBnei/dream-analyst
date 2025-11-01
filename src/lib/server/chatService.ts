@@ -5,7 +5,6 @@ import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
-import type { ChatMessage } from '$lib/types/chat'; // Import the shared ChatMessage interface
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
@@ -35,7 +34,7 @@ class ChatService {
 	 * @param userId The ID of the user.
 	 * @returns An array of ChatMessage.
 	 */
-	async loadChatHistory(dreamId: string, userId: string): Promise<ChatMessage[]> {
+	async loadChatHistory(dreamId: string, userId: string): Promise<App.ChatMessage[]> {
 		if (!this.prisma) {
 			this.prisma = await getPrismaClient();
 		}
@@ -71,7 +70,7 @@ class ChatService {
 		role: 'user' | 'assistant',
 		content: string,
 		promptType?: DreamPromptType
-	): Promise<ChatMessage> {
+	): Promise<App.ChatMessage> {
 		if (!this.prisma) {
 			this.prisma = await getPrismaClient();
 		}
@@ -138,7 +137,7 @@ class ChatService {
 
 		// Deduct credits for chat message
 		const cost = creditService.getCost('CHAT_MESSAGE');
-		let userChatMessage: ChatMessage; // To store the created user message
+		let userChatMessage: App.ChatMessage; // To store the created user message
 
 		try {
 			// Check if user has enough credits before saving message and calling LLM

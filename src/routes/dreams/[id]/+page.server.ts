@@ -215,7 +215,6 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const dreamDate = formData.get('dreamDate');
 
-
 		let validatedData;
 		try {
 			validatedData = v.parse(UpdateDreamDateSchema, { dreamDate });
@@ -238,7 +237,7 @@ export const actions: Actions = {
 			const updatedDream = await prisma.dream.update({
 				where: { id: dreamId },
 				data: {
-					dreamDate: new Date(validatedData.dreamDate as string),
+					dreamDate: new Date(validatedData.dreamDate as string)
 				}
 			});
 			return { success: true, dream: updatedDream };
@@ -321,7 +320,9 @@ export const actions: Actions = {
 			const hasCredits = await creditService.checkCredits(sessionUser.id, cost);
 
 			if (!hasCredits) {
-				return fail(402, { error: 'Insufficient credits for dream analysis or daily limit exceeded.' });
+				return fail(402, {
+					error: 'Insufficient credits for dream analysis or daily limit exceeded.'
+				});
 			}
 
 			const updatedDream = await prisma.dream.update({
@@ -335,14 +336,13 @@ export const actions: Actions = {
 			});
 
 			// Deduct credits for the new analysis
-			await creditService.deductCredits(
-				sessionUser.id,
-				cost,
-				'DREAM_ANALYSIS',
-				updatedDream.id
-			);
+			await creditService.deductCredits(sessionUser.id, cost, 'DREAM_ANALYSIS', updatedDream.id);
 
-			return { success: true, message: 'Dream status reset to PENDING_ANALYSIS.', dream: updatedDream };
+			return {
+				success: true,
+				message: 'Dream status reset to PENDING_ANALYSIS.',
+				dream: updatedDream
+			};
 		} catch (e: any) {
 			console.error(`Failed to reset dream status for ${dreamId}:`, e);
 			return fail(500, { error: 'Failed to reset dream status.' });

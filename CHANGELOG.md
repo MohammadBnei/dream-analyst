@@ -2,10 +2,9 @@
 
 ## [0.21.8](https://github.com/MohammadBnei/dream-analyst/compare/0.21.7...0.21.8) (2025-11-01)
 
-
 ### Bug Fixes
 
-* Make regenerate and prompt type selector responsive ([6761cae](https://github.com/MohammadBnei/dream-analyst/commit/6761cae0ae24add9423d10e65f068f7d6d391e02))
+- Make regenerate and prompt type selector responsive ([6761cae](https://github.com/MohammadBnei/dream-analyst/commit/6761cae0ae24add9423d10e65f068f7d6d391e02))
 
 ## [0.21.7](https://github.com/MohammadBnei/dream-analyst/compare/0.21.6...0.21.7) (2025-11-01)
 
@@ -13,10 +12,9 @@
 
 ## [0.21.5](https://github.com/MohammadBnei/dream-analyst/compare/0.21.4...0.21.5) (2025-11-01)
 
-
 ### Bug Fixes
 
-* Hardcode service worker cache version for static file ([846cc70](https://github.com/MohammadBnei/dream-analyst/commit/846cc70da7e1b2fab4574e21e7acbb51623440cd))
+- Hardcode service worker cache version for static file ([846cc70](https://github.com/MohammadBnei/dream-analyst/commit/846cc70da7e1b2fab4574e21e7acbb51623440cd))
 
 ## [0.21.4](https://github.com/MohammadBnei/dream-analyst/compare/0.21.3...0.21.4) (2025-10-31)
 
@@ -28,25 +26,22 @@
 
 # [0.21.0](https://github.com/MohammadBnei/dream-analyst/compare/0.20.7...0.21.0) (2025-10-31)
 
-
 ### Bug Fixes
 
-* Convert AsyncIterable<string> to ReadableStream<Uint8Array> for stream processing ([fbc0eb6](https://github.com/MohammadBnei/dream-analyst/commit/fbc0eb69503d634f4d51712b289e9e5963cf4cad))
-
+- Convert AsyncIterable<string> to ReadableStream<Uint8Array> for stream processing ([fbc0eb6](https://github.com/MohammadBnei/dream-analyst/commit/fbc0eb69503d634f4d51712b289e9e5963cf4cad))
 
 ### Features
 
-* Add AnalysisStreamChunk type definition ([9182ea6](https://github.com/MohammadBnei/dream-analyst/commit/9182ea6fc43b33bbbe3f0fd24e9cefd60cf41c42))
-* centralize chat logic into new server-side ChatService ([168bb47](https://github.com/MohammadBnei/dream-analyst/commit/168bb476b3ee94b7267fae3c4a180e5cf9d9f5ea))
+- Add AnalysisStreamChunk type definition ([9182ea6](https://github.com/MohammadBnei/dream-analyst/commit/9182ea6fc43b33bbbe3f0fd24e9cefd60cf41c42))
+- centralize chat logic into new server-side ChatService ([168bb47](https://github.com/MohammadBnei/dream-analyst/commit/168bb476b3ee94b7267fae3c4a180e5cf9d9f5ea))
 
 ## [0.20.7](https://github.com/MohammadBnei/dream-analyst/compare/0.20.6...0.20.7) (2025-10-31)
 
 ## [0.20.6](https://github.com/MohammadBnei/dream-analyst/compare/0.20.5...0.20.6) (2025-10-31)
 
-
 ### Bug Fixes
 
-* Wrap DreamHeader in flex container for responsive buttons ([5c18cb2](https://github.com/MohammadBnei/dream-analyst/commit/5c18cb2ca9fafa45a169c4823e3eca9ed7e28389))
+- Wrap DreamHeader in flex container for responsive buttons ([5c18cb2](https://github.com/MohammadBnei/dream-analyst/commit/5c18cb2ca9fafa45a169c4823e3eca9ed7e28389))
 
 ## [0.20.5](https://github.com/MohammadBnei/dream-analyst/compare/0.20.4...0.20.5) (2025-10-31)
 
@@ -60,124 +55,113 @@
 
 # [0.20.0](https://github.com/MohammadBnei/dream-analyst/compare/0.19.0...0.20.0) (2025-10-31)
 
-
 ### Bug Fixes
 
-* Pass resolved values to message formatter in DreamPagination ([49c31a3](https://github.com/MohammadBnei/dream-analyst/commit/49c31a3cae1f276b20d22eac2a49d6c29bdfed1f))
-* Prevent default form submission behavior in search handler ([ca53df6](https://github.com/MohammadBnei/dream-analyst/commit/ca53df62e1ce0f35e84efb64e257711e7eded52c))
-* Refactor service worker to prevent stale content issues ([090f771](https://github.com/MohammadBnei/dream-analyst/commit/090f771b29fd9776fda3ca681ca2662e92756e59))
-* Use 'search' for full-text search in dream queries ([d01b6f9](https://github.com/MohammadBnei/dream-analyst/commit/d01b6f9c18d57b570fb85cbd0056d14516e4de8e))
-
+- Pass resolved values to message formatter in DreamPagination ([49c31a3](https://github.com/MohammadBnei/dream-analyst/commit/49c31a3cae1f276b20d22eac2a49d6c29bdfed1f))
+- Prevent default form submission behavior in search handler ([ca53df6](https://github.com/MohammadBnei/dream-analyst/commit/ca53df62e1ce0f35e84efb64e257711e7eded52c))
+- Refactor service worker to prevent stale content issues ([090f771](https://github.com/MohammadBnei/dream-analyst/commit/090f771b29fd9776fda3ca681ca2662e92756e59))
+- Use 'search' for full-text search in dream queries ([d01b6f9](https://github.com/MohammadBnei/dream-analyst/commit/d01b6f9c18d57b570fb85cbd0056d14516e4de8e))
 
 ### Features
 
-* Add pagination and sorting components to dreams page ([ad3c0f2](https://github.com/MohammadBnei/dream-analyst/commit/ad3c0f2119f6762615805d6ca010bc6dfed66b02))
-* add pagination and sorting to dream list ([ffb70e2](https://github.com/MohammadBnei/dream-analyst/commit/ffb70e2059098a332646370bf1d80be136048592))
-* Add pagination and sorting translations ([627b478](https://github.com/MohammadBnei/dream-analyst/commit/627b478f70de7fd4534cf69ce14f0360e977f563))
-* Add reset search button to dreams page ([d8e4e53](https://github.com/MohammadBnei/dream-analyst/commit/d8e4e537ee55bd01cef366586a51c812a6de96c2))
-* Add reset_search_button translation ([42d8222](https://github.com/MohammadBnei/dream-analyst/commit/42d8222d6f50c636e4c4407b6c94e59cdbc3099a))
-* Add search_dreams_placeholder translation ([d6c2e29](https://github.com/MohammadBnei/dream-analyst/commit/d6c2e29cf320bcafae4b12bc8fd08bc437339710))
-* Display active search query in dreams page search bar ([a7d8737](https://github.com/MohammadBnei/dream-analyst/commit/a7d8737b9dbde64fef497617136fa75854ebc6f9))
-* Display current dream range in pagination ([81fdd0c](https://github.com/MohammadBnei/dream-analyst/commit/81fdd0c108287c9738407d8aadd41814451a0368))
-* Implement dream search functionality ([32331c2](https://github.com/MohammadBnei/dream-analyst/commit/32331c235bf36e9c4d7c617bb567f8cff6ab12d9))
-* Implement dream search functionality ([2610a17](https://github.com/MohammadBnei/dream-analyst/commit/2610a17483397e1818e11ef0baf57b417b6ccf16))
-* implement dream search functionality on main page ([0a925fd](https://github.com/MohammadBnei/dream-analyst/commit/0a925fdf134b75c5ec3b7b16c36ef63ad4c488c4))
-* Implement versioned service worker caching ([08671f6](https://github.com/MohammadBnei/dream-analyst/commit/08671f61a22cfdecf07e1398e42214d4341f7f52))
-* Merge search and sort components into a single flex container ([444b5d5](https://github.com/MohammadBnei/dream-analyst/commit/444b5d5dc69b00cebb4a64fa0a3b7bf204631b33))
-* Refactor DreamCard to use DaisyUI accordion component ([99ea9cd](https://github.com/MohammadBnei/dream-analyst/commit/99ea9cd37ba64c09bbab32d6161411d36df42016))
-* Render dream interpretation as markdown in DreamCard ([513e488](https://github.com/MohammadBnei/dream-analyst/commit/513e4889022af8c072a6f1c0c67d54cb08d1b9a5))
+- Add pagination and sorting components to dreams page ([ad3c0f2](https://github.com/MohammadBnei/dream-analyst/commit/ad3c0f2119f6762615805d6ca010bc6dfed66b02))
+- add pagination and sorting to dream list ([ffb70e2](https://github.com/MohammadBnei/dream-analyst/commit/ffb70e2059098a332646370bf1d80be136048592))
+- Add pagination and sorting translations ([627b478](https://github.com/MohammadBnei/dream-analyst/commit/627b478f70de7fd4534cf69ce14f0360e977f563))
+- Add reset search button to dreams page ([d8e4e53](https://github.com/MohammadBnei/dream-analyst/commit/d8e4e537ee55bd01cef366586a51c812a6de96c2))
+- Add reset_search_button translation ([42d8222](https://github.com/MohammadBnei/dream-analyst/commit/42d8222d6f50c636e4c4407b6c94e59cdbc3099a))
+- Add search_dreams_placeholder translation ([d6c2e29](https://github.com/MohammadBnei/dream-analyst/commit/d6c2e29cf320bcafae4b12bc8fd08bc437339710))
+- Display active search query in dreams page search bar ([a7d8737](https://github.com/MohammadBnei/dream-analyst/commit/a7d8737b9dbde64fef497617136fa75854ebc6f9))
+- Display current dream range in pagination ([81fdd0c](https://github.com/MohammadBnei/dream-analyst/commit/81fdd0c108287c9738407d8aadd41814451a0368))
+- Implement dream search functionality ([32331c2](https://github.com/MohammadBnei/dream-analyst/commit/32331c235bf36e9c4d7c617bb567f8cff6ab12d9))
+- Implement dream search functionality ([2610a17](https://github.com/MohammadBnei/dream-analyst/commit/2610a17483397e1818e11ef0baf57b417b6ccf16))
+- implement dream search functionality on main page ([0a925fd](https://github.com/MohammadBnei/dream-analyst/commit/0a925fdf134b75c5ec3b7b16c36ef63ad4c488c4))
+- Implement versioned service worker caching ([08671f6](https://github.com/MohammadBnei/dream-analyst/commit/08671f61a22cfdecf07e1398e42214d4341f7f52))
+- Merge search and sort components into a single flex container ([444b5d5](https://github.com/MohammadBnei/dream-analyst/commit/444b5d5dc69b00cebb4a64fa0a3b7bf204631b33))
+- Refactor DreamCard to use DaisyUI accordion component ([99ea9cd](https://github.com/MohammadBnei/dream-analyst/commit/99ea9cd37ba64c09bbab32d6161411d36df42016))
+- Render dream interpretation as markdown in DreamCard ([513e488](https://github.com/MohammadBnei/dream-analyst/commit/513e4889022af8c072a6f1c0c67d54cb08d1b9a5))
 
 # [0.19.0](https://github.com/MohammadBnei/dream-analyst/compare/0.18.1...0.19.0) (2025-10-30)
 
-
 ### Bug Fixes
 
-* Allow symbolic interpretation for Hulm dreams after initial advice ([c819c8c](https://github.com/MohammadBnei/dream-analyst/commit/c819c8c4751dc3e8cd229d9053c8e5e45b1c53a5))
-
+- Allow symbolic interpretation for Hulm dreams after initial advice ([c819c8c](https://github.com/MohammadBnei/dream-analyst/commit/c819c8c4751dc3e8cd229d9053c8e5e45b1c53a5))
 
 ### Features
 
-* add Islamic dream analysis prompt and type ([0e9583a](https://github.com/MohammadBnei/dream-analyst/commit/0e9583a0d2db7af526649aded5c22847d502197c))
-* Add Islamic dream interpretation prompt and knowledge integration ([396b2b9](https://github.com/MohammadBnei/dream-analyst/commit/396b2b9dbc1f694287454b39906589f696929b85))
+- add Islamic dream analysis prompt and type ([0e9583a](https://github.com/MohammadBnei/dream-analyst/commit/0e9583a0d2db7af526649aded5c22847d502197c))
+- Add Islamic dream interpretation prompt and knowledge integration ([396b2b9](https://github.com/MohammadBnei/dream-analyst/commit/396b2b9dbc1f694287454b39906589f696929b85))
 
 ## [0.18.1](https://github.com/MohammadBnei/dream-analyst/compare/0.18.0...0.18.1) (2025-10-30)
 
 # [0.18.0](https://github.com/MohammadBnei/dream-analyst/compare/0.17.0...0.18.0) (2025-10-30)
 
-
 ### Features
 
-* Implement promptType selection and persistence for dream analysis ([892828f](https://github.com/MohammadBnei/dream-analyst/commit/892828f846a4e6c348971bc5fc101cd13241cb9d))
+- Implement promptType selection and persistence for dream analysis ([892828f](https://github.com/MohammadBnei/dream-analyst/commit/892828f846a4e6c348971bc5fc101cd13241cb9d))
 
 # [0.17.0](https://github.com/MohammadBnei/dream-analyst/compare/0.16.1...0.17.0) (2025-10-30)
 
-
 ### Bug Fixes
 
-* Adjust dream analysis credit cost to 2 ([a7f6267](https://github.com/MohammadBnei/dream-analyst/commit/a7f6267c9800829ef957fda0016664459a684439))
-
+- Adjust dream analysis credit cost to 2 ([a7f6267](https://github.com/MohammadBnei/dream-analyst/commit/a7f6267c9800829ef957fda0016664459a684439))
 
 ### Features
 
-* Use environment variables for credit costs and daily limits ([9254aae](https://github.com/MohammadBnei/dream-analyst/commit/9254aae3801fa9368060d98e8c5ec2ba01e88a79))
+- Use environment variables for credit costs and daily limits ([9254aae](https://github.com/MohammadBnei/dream-analyst/commit/9254aae3801fa9368060d98e8c5ec2ba01e88a79))
 
 ## [0.16.1](https://github.com/MohammadBnei/dream-analyst/compare/0.16.0...0.16.1) (2025-10-30)
 
 # [0.16.0](https://github.com/MohammadBnei/dream-analyst/compare/0.15.0...0.16.0) (2025-10-30)
 
-
 ### Bug Fixes
 
-* Add fetch call to cancel analysis in closeStream method ([d28bade](https://github.com/MohammadBnei/dream-analyst/commit/d28badeb0005b86399a368497e1f4ead0dc3055b))
-* Implement all messages in profile page ([625d3e3](https://github.com/MohammadBnei/dream-analyst/commit/625d3e37ce93d2f9b5a78c0f3b9256d90515f679))
-* Implement server-side stream cancellation using internal AbortController ([4c5e185](https://github.com/MohammadBnei/dream-analyst/commit/4c5e185824c93fa341a1eee9f4dd3ba8164f02c0))
-* Prevent stream abortion on page navigation, only on explicit user cancel ([42477d3](https://github.com/MohammadBnei/dream-analyst/commit/42477d3c90fcf79421c5f529333d846749f228b5))
-* Remove request.signal from stream processor to prevent premature abortion ([cbbec4d](https://github.com/MohammadBnei/dream-analyst/commit/cbbec4d573ba3c712564a2e03dd62d1f9b7d64de))
-
+- Add fetch call to cancel analysis in closeStream method ([d28bade](https://github.com/MohammadBnei/dream-analyst/commit/d28badeb0005b86399a368497e1f4ead0dc3055b))
+- Implement all messages in profile page ([625d3e3](https://github.com/MohammadBnei/dream-analyst/commit/625d3e37ce93d2f9b5a78c0f3b9256d90515f679))
+- Implement server-side stream cancellation using internal AbortController ([4c5e185](https://github.com/MohammadBnei/dream-analyst/commit/4c5e185824c93fa341a1eee9f4dd3ba8164f02c0))
+- Prevent stream abortion on page navigation, only on explicit user cancel ([42477d3](https://github.com/MohammadBnei/dream-analyst/commit/42477d3c90fcf79421c5f529333d846749f228b5))
+- Remove request.signal from stream processor to prevent premature abortion ([cbbec4d](https://github.com/MohammadBnei/dream-analyst/commit/cbbec4d573ba3c712564a2e03dd62d1f9b7d64de))
 
 ### Features
 
-* Add admin dashboard and action labels to translations ([e517eed](https://github.com/MohammadBnei/dream-analyst/commit/e517eed0b633a9cc42e2c9c089a7a9b39e938b41))
-* Add adminId and notes to CreditTransaction model ([d6d0ab7](https://github.com/MohammadBnei/dream-analyst/commit/d6d0ab71075b4a6953bcb0931a7fb8b03a629edf))
-* Add adminId and reason to admin credit grant/deduct methods ([b393d31](https://github.com/MohammadBnei/dream-analyst/commit/b393d31876ba9e37a09adba39953598a36fb95a0))
-* Add chat service for server-side operations ([178b46c](https://github.com/MohammadBnei/dream-analyst/commit/178b46cae45af9ea0b30c6038cb226e0f876c6c1))
-* Add CreditTransaction model and link to User and Dream models ([4aa71fe](https://github.com/MohammadBnei/dream-analyst/commit/4aa71fe3fc4cad502644c354e682f6f35320dca3))
-* add profile and account details translations ([2a1908e](https://github.com/MohammadBnei/dream-analyst/commit/2a1908ef4840f76d44b3e4d88c79efea4dff6f1b))
-* Add profile and admin link translation keys ([7cb3ca5](https://github.com/MohammadBnei/dream-analyst/commit/7cb3ca5270ca7e5321fddfe62fa850779544df67))
-* Add submit button translation ([3daea7c](https://github.com/MohammadBnei/dream-analyst/commit/3daea7cdbba79cd2f634067d1f72b54104ccd696))
-* Implement admin dashboard and refactor profile page with $state/$effect ([a45a602](https://github.com/MohammadBnei/dream-analyst/commit/a45a60209c037bd68cca107d206fb3ebfdf3e30e))
-* Implement adminGrantCredits and adminDeductCredits methods ([cc00e40](https://github.com/MohammadBnei/dream-analyst/commit/cc00e40096d0113a89eb0e4db12c65173944f4ed))
-* Implement chat message cancellation functionality ([13ffe20](https://github.com/MohammadBnei/dream-analyst/commit/13ffe202ac5e5e0b9233b255c5375c28ffb480de))
-* Implement credit deduction for dream analysis and chat messages ([d74efc2](https://github.com/MohammadBnei/dream-analyst/commit/d74efc2322ce122bd901a4b97d1382b66d32be98))
-* Implement credit system with user roles and daily limits ([d3697fd](https://github.com/MohammadBnei/dream-analyst/commit/d3697fde7bf375728eced880b72013fc8fb2906b))
-* Implement user profile page with edit functionality ([b191c36](https://github.com/MohammadBnei/dream-analyst/commit/b191c36cd6a6575a6d9bfdecff133c7548424b43))
+- Add admin dashboard and action labels to translations ([e517eed](https://github.com/MohammadBnei/dream-analyst/commit/e517eed0b633a9cc42e2c9c089a7a9b39e938b41))
+- Add adminId and notes to CreditTransaction model ([d6d0ab7](https://github.com/MohammadBnei/dream-analyst/commit/d6d0ab71075b4a6953bcb0931a7fb8b03a629edf))
+- Add adminId and reason to admin credit grant/deduct methods ([b393d31](https://github.com/MohammadBnei/dream-analyst/commit/b393d31876ba9e37a09adba39953598a36fb95a0))
+- Add chat service for server-side operations ([178b46c](https://github.com/MohammadBnei/dream-analyst/commit/178b46cae45af9ea0b30c6038cb226e0f876c6c1))
+- Add CreditTransaction model and link to User and Dream models ([4aa71fe](https://github.com/MohammadBnei/dream-analyst/commit/4aa71fe3fc4cad502644c354e682f6f35320dca3))
+- add profile and account details translations ([2a1908e](https://github.com/MohammadBnei/dream-analyst/commit/2a1908ef4840f76d44b3e4d88c79efea4dff6f1b))
+- Add profile and admin link translation keys ([7cb3ca5](https://github.com/MohammadBnei/dream-analyst/commit/7cb3ca5270ca7e5321fddfe62fa850779544df67))
+- Add submit button translation ([3daea7c](https://github.com/MohammadBnei/dream-analyst/commit/3daea7cdbba79cd2f634067d1f72b54104ccd696))
+- Implement admin dashboard and refactor profile page with $state/$effect ([a45a602](https://github.com/MohammadBnei/dream-analyst/commit/a45a60209c037bd68cca107d206fb3ebfdf3e30e))
+- Implement adminGrantCredits and adminDeductCredits methods ([cc00e40](https://github.com/MohammadBnei/dream-analyst/commit/cc00e40096d0113a89eb0e4db12c65173944f4ed))
+- Implement chat message cancellation functionality ([13ffe20](https://github.com/MohammadBnei/dream-analyst/commit/13ffe202ac5e5e0b9233b255c5375c28ffb480de))
+- Implement credit deduction for dream analysis and chat messages ([d74efc2](https://github.com/MohammadBnei/dream-analyst/commit/d74efc2322ce122bd901a4b97d1382b66d32be98))
+- Implement credit system with user roles and daily limits ([d3697fd](https://github.com/MohammadBnei/dream-analyst/commit/d3697fde7bf375728eced880b72013fc8fb2906b))
+- Implement user profile page with edit functionality ([b191c36](https://github.com/MohammadBnei/dream-analyst/commit/b191c36cd6a6575a6d9bfdecff133c7548424b43))
 
 # [0.15.0](https://github.com/MohammadBnei/dream-analyst/compare/0.14.3...0.15.0) (2025-10-30)
 
-
 ### Bug Fixes
 
-* Correctly call deleteMessage in deleteChatMessage function ([4bed0c4](https://github.com/MohammadBnei/dream-analyst/commit/4bed0c4942b694e159a9174a59e36fb287138681))
-* Use App.ChatMessage type and implement delete message functionality ([2d603e3](https://github.com/MohammadBnei/dream-analyst/commit/2d603e39fd6ecb87014021544366a9b5e398152b))
-* Use ORIGIN environment variable for OpenRouter site URL ([a7716a9](https://github.com/MohammadBnei/dream-analyst/commit/a7716a9a3705553c2d85acc7fe11b6bfbc2428a2))
-
+- Correctly call deleteMessage in deleteChatMessage function ([4bed0c4](https://github.com/MohammadBnei/dream-analyst/commit/4bed0c4942b694e159a9174a59e36fb287138681))
+- Use App.ChatMessage type and implement delete message functionality ([2d603e3](https://github.com/MohammadBnei/dream-analyst/commit/2d603e39fd6ecb87014021544366a9b5e398152b))
+- Use ORIGIN environment variable for OpenRouter site URL ([a7716a9](https://github.com/MohammadBnei/dream-analyst/commit/a7716a9a3705553c2d85acc7fe11b6bfbc2428a2))
 
 ### Features
 
-* add 'type_your_message_placeholder' translation ([4c0d3e4](https://github.com/MohammadBnei/dream-analyst/commit/4c0d3e493dfbb1b7ad0b61a6e2434c55706f0f3b))
-* Add API endpoint for dream chat interpretation ([1090425](https://github.com/MohammadBnei/dream-analyst/commit/10904256ffde422177697dd2e9984f335ebdbc41))
-* Add chat interface and interpretation editing to dream details page ([ff8123c](https://github.com/MohammadBnei/dream-analyst/commit/ff8123c80f0a886160ebc62ac54c9c119418cde3))
-* Add chat_with_ai_heading translation ([5baa946](https://github.com/MohammadBnei/dream-analyst/commit/5baa946e920b03e0332accc7504a7858e347f372))
-* Add confirm delete chat message translation ([c32b470](https://github.com/MohammadBnei/dream-analyst/commit/c32b470cbd50b6cf37c5894c612a0649db0d305e))
-* Add delete chat message button translation ([8ce3042](https://github.com/MohammadBnei/dream-analyst/commit/8ce304295e80fc6e8cd4f1f078020db866cb414b))
-* Add multiple dream analysis prompt types and selection logic ([be11ee1](https://github.com/MohammadBnei/dream-analyst/commit/be11ee150b13ed103fe46ba71955f6eaa4b781f4))
-* Add send button translation ([92c7db7](https://github.com/MohammadBnei/dream-analyst/commit/92c7db7ed2b1a5812217079e6aa2770207f952e1))
-* Add Streamdown component for chat message animation ([9e1b971](https://github.com/MohammadBnei/dream-analyst/commit/9e1b971d96623a11d0ff7506f55435cb8025d6ff))
-* Allow users to select interpretation type and enable AI chat ([8471ea3](https://github.com/MohammadBnei/dream-analyst/commit/8471ea33f93362c187c84fc048bba1c69ebc218d))
-* Implement chat message deletion functionality ([55cde64](https://github.com/MohammadBnei/dream-analyst/commit/55cde64c205670af2583e07458fdeb53bbba71f4))
-* Implement persistent chat history using Prisma `DreamChat` model ([60e16c9](https://github.com/MohammadBnei/dream-analyst/commit/60e16c9f2d9a230c84e2a0c399a50d165d739561))
-* Implement server-side chat service for dream interpretation ([ebf61a6](https://github.com/MohammadBnei/dream-analyst/commit/ebf61a600b6717610851209ebf8828d7959656f3))
-* Replace n8n dream analysis with LangChain and OpenRouter service ([d3cf203](https://github.com/MohammadBnei/dream-analyst/commit/d3cf20397e967526b03e495e3ad3288ba58d28ee))
+- add 'type_your_message_placeholder' translation ([4c0d3e4](https://github.com/MohammadBnei/dream-analyst/commit/4c0d3e493dfbb1b7ad0b61a6e2434c55706f0f3b))
+- Add API endpoint for dream chat interpretation ([1090425](https://github.com/MohammadBnei/dream-analyst/commit/10904256ffde422177697dd2e9984f335ebdbc41))
+- Add chat interface and interpretation editing to dream details page ([ff8123c](https://github.com/MohammadBnei/dream-analyst/commit/ff8123c80f0a886160ebc62ac54c9c119418cde3))
+- Add chat_with_ai_heading translation ([5baa946](https://github.com/MohammadBnei/dream-analyst/commit/5baa946e920b03e0332accc7504a7858e347f372))
+- Add confirm delete chat message translation ([c32b470](https://github.com/MohammadBnei/dream-analyst/commit/c32b470cbd50b6cf37c5894c612a0649db0d305e))
+- Add delete chat message button translation ([8ce3042](https://github.com/MohammadBnei/dream-analyst/commit/8ce304295e80fc6e8cd4f1f078020db866cb414b))
+- Add multiple dream analysis prompt types and selection logic ([be11ee1](https://github.com/MohammadBnei/dream-analyst/commit/be11ee150b13ed103fe46ba71955f6eaa4b781f4))
+- Add send button translation ([92c7db7](https://github.com/MohammadBnei/dream-analyst/commit/92c7db7ed2b1a5812217079e6aa2770207f952e1))
+- Add Streamdown component for chat message animation ([9e1b971](https://github.com/MohammadBnei/dream-analyst/commit/9e1b971d96623a11d0ff7506f55435cb8025d6ff))
+- Allow users to select interpretation type and enable AI chat ([8471ea3](https://github.com/MohammadBnei/dream-analyst/commit/8471ea33f93362c187c84fc048bba1c69ebc218d))
+- Implement chat message deletion functionality ([55cde64](https://github.com/MohammadBnei/dream-analyst/commit/55cde64c205670af2583e07458fdeb53bbba71f4))
+- Implement persistent chat history using Prisma `DreamChat` model ([60e16c9](https://github.com/MohammadBnei/dream-analyst/commit/60e16c9f2d9a230c84e2a0c399a50d165d739561))
+- Implement server-side chat service for dream interpretation ([ebf61a6](https://github.com/MohammadBnei/dream-analyst/commit/ebf61a600b6717610851209ebf8828d7959656f3))
+- Replace n8n dream analysis with LangChain and OpenRouter service ([d3cf203](https://github.com/MohammadBnei/dream-analyst/commit/d3cf20397e967526b03e495e3ad3288ba58d28ee))
 
 ## [0.14.3](https://github.com/MohammadBnei/dream-analyst/compare/0.14.2...0.14.3) (2025-10-30)
 

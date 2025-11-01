@@ -3,7 +3,6 @@ import { env } from '$env/dynamic/private';
 // Removed N8N_WEBHOOK_URL and N8N_AUTH as they are no longer used for analysis streaming
 const N8N_AUDIO_TRANSCRIBE_URL = env.N8N_AUDIO_TRANSCRIBE_URL; // New environment variable for audio transcription
 
-// Removed AnalysisStreamChunk interface as it's now defined in langchainService.ts or a shared type file.
 // If Dream['status'] is still needed for audio transcription, keep the import.
 
 // Removed initiateStreamedDreamAnalysis function

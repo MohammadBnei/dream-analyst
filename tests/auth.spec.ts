@@ -24,7 +24,9 @@ test.describe('Authentication Flows', () => {
 		// 4. Expect redirection to login page after successful registration
 		await page.waitForURL(/login/);
 		await expect(page.locator('h1')).toHaveText('Login');
-		await expect(page.locator('.alert-success')).toContainText('Registration successful! Please log in.');
+		await expect(page.locator('.alert-success')).toContainText(
+			'Registration successful! Please log in.'
+		);
 
 		// 5. Log in with the newly registered user
 		await page.fill('input[name="identity"]', testEmail);
@@ -65,7 +67,9 @@ test.describe('Authentication Flows', () => {
 		await expect(page.locator('.alert-error')).toBeVisible(); // Assuming a general error message for missing fields
 	});
 
-	test('should display an error if passwords do not match during registration', async ({ page }) => {
+	test('should display an error if passwords do not match during registration', async ({
+		page
+	}) => {
 		await page.goto('/register');
 		await expect(page).toHaveURL(/register/);
 

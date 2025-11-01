@@ -4,13 +4,10 @@ import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { DreamPromptType } from '../prompts/dreamAnalyst'; // Import the type
 import { promptService } from '$lib/prompts/promptService';
-// Removed: import type { AnalysisStreamChunk } from '$lib/types/analysis'; // Now imported from shared types
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2'; // Default model
 const YOUR_SITE_URL = env.ORIGIN; // Optional, for OpenRouter rankings
-
-// Removed: AnalysisStreamChunk definition is now in src/lib/types/analysis.d.ts
 
 /**
  * Initiates a raw streamed dream analysis from the LLM.
@@ -47,7 +44,10 @@ export async function initiateRawStreamedDreamAnalysis(
 
 		// Use the PromptService to get the system prompt, which now handles Jungian knowledge
 		const systemPrompt = promptService.getSystemPrompt(promptType);
-		const messages = [new SystemMessage(systemPrompt), new HumanMessage(`My dream: ${dream.rawText}`)];
+		const messages = [
+			new SystemMessage(systemPrompt),
+			new HumanMessage(`My dream: ${dream.rawText}`)
+		];
 
 		const stream = await chat.stream(messages, {
 			signal: signal // Pass the abort signal directly to the stream method
