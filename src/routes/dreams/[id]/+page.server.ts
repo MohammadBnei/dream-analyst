@@ -215,6 +215,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const dreamDate = formData.get('dreamDate');
 
+
 		let validatedData;
 		try {
 			validatedData = v.parse(UpdateDreamDateSchema, { dreamDate });
@@ -238,7 +239,6 @@ export const actions: Actions = {
 				where: { id: dreamId },
 				data: {
 					dreamDate: new Date(validatedData.dreamDate as string),
-					updatedAt: new Date()
 				}
 			});
 			return { success: true, dream: updatedDream };

@@ -2,6 +2,7 @@
 
 import type { Dream, DreamChat } from '@prisma/client';
 import type { ChatMessage } from '$lib/types/chat'; // Import the shared ChatMessage interface
+import type { Dream as IDream } from '@prisma/client'
 
 // for information about these interfaces
 declare global {
@@ -19,6 +20,8 @@ declare global {
 		// interface Error {}
 		// interface PageData {}
 		// interface Platform {}
+
+		interface Dream extends IDream {}
 
 		// Remove the redundant ChatMessage declaration here
 		// interface ChatMessage extends DreamChat {}
