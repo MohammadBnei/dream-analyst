@@ -95,54 +95,56 @@
 					{m.edit_button()}
 				</button>
 			{/if}
-			<!-- Prompt Type Selector -->
-			<select
-				class="select-bordered select select-sm"
-				bind:value={selectedPromptType}
-				onchange={handlePromptTypeChange}
-				disabled={isLoadingStream}
-			>
-				{#each availablePromptTypes as type}
-					<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
-				{/each}
-			</select>
-
-			{#if status === 'COMPLETED' || status === 'ANALYSIS_FAILED'}
-				<form
-					method="POST"
-					action="?/resetAnalysis"
-					use:enhance={() => {
-						// Optimistically set loading state and clear previous data
-						isLoadingStream = true;
-						return handleRegenerateSubmit;
-					}}
+			<div class="join join-vertical lg:join-horizontal">
+				<!-- Prompt Type Selector -->
+				<select
+					class="select-bordered select select-sm join-item"
+					bind:value={selectedPromptType}
+					onchange={handlePromptTypeChange}
+					disabled={isLoadingStream}
 				>
-					<!-- Hidden input to send selectedPromptType to the server action -->
-					<input type="hidden" name="promptType" value={selectedPromptType} />
-					<button type="submit" class="btn btn-sm btn-primary" disabled={isLoadingStream}>
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="mr-1 h-4 w-4"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke="currentColor"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
-							/>
-						</svg>
-						{m.regenerate_analysis_button()}
+					{#each availablePromptTypes as type}
+						<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+					{/each}
+				</select>
+
+				{#if status === 'COMPLETED' || status === 'ANALYSIS_FAILED'}
+					<form
+						method="POST"
+						action="?/resetAnalysis"
+						use:enhance={() => {
+							// Optimistically set loading state and clear previous data
+							isLoadingStream = true;
+							return handleRegenerateSubmit;
+						}}
+					>
+						<!-- Hidden input to send selectedPromptType to the server action -->
+						<input type="hidden" name="promptType" value={selectedPromptType} />
+						<button type="submit" class="btn btn-sm btn-primary join-item" disabled={isLoadingStream}>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								class="mr-1 h-4 w-4"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
+								/>
+							</svg>
+							{m.regenerate_analysis_button()}
+						</button>
+					</form>
+				{:else if status === 'PENDING_ANALYSIS' && isLoadingStream}
+					<button onclick={onCancelAnalysis} class="btn btn-sm btn-warning join-item">
+						<span class="loading loading-spinner"></span>
+						{m.cancel_analysis_button()}
 					</button>
-				</form>
-			{:else if status === 'PENDING_ANALYSIS' && isLoadingStream}
-				<button onclick={onCancelAnalysis} class="btn btn-sm btn-warning">
-					<span class="loading loading-spinner"></span>
-					{m.cancel_analysis_button()}
-				</button>
-			{/if}
+				{/if}
+			</div>
 		</div>
 	</div>
 
