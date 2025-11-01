@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.5](https://github.com/MohammadBnei/dream-analyst/compare/0.21.4...0.21.5) (2025-11-01)
+
+
+### Bug Fixes
+
+* Hardcode service worker cache version for static file ([846cc70](https://github.com/MohammadBnei/dream-analyst/commit/846cc70da7e1b2fab4574e21e7acbb51623440cd))
+
 ## [0.21.4](https://github.com/MohammadBnei/dream-analyst/compare/0.21.3...0.21.4) (2025-10-31)
 
 ## [0.21.3](https://github.com/MohammadBnei/dream-analyst/compare/0.21.2...0.21.3) (2025-10-31)
