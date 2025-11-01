@@ -10,7 +10,7 @@
 	let userRoles = $derived(data.userRoles);
 
 	let formMessage = $derived<string | null>(null);
-	let formMessageType: 'success' | 'error' | null = null;
+	let formMessageType: 'success' | 'error' | null = $state(null);
 
 	// State for credit adjustment forms
 	let creditAmount: { [key: string]: number } = $state({});

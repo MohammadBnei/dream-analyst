@@ -6,15 +6,13 @@ import { z } from 'zod';
 
 // Zod schema for updating user role
 const UpdateUserRoleSchema = z.object({
-	userId: z.string().uuid('Invalid user ID.'),
-	role: z.enum(UserRole, {
-		errorMap: () => ({ message: 'Invalid user role.' })
-	})
+	userId: z.uuid('Invalid user ID.'),
+	role: z.string()
 });
 
 // Zod schema for updating user credits
 const UpdateUserCreditsSchema = z.object({
-	userId: z.string().uuid('Invalid user ID.'),
+	userId: z.uuid('Invalid user ID.'),
 	amount: z.number().int('Amount must be an integer.').min(1, 'Amount must be at least 1.'),
 	action: z.enum(['grant', 'deduct'], {
 		errorMap: () => ({ message: 'Invalid credit action.' })
@@ -84,11 +82,12 @@ export const actions = {
 
 			return {
 				success: true,
+				userId: validatedData.userId,
 				message: `User ${validatedData.userId} role updated to ${validatedData.role}.`
 			};
 		} catch (e) {
 			if (e instanceof z.ZodError) {
-				return fail(400, { message: e.errors[0].message });
+				return fail(400, { message: e.message });
 			}
 			console.error('Error updating user role:', e);
 			return fail(500, { message: 'Failed to update user role.' });
@@ -127,11 +126,12 @@ export const actions = {
 
 			return {
 				success: true,
-				message: `User ${validatedData.userId} credits ${validatedData.action}ed by ${validatedData.amount}. New balance: ${newCredits}.`
+				message: `User ${validatedData.userId} credits ${validatedData.action}ed by ${validatedData.amount}. New balance: ${newCredits}.`,
+				userId: validatedData.userId
 			};
 		} catch (e) {
 			if (e instanceof z.ZodError) {
-				return fail(400, { message: e.errors[0].message });
+				return fail(400, { message: e.message });
 			}
 			console.error('Error updating user credits:', e);
 			return fail(500, { message: `Failed to ${action} credits: ${(e as Error).message}` });
