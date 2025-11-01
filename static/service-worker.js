@@ -1,6 +1,6 @@
-// CACHE_NAME will now include the app version from package.json
-// The APP_VERSION variable is injected during the build process via Vite's define option.
-const CACHE_NAME = `dream-journal-ai-cache-v${process.env.APP_VERSION}`;
+// CACHE_NAME will now include the app version.
+// Since this is a static file, APP_VERSION needs to be manually updated or injected via a build step that processes static files.
+const CACHE_NAME = `dream-journal-ai-cache-v1.0.0`; // Hardcoded version for static file
 const urlsToCache = [
     '/manifest.json',
     '/icon-192x192.png',
