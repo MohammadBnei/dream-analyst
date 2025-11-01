@@ -24,8 +24,17 @@ async function globalSetup(config: FullConfig) {
 	// Navigate to the login page
 	await page.goto(`${baseURL}/login`);
 
+	// Check if already logged in (e.g., by checking for the dreams page)
+	const currentUrl = page.url();
+	if (currentUrl.includes('/dreams')) {
+		console.log('Already logged in, skipping global setup login.');
+		await page.context().storageState({ path: storageState as string });
+		await browser.close();
+		return;
+	}
+
 	// Fill in the login form
-	await page.fill('input[name="email"]', process.env.E2E_TEST_USERNAME || 'test@example.com');
+	await page.fill('input[name="identity"]', process.env.E2E_TEST_USERNAME || 'test@example.com');
 	await page.fill('input[name="password"]', process.env.E2E_TEST_PASSWORD || 'password');
 
 	// Click the login button
