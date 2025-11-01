@@ -69,7 +69,6 @@
 			onRegenerateAnalysis(selectedPromptType);
 		}
 	}
-
 </script>
 
 <div class="mb-6">
@@ -95,10 +94,10 @@
 					{m.edit_button()}
 				</button>
 			{/if}
-			<div class="join join-vertical lg:join-horizontal">
+			<div class="join-vertical join lg:join-horizontal">
 				<!-- Prompt Type Selector -->
 				<select
-					class="select-bordered select select-sm join-item"
+					class="select-bordered select join-item select-sm"
 					bind:value={selectedPromptType}
 					onchange={handlePromptTypeChange}
 					disabled={isLoadingStream}
@@ -120,7 +119,11 @@
 					>
 						<!-- Hidden input to send selectedPromptType to the server action -->
 						<input type="hidden" name="promptType" value={selectedPromptType} />
-						<button type="submit" class="btn btn-sm btn-primary join-item" disabled={isLoadingStream}>
+						<button
+							type="submit"
+							class="btn join-item btn-sm btn-primary"
+							disabled={isLoadingStream}
+						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								class="mr-1 h-4 w-4"
@@ -139,7 +142,7 @@
 						</button>
 					</form>
 				{:else if status === 'PENDING_ANALYSIS' && isLoadingStream}
-					<button onclick={onCancelAnalysis} class="btn btn-sm btn-warning join-item">
+					<button onclick={onCancelAnalysis} class="btn join-item btn-sm btn-warning">
 						<span class="loading loading-spinner"></span>
 						{m.cancel_analysis_button()}
 					</button>
@@ -149,7 +152,11 @@
 	</div>
 
 	{#if isEditingInterpretation}
-		<form method="POST" action="?/updateInterpretation" use:enhance={() => handleInterpretationSubmit}>
+		<form
+			method="POST"
+			action="?/updateInterpretation"
+			use:enhance={() => handleInterpretationSubmit}
+		>
 			<RichTextInput
 				name="interpretation"
 				placeholder={m.interpretation_heading()}
