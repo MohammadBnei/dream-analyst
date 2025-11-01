@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.21.8](https://github.com/MohammadBnei/dream-analyst/compare/0.21.7...0.21.8) (2025-11-01)
+
+
+### Bug Fixes
+
+* Make regenerate and prompt type selector responsive ([6761cae](https://github.com/MohammadBnei/dream-analyst/commit/6761cae0ae24add9423d10e65f068f7d6d391e02))
+
 ## [0.21.7](https://github.com/MohammadBnei/dream-analyst/compare/0.21.6...0.21.7) (2025-11-01)
 
 ## [0.21.6](https://github.com/MohammadBnei/dream-analyst/compare/0.21.5...0.21.6) (2025-11-01)
