@@ -5,6 +5,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { error } from '@sveltejs/kit';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
+// Removed initiateTextToSpeech as it's no longer used directly in this action
 
 // Schemas for validation
 const UpdateDreamSchema = v.object({

@@ -20,6 +20,7 @@ enum UserRole {
 
 // New CreditActionType enum
 enum CreditActionType {
+  DREAM_ANALYSIS_TTS
   DREAM_ANALYSIS
   CHAT_MESSAGE
   DAILY_GRANT

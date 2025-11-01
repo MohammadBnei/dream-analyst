@@ -2,6 +2,7 @@ import { env } from '$env/dynamic/private';
 
 // Removed N8N_WEBHOOK_URL and N8N_AUTH as they are no longer used for analysis streaming
 const N8N_AUDIO_TRANSCRIBE_URL = env.N8N_AUDIO_TRANSCRIBE_URL; // New environment variable for audio transcription
+const N8N_TTS_URL = env.N8N_TTS_URL; // New environment variable for Text-to-Speech
 
 // Removed AnalysisStreamChunk interface as it's now defined in langchainService.ts or a shared type file.
 // If Dream['status'] is still needed for audio transcription, keep the import.
@@ -54,5 +55,46 @@ export async function initiateAudioTranscription(
 	} catch (error) {
 		console.error('Error initiating n8n audio transcription:', error);
 		throw new Error(`Failed to initiate audio transcription service: ${(error as Error).message}`);
+	}
+}
+
+export async function initiateTextToSpeech(
+	text: string,
+	signal?: AbortSignal
+): Promise<ReadableStream<Uint8Array>> {
+	if (!N8N_TTS_URL) {
+		throw new Error('N8N_TTS_URL is not defined');
+	}
+
+	const headers: HeadersInit = {
+		'Content-Type': 'application/json'
+	};
+	if (env.N8N_AUTH) {
+		headers['N8N_AUTH'] = env.N8N_AUTH;
+	}
+
+	try {
+		const response = await fetch(N8N_TTS_URL, {
+			method: 'POST',
+			headers,
+			body: JSON.stringify({ text }),
+			signal
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			console.error(`n8n text-to-speech call failed: ${response.status} - ${errorText}`);
+			throw new Error(`Failed to generate speech: ${response.statusText} - ${errorText}`);
+		}
+
+		if (!response.body) {
+			throw new Error('No response body received from TTS service.');
+		}
+
+		// Return the ReadableStream directly
+		return response.body;
+	} catch (error) {
+		console.error('Error initiating n8n text-to-speech:', error);
+		throw new Error(`Failed to initiate text-to-speech service: ${(error as Error).message}`);
 	}
 }

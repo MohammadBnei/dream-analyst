@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "CreditActionType" ADD VALUE 'DREAM_ANALYSIS_TTS';

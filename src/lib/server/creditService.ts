@@ -6,7 +6,8 @@ import { env } from '$env/dynamic/private'; // Import env
 // Define credit costs and daily limits per role
 const CREDIT_COSTS = {
     DREAM_ANALYSIS: parseInt(env.CREDIT_COST_DREAM_ANALYSIS || '2', 10), // Cost for one dream analysis
-    CHAT_MESSAGE: parseInt(env.CREDIT_COST_CHAT_MESSAGE || '1', 10) // Cost for one AI chat message
+    CHAT_MESSAGE: parseInt(env.CREDIT_COST_CHAT_MESSAGE || '1', 10), // Cost for one AI chat message
+    DREAM_ANALYSIS_TTS: parseInt(env.CREDIT_COST_DREAM_ANALYSIS_TTS || '1', 10)
 };
 
 const DAILY_CREDIT_LIMITS: Record<UserRole, number> = {
@@ -36,7 +37,7 @@ class CreditService {
     async deductCredits(
         userId: string,
         amount: number,
-        actionType: 'DREAM_ANALYSIS' | 'CHAT_MESSAGE',
+        actionType: keyof typeof CREDIT_COSTS,
         relatedId?: string
     ): Promise<number> {
         if (!this.prisma) {
@@ -91,9 +92,9 @@ class CreditService {
                 await tx.creditTransaction.create({
                     data: {
                         userId: userId,
-                        amount: -amount, // Store as negative for deduction
+                        amount: -amount,
                         actionType: actionType,
-                        relatedDreamId: actionType === 'DREAM_ANALYSIS' ? relatedId : undefined,
+                        relatedDreamId: ['DREAM_ANALYSIS', 'DREAM_ANALYSIS_TTS'].includes(actionType) ? relatedId : undefined,
                         relatedChatMessageId: actionType === 'CHAT_MESSAGE' ? relatedId : undefined
                     }
                 });
@@ -379,7 +380,7 @@ class CreditService {
      * @param actionType The type of action.
      * @returns The credit cost.
      */
-    getCost(actionType: 'DREAM_ANALYSIS' | 'CHAT_MESSAGE'): number {
+    getCost(actionType: keyof typeof CREDIT_COSTS): number {
         return CREDIT_COSTS[actionType];
     }
 

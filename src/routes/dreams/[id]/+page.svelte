@@ -29,6 +29,7 @@
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
+	let isDownloadingAudio = $state(false); // New state for audio download
 
 	let analysisService: DreamAnalysisService | null = $state(null);
 	let clientChatService: ClientChatService | null = $state(null);
@@ -71,6 +72,12 @@
 				streamError = form.error; // General stream error
 			}
 			isLoadingStream = false;
+		}
+		// Handle audio download specific errors
+		if (form?.downloadError) {
+			console.error('Audio download error:', form.downloadError);
+			alert(`Failed to download audio: ${form.downloadError}`);
+			isDownloadingAudio = false;
 		}
 	});
 
@@ -170,11 +177,13 @@
 				<DreamRawTextSection rawText={dream.rawText} onUpdate={handleDreamUpdate} />
 
 				<DreamInterpretationSection
+					dreamId={dream.id}
 					interpretation={streamedInterpretation}
 					tags={streamedTags}
 					status={dream.status}
 					promptType={selectedPromptType}
 					bind:isLoadingStream
+					bind:isDownloadingAudio
 					{streamError}
 					onRegenerateAnalysis={startStream}
 					onCancelAnalysis={handleCancelAnalysis}
