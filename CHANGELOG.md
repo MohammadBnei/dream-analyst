@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.22.1](https://github.com/MohammadBnei/dream-analyst/compare/0.22.0...0.22.1) (2025-11-02)
+
+
+### Bug Fixes
+
+* streamdown animation on the dreams page ([20780ac](https://github.com/MohammadBnei/dream-analyst/commit/20780acb9e244b20da57b381c95676c8d4689387))
+
 # [0.22.0](https://github.com/MohammadBnei/dream-analyst/compare/0.21.8...0.22.0) (2025-11-01)
 
 
