@@ -22,7 +22,7 @@
 		>
 	</div>
 	<div class="collapse-content">
-		<p class="mb-4 text-sm text-base-content/80">
+		<p class="mb-4 text-base-content/80">
 			{dream.rawText}
 		</p>
 
@@ -34,11 +34,7 @@
 			</div>
 		{/if}
 
-		{#if dream.interpretation}
-			<div class="prose max-w-none text-sm text-base-content/70 italic">
-				<Streamdown content={dream.interpretation} animation={{ enabled: false }} />
-			</div>
-		{:else if dream.status === 'PENDING_ANALYSIS'}
+		{#if dream.status === 'PENDING_ANALYSIS'}
 			<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
 		{:else if dream.status === 'ANALYSIS_FAILED'}
 			<p class="text-sm text-error italic">{m.ANALYSIS_FAILED_try_again_message()}</p>
