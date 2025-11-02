@@ -36,7 +36,7 @@
 
 		{#if dream.interpretation}
 			<div class="prose max-w-none text-sm text-base-content/70 italic">
-				<Streamdown content={dream.interpretation} />
+				<Streamdown content={dream.interpretation} animation={{ enabled: false }} />
 			</div>
 		{:else if dream.status === 'PENDING_ANALYSIS'}
 			<p class="text-sm text-info italic">{m.analysis_pending_message()}</p>
