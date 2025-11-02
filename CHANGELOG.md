@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.22.0](https://github.com/MohammadBnei/dream-analyst/compare/0.21.8...0.22.0) (2025-11-01)
+
+
+### Features
+
+* Add Playwright E2E testing setup and example tests ([dd9d935](https://github.com/MohammadBnei/dream-analyst/commit/dd9d9351aa14d2bf46c0e46f201bd4f9f2f2f792))
+
 ## [0.21.8](https://github.com/MohammadBnei/dream-analyst/compare/0.21.7...0.21.8) (2025-11-01)
 
 ### Bug Fixes
