@@ -2,16 +2,12 @@
 	import * as m from '$lib/paraglide/messages';
 
 	let { dreamStatus, onDeleteClick } = $props();
-
-	function handleBackClick() {
-		history.back(); // Use history.back() for a more natural navigation experience
-	}
 </script>
 
 <div class="mb-6 flex w-full flex-col items-center justify-between">
 	<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
 	<div class="mt-2 flex w-full justify-between">
-		<button onclick={handleBackClick} class="btn btn-ghost">
+		<a href="/dreams" class="btn btn-ghost">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				class="h-5 w-5"
@@ -22,7 +18,7 @@
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
 			</svg>
 			{m.back_to_dreams_button()}
-		</button>
+		</a>
 		<div class="w-24 text-right">
 			<button
 				onclick={onDeleteClick}

@@ -55,7 +55,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		prisma.dream.findMany({
 			where: whereClause,
 			orderBy: {
-				createdAt: sortOrder
+				dreamDate: sortOrder
 			},
 			skip,
 			take
