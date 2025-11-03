@@ -1,22 +1,27 @@
-# sv
+# Dream Analyst App
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Welcome to the Dream Analyst App! This SvelteKit application is designed to help users capture, analyze, and understand their dreams using advanced AI.
 
-## Creating a project
+## What is Dream Analyst?
 
-If you're seeing this, you've probably already done this step. Congrats!
+Dream Analyst is a powerful tool for dream journaling and interpretation. It leverages an LLM (Large Language Model) to provide Jungian interpretations and extract symbolic tags from your dream entries. Our goal is to provide a seamless experience for users to record their dreams and gain insights into their subconscious.
 
-```sh
-# create a new project in the current directory
-npx sv create
+### Key Features:
 
-# create a new project in my-app
-npx sv create my-app
-```
+*   **Dream Capture:** Easily record your dreams via text entry or voice-to-text (using the Web Speech API).
+*   **Automatic Jungian Analysis:** After saving, our AI provides a 150-200 word Jungian reading (archetypes, shadow, anima/animus, etc.) and extracts a comma-separated list of symbolic tags.
+*   **Secure Vault:** All your dreams are securely stored in a personal library, indexed by date, ensuring you can always revisit them.
+*   **Tag Management:** Dreams display their tags as clickable chips. Future features will include redundancy highlighting and progression scoring for tags.
+*   **User-Data View:** A chronological list of your dreams with detailed views, search, and filter capabilities.
+*   **Visualisation & Progress Tracking:** Future enhancements will include timelines, heatmaps, and reports to visualize dream patterns and progress over time.
 
-## Developing
+## Getting Started
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+This project is built with SvelteKit.
+
+### Development
+
+Once you've cloned the repository and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```sh
 npm run dev
@@ -25,7 +30,7 @@ npm run dev
 npm run dev -- --open
 ```
 
-## Building
+### Building
 
 To create a production version of your app:
 
