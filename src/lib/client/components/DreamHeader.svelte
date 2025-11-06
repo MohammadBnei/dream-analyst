@@ -37,25 +37,34 @@
 	}
 
 	// Function to be used with use:enhance for title update
-	async function handleUpdateSubmit({ update }) {
+	async function handleUpdateSubmit() {
 		isUpdatingTitle = true;
-		await update(); // This will trigger the form action and invalidate
-		isUpdatingTitle = false;
-		isEditingTitle = false; // Exit edit mode after update attempt
+		return async ({ update }) => {
+			await update(); // This will trigger the form action and invalidate
+			isUpdatingTitle = false;
+			isEditingTitle = false; // Exit edit mode after update attempt
+		};
 	}
 
 	// Function to be used with use:enhance for title regeneration
-	async function handleRegenerateSubmit({ update }) {
+	async function handleRegenerateSubmit() {
 		isRegeneratingTitle = true;
-		await update(); // This will trigger the form action and invalidate
-		isRegeneratingTitle = false;
+		return async ({ update }) => {
+			await update(); // This will trigger the form action and invalidate
+			isRegeneratingTitle = false;
+		};
 	}
 </script>
 
 <div class="mb-6 flex w-full flex-col items-center justify-between">
 	<div class="flex items-center justify-center gap-2">
 		{#if isEditingTitle}
-			<form method="POST" action="?/updateTitle" use:enhance={() => handleUpdateSubmit} class="flex items-center gap-2">
+			<form
+				method="POST"
+				action="?/updateTitle"
+				use:enhance={handleUpdateSubmit}
+				class="flex items-center gap-2"
+			>
 				<input
 					type="text"
 					name="title"
@@ -123,7 +132,12 @@
 					></path>
 				</svg>
 			</button>
-			<form method="POST" action="?/regenerateTitle" use:enhance={() => handleRegenerateSubmit} class="inline-block">
+			<form
+				method="POST"
+				action="?/regenerateTitle"
+				use:enhance={handleRegenerateSubmit}
+				class="inline-block"
+			>
 				<button
 					type="submit"
 					class="btn btn-ghost btn-sm"
