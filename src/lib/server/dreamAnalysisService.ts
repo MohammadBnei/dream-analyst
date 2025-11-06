@@ -79,54 +79,56 @@ class DreamAnalysisService {
 		let pastDreamsContext = '';
 
 		try {
-			// 1. Fetch last 5 dreams in parallel
-			const lastFiveDreamsPromise = prisma.dream.findMany({
-				where: {
-					userId: dream.userId,
-					id: { not: dream.id } // Exclude the current dream
-				},
-				orderBy: {
-					dreamDate: 'desc'
-				},
-				take: 5,
-				select: {
-					rawText: true,
-					interpretation: true,
-				}
-			});
-
-			// 2. Generate search terms from the new dream using the weak model
+			// 1. Generate search terms from the new dream using the weak model
 			const searchTermsPrompt = `Given the following dream text, extract 7 distinct keywords or short phrases (2-3 words max) that best describe its core themes, objects, or emotions. Separate them with commas. Use the same language as the dream text.
 Example: "water,fire,mountain,shame"
 Dream: "${dream.rawText}"
 Keywords:`;
-			const searchTermsPromise = this.llmService.generateText(searchTermsPrompt, signal);
-
-			const [lastFiveDreams, rawSearchTerms] = await Promise.all([
-				lastFiveDreamsPromise,
-				searchTermsPromise
-			]);
+			const rawSearchTerms = await this.llmService.generateText(searchTermsPrompt, signal);
 
 			const searchTerms = rawSearchTerms
 				.split(',')
-				.map((term) => term.trim().toLowerCase())
+				.map((term) => term.trim())
 				.filter(Boolean);
 
-			// 3. Filter the fetched dreams based on these search terms (simple full-text search)
-			const relevantPastDreams = lastFiveDreams.filter((pastDream) => {
-				const dreamContent =
-					pastDream.rawText.toLowerCase();
-				return searchTerms.some((term) => dreamContent.includes(term));
-			});
+			// 2. Perform a full-text search on past dreams using the generated search terms
+			if (searchTerms.length > 0) {
+				const relevantPastDreams = await prisma.dream.findMany({
+					where: {
+						userId: dream.userId,
+						id: { not: dream.id }, // Exclude the current dream
+						OR: [
+							{
+								rawText: {
+									search: searchTerms.join(' | ') // Use OR for full-text search
+								}
+							},
+							{
+								interpretation: {
+									search: searchTerms.join(' | ')
+								}
+							}
+						]
+					},
+					orderBy: {
+						dreamDate: 'desc'
+					},
+					take: 5, // Limit to a reasonable number of relevant dreams
+					select: {
+						rawText: true,
+						interpretation: true
+					}
+				});
 
-			// 4. Construct the pastDreamsContext string from the filtered dreams
-			if (relevantPastDreams.length > 0) {
-				pastDreamsContext = relevantPastDreams
-					.map(
-						(d, index) =>
-							`Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
-					)
-					.join('\n\n');
+				// 3. Construct the pastDreamsContext string from the filtered dreams
+				if (relevantPastDreams.length > 0) {
+					pastDreamsContext = relevantPastDreams
+						.map(
+							(d, index) =>
+								`Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
+						)
+						.join('\n\n');
+				}
 			}
 		} catch (e) {
 			console.warn(`Dream ${dream.id}: Failed to fetch or process past dreams context:`, e);
