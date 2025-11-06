@@ -16,7 +16,8 @@
 
 	// This effect ensures editedTitle is always in sync with the prop when it changes from outside
 	$effect(() => {
-		if (!isEditingTitle) { // Only update if not currently editing to avoid overwriting user input
+		if (!isEditingTitle) {
+			// Only update if not currently editing to avoid overwriting user input
 			editedTitle = dreamTitle || '';
 		}
 	});
@@ -55,14 +56,14 @@
 		{#if isEditingTitle}
 			<input
 				type="text"
-				class="input input-ghost input-lg w-full text-center text-3xl font-bold"
+				class="input input-lg w-full input-ghost text-center text-3xl font-bold"
 				bind:value={editedTitle}
 				onkeydown={handleKeyDown}
 				disabled={isUpdatingTitle}
 			/>
 			<button class="btn btn-ghost btn-sm" onclick={handleSaveClick} disabled={isUpdatingTitle}>
 				{#if isUpdatingTitle}
-					<span class="loading loading-spinner loading-sm"></span>
+					<span class="loading loading-sm loading-spinner"></span>
 				{:else}
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -72,15 +73,16 @@
 						stroke="currentColor"
 						class="h-5 w-5"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M4.5 12.75l6 6 9-13.5"
-						></path>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
 					</svg>
 				{/if}
 			</button>
-			<button class="btn btn-ghost btn-sm" onclick={handleCancelClick} disabled={isUpdatingTitle}>
+			<button
+				class="btn btn-ghost btn-sm"
+				onclick={handleCancelClick}
+				disabled={isUpdatingTitle}
+				aria-label="cancel title edit"
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -100,7 +102,7 @@
 					{m.dream_details_title()}
 				{/if}
 			</h1>
-			<button class="btn btn-ghost btn-sm ml-2" onclick={handleEditClick}>
+			<button class="btn ml-2 btn-ghost btn-sm" onclick={handleEditClick} aria-label="edit title">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -122,7 +124,7 @@
 				disabled={isRegeneratingTitle || dreamStatus === 'PENDING_ANALYSIS'}
 			>
 				{#if isRegeneratingTitle}
-					<span class="loading loading-spinner loading-sm"></span>
+					<span class="loading loading-sm loading-spinner"></span>
 				{:else}
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -132,11 +134,12 @@
 						stroke="currentColor"
 						class="h-5 w-5"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.181m0 0 9.54-9.541m-9.54 9.54H12a2.25 2.25 0 0 0 2.25-2.25V12a2.25 2.25 0 0 0-2.25-2.25H9c-1.03 0-1.9.693-2.165 1.731m0 0 3.181 3.181M12 5.25V3m0 18v-2.25M21 12h-2.25M3 12H5.25m15.403-9.403L17.58 7.21M3.393 3.393 7.21 7.21m11.384 8.614 2.916 2.916m-2.916-2.916A11.952 11.952 0 0 0 12 21c-2.31 0-4.516-.657-6.418-1.823M11.25 4.721A11.952 11.952 0 0 1 12 3c2.31 0 4.516.657 6.418 1.823"
-						/>
+						<path d="M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8" />
+						<path d="M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8" />
+						<path d="M17.5 16a3.5 3.5 0 0 0 0 -7h-.5" />
+						<path d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0" />
+						<path d="M6.5 16a3.5 3.5 0 0 1 0 -7h.5" />
+						<path d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10" />
 					</svg>
 				{/if}
 			</button>
