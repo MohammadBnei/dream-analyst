@@ -53,6 +53,16 @@ This document outlines the primary methods, their inputs, and their outputs for 
 -   **Outputs:**
     -   `Promise<void>` - A promise that resolves when the operation is complete.
 
+### `deleteChatMessage`
+
+-   **Description:** Deletes a specific chat message from the database, ensuring it belongs to the specified dream and user.
+-   **Inputs:**
+    -   `messageId`: `string` - The ID of the message to delete.
+    -   `dreamId`: `string` - The ID of the dream the message belongs to.
+    -   `userId`: `string` - The ID of the user who owns the message/dream.
+-   **Outputs:**
+    -   `Promise<void>` - A promise that resolves if the deletion is successful, or rejects with an error if the message is not found or unauthorized.
+
 ### `chatWithAI`
 
 -   **Description:** Initiates a conversational chat with the LLM for dream interpretation, handling credit deductions and database updates for messages.

@@ -4,7 +4,7 @@ import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
-import { getLLMService } from '$lib/server/llmService'; // Import the new LLMService
+import { getLLMService } from '$lib/server/services/llmService'; // Import the new LLMService
 
 class ServerChatService {
 	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
@@ -42,7 +42,6 @@ class ServerChatService {
 				createdAt: 'asc'
 			}
 		});
-
 	}
 
 	/**
@@ -90,6 +89,33 @@ class ServerChatService {
 	}
 
 	/**
+	 * Deletes a specific chat message from the database.
+	 * @param messageId The ID of the message to delete.
+	 * @param dreamId The ID of the dream the message belongs to.
+	 * @param userId The ID of the user who owns the message/dream.
+	 */
+	async deleteChatMessage(messageId: string, dreamId: string, userId: string): Promise<void> {
+		const prisma = await this.getPrisma();
+		const message = await prisma.dreamChat.findUnique({
+			where: { id: messageId }
+		});
+
+		if (!message) {
+			throw new Error('Chat message not found.');
+		}
+
+		// Ensure the message belongs to the dream and the user
+		if (message.dreamId !== dreamId || message.userId !== userId) {
+			throw new Error('Chat message not found or not authorized for deletion.');
+		}
+
+		await prisma.dreamChat.delete({
+			where: { id: messageId }
+		});
+		console.log(`Chat message ${messageId} for dream ${dreamId} deleted from DB.`);
+	}
+
+	/**
 	 * Initiates a chat interaction with the LLM for dream interpretation.
 	 * @param dreamId The ID of the dream.
 	 * @param userId The ID of the user.
@@ -108,11 +134,6 @@ class ServerChatService {
 		promptType: DreamPromptType = 'jungian',
 		signal?: AbortSignal
 	): Promise<ReadableStream<Uint8Array>> {
-		// LLMService handles OPENROUTER_API_KEY check internally
-		// if (!OPENROUTER_API_KEY) {
-		// 	throw new Error('OPENROUTER_API_KEY is not defined');
-		// }
-
 		const encoder = new TextEncoder();
 		const creditService = getCreditService();
 
@@ -199,7 +220,8 @@ class ServerChatService {
 								console.debug(`Chat for dream ${dreamId}: LangChain stream aborted by signal.`);
 								break;
 							}
-							if (chunk) { // chunk is already a string from LLMService
+							if (chunk) {
+								// chunk is already a string from LLMService
 								assistantResponse += chunk;
 								controller.enqueue(encoder.encode(JSON.stringify({ content: chunk }) + '\n'));
 							}
