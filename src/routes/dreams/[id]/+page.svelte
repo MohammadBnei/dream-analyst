@@ -4,7 +4,6 @@
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import { ClientChatService } from '$lib/client/services/chatService';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-	import { enhance } from '$app/forms';
 
 	// New Components
 	import DreamHeader from '$lib/client/components/DreamHeader.svelte';
@@ -15,7 +14,7 @@
 	import DreamChatSection from '$lib/client/components/DreamChatSection.svelte';
 	import DeleteDreamModal from '$lib/client/components/DeleteDreamModal.svelte';
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
-	import DreamRelatedDreams from './DreamRelatedDreams.svelte'; // Import the new component
+	import DreamRelatedDreams from '$lib/client/components/DreamRelatedDreams.svelte'; // Import the new component
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
 
 	let { data, form } = $props();
