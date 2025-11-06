@@ -318,6 +318,41 @@ export const actions: Actions = {
 		}
 	},
 
+	regenerateTitle: async ({ params, locals }) => {
+		const dreamId = params.id;
+		const sessionUser = locals.user;
+		if (!sessionUser) {
+			return fail(401, { message: 'Unauthorized' });
+		}
+
+		const prisma = await getPrismaClient();
+		const dreamAnalysisService = getDreamAnalysisService();
+
+		try {
+			const existingDream = await prisma.dream.findUnique({
+				where: { id: dreamId }
+			});
+
+			if (!existingDream || existingDream.userId !== sessionUser.id) {
+				return fail(403, { error: 'Forbidden: You do not own this dream or it does not exist.' });
+			}
+
+			const generatedTitle = await dreamAnalysisService.generateDreamTitle(existingDream.rawText);
+
+			const updatedDream = await prisma.dream.update({
+				where: { id: dreamId },
+				data: {
+					title: generatedTitle,
+					updatedAt: new Date()
+				}
+			});
+			return { success: true, dream: updatedDream };
+		} catch (e) {
+			console.error('Error regenerating dream title:', e);
+			return fail(500, { error: 'Failed to regenerate dream title due to a server error.' });
+		}
+	},
+
 	updateRelatedDreams: async ({ request, params, locals }) => {
 		const dreamId = params.id;
 		const sessionUser = locals.user;
