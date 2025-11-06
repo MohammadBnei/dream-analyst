@@ -15,7 +15,11 @@
 	<input type="checkbox" />
 	<div class="collapse-title flex items-center justify-between font-semibold">
 		<h2 class="text-lg">
-			{m.dream_on_date({ date: new Date(dream.dreamDate).toLocaleDateString() })}
+			{#if dream.title}
+				{dream.title} - {new Date(dream.dreamDate).toLocaleDateString()}
+			{:else}
+				{m.dream_on_date({ date: new Date(dream.dreamDate).toLocaleDateString() })}
+			{/if}
 		</h2>
 		<StatusBadge status={dream.status} />
 		<a href={`/dreams/${dream.id}`} class="btn z-10 btn-sm btn-primary">{m.view_details_button()}</a
