@@ -38,10 +38,10 @@
 	}
 
 	function toggleRawTextDisplay() {
-		rawTextDisplayState = (rawTextDisplayState + 1) % 3 as 0 | 1 | 2;
+		rawTextDisplayState = ((rawTextDisplayState + 1) % 3) as 0 | 1 | 2;
 	}
 
-	const rawTextClass = $derived(() => {
+	const rawTextClass = $derived.by(() => {
 		return {
 			0: 'hidden', // No text
 			1: 'line-clamp-3', // Clamped
@@ -49,11 +49,11 @@
 		}[rawTextDisplayState];
 	});
 
-	const rawTextTooltip = $derived(() => {
+	const rawTextTooltip = $derived.by(() => {
 		return {
-			0: 'Show dream text (clamped)',
-			1: 'Show full dream text',
-			2: 'Hide dream text'
+			0: m.show_dream_text(),
+			1: m.show_full_dream_text(),
+			2: m.hide_dream_text()
 		}[rawTextDisplayState];
 	});
 </script>
@@ -81,7 +81,7 @@
 	</div>
 
 	<!-- Dream Text (truncated or full) -->
-	<p class="list-col-wrap text-sm {rawTextClass}">
+	<p class={`list-col-wrap text-sm ${rawTextClass}`}>
 		{#if rawTextDisplayState !== 0}
 			{dream.rawText}
 		{/if}
@@ -135,7 +135,7 @@
 	<!-- View Details Button -->
 	<a
 		href={`/dreams/${dream.id}`}
-		class="tooltip btn btn-primary tooltip-left btn-square btn-ghost"
+		class="tooltip btn tooltip-left btn-square btn-primary"
 		data-tip={m.view_details_button()}
 		aria-label="go to details"
 	>
