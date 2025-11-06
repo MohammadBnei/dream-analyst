@@ -38,25 +38,29 @@
 </script>
 
 <div class="join-vertical join w-full lg:join-horizontal">
-	<!-- Sort By Field -->
-	<select
-		class="select-bordered select join-item w-full lg:w-fit"
-		onchange={handleSortByChange}
-		value={sortBy}
-	>
-		<option value="dreamDate">{m.sort_by_date()}</option>
-		<option value="title">{m.sort_by_title()}</option>
-	</select>
+	<div class="join-item">
+		<div class="join-horizontal join w-full">
+			<!-- Sort By Field -->
+			<select
+				class="select-bordered select join-item w-full lg:w-fit"
+				onchange={handleSortByChange}
+				value={sortBy}
+			>
+				<option value="dreamDate">{m.sort_by_date()}</option>
+				<option value="title">{m.sort_by_title()}</option>
+			</select>
 
-	<!-- Sort Order -->
-	<select
-		class="select-bordered select join-item w-full lg:w-fit"
-		onchange={handleSortOrderChange}
-		value={sortOrder}
-	>
-		<option value="desc">{m.descending_option()}</option>
-		<option value="asc">{m.ascending_option()}</option>
-	</select>
+			<!-- Sort Order -->
+			<select
+				class="select-bordered select join-item w-full lg:w-fit"
+				onchange={handleSortOrderChange}
+				value={sortOrder}
+			>
+				<option value="desc">{m.descending_option()}</option>
+				<option value="asc">{m.ascending_option()}</option>
+			</select>
+		</div>
+	</div>
 
 	<div class="grow">
 		<form onsubmit={handleSubmit} class="flex h-full">
