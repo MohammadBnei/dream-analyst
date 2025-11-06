@@ -492,8 +492,9 @@ export const actions: Actions = {
 					userId: sessionUser.id,
 					id: { not: dreamId }, // Exclude the current dream
 					OR: [
-						{ title: { contains: validatedData.query, mode: 'insensitive' } },
-						{ rawText: { contains: validatedData.query, mode: 'insensitive' } }
+						{ title: { search: validatedData.query, mode: 'insensitive' } },
+						{ rawText: { search: validatedData.query, mode: 'insensitive' } },
+						{ interpretation: { search: validatedData.query, mode: 'insensitive' } }
 					]
 				},
 				select: {
