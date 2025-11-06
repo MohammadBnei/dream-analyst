@@ -1,31 +1,33 @@
 import { env } from '$env/dynamic/private';
-import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
+import { getLLMService } from '$lib/server/services/llmService'; // Import the new LLMService
 
-const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
-const YOUR_SITE_URL = env.ORIGIN;
+const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY; // Still needed for error check, but LLMService uses it
+const YOUR_SITE_URL = env.ORIGIN; // Still needed for error check, but LLMService uses it
 
-// The ChatMessage interface is now imported from $lib/types/chat.ts
-// export interface ChatMessage {
-// 	id: string; // Added id to ChatMessage interface
-// 	role: 'user' | 'assistant' | 'system';
-// 	content: string;
-// 	promptType?: DreamPromptType; // Added promptType to ChatMessage interface
-// }
-
-class ChatService {
+class ServerChatService {
 	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
+	private creditService: ReturnType<typeof getCreditService>;
+	private llmService: ReturnType<typeof getLLMService>; // Add LLMService instance
 
 	constructor() {
 		// Initialize prisma client here, or ensure it's initialized before use
 		getPrismaClient().then((client) => {
 			this.prisma = client;
 		});
+		this.creditService = getCreditService();
+		this.llmService = getLLMService(); // Initialize LLMService
+	}
+
+	private async getPrisma(): Promise<Awaited<ReturnType<typeof getPrismaClient>>> {
+		if (!this.prisma) {
+			this.prisma = await getPrismaClient();
+		}
+		return this.prisma;
 	}
 
 	/**
@@ -35,10 +37,8 @@ class ChatService {
 	 * @returns An array of ChatMessage.
 	 */
 	async loadChatHistory(dreamId: string, userId: string): Promise<App.ChatMessage[]> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
-		const dbMessages = await this.prisma.dreamChat.findMany({
+		const prisma = await this.getPrisma();
+		const dbMessages = await prisma.dreamChat.findMany({
 			where: {
 				dreamId: dreamId,
 				userId: userId
@@ -71,10 +71,8 @@ class ChatService {
 		content: string,
 		promptType?: DreamPromptType
 	): Promise<App.ChatMessage> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
-		const createdMessage = await this.prisma.dreamChat.create({
+		const prisma = await this.getPrisma();
+		const createdMessage = await prisma.dreamChat.create({
 			data: {
 				dreamId: dreamId,
 				userId: userId,
@@ -97,10 +95,8 @@ class ChatService {
 	 * @param userId The ID of the user.
 	 */
 	async clearChatHistory(dreamId: string, userId: string): Promise<void> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
-		await this.prisma.dreamChat.deleteMany({
+		const prisma = await this.getPrisma();
+		await prisma.dreamChat.deleteMany({
 			where: {
 				dreamId: dreamId,
 				userId: userId
@@ -128,9 +124,10 @@ class ChatService {
 		promptType: DreamPromptType = 'jungian',
 		signal?: AbortSignal
 	): Promise<ReadableStream<Uint8Array>> {
-		if (!OPENROUTER_API_KEY) {
-			throw new Error('OPENROUTER_API_KEY is not defined');
-		}
+		// LLMService handles OPENROUTER_API_KEY check internally
+		// if (!OPENROUTER_API_KEY) {
+		// 	throw new Error('OPENROUTER_API_KEY is not defined');
+		// }
 
 		const encoder = new TextEncoder();
 		const creditService = getCreditService();
@@ -175,19 +172,6 @@ class ChatService {
 		}
 
 		try {
-			const chat = new ChatOpenAI({
-				model: OPENROUTER_MODEL_NAME,
-				temperature: 0.7,
-				streaming: true,
-				apiKey: OPENROUTER_API_KEY,
-				configuration: {
-					baseURL: 'https://openrouter.ai/api/v1',
-					defaultHeaders: {
-						...(YOUR_SITE_URL && { 'HTTP-Referer': YOUR_SITE_URL })
-					}
-				}
-			});
-
 			// Load existing chat history from DB (excluding the just-saved user message, as it's already handled)
 			const history = await this.loadChatHistory(dreamId, userId);
 
@@ -218,7 +202,7 @@ class ChatService {
 				new HumanMessage(userMessage) // Add the current user message
 			];
 
-			const stream = await chat.stream(messages, { signal: signal });
+			const stream = await this.llmService.streamChatCompletion(messages, signal); // Use LLMService
 
 			let assistantResponse = '';
 			const saveChatMessage = this.saveChatMessage.bind(this);
@@ -231,10 +215,9 @@ class ChatService {
 								console.debug(`Chat for dream ${dreamId}: LangChain stream aborted by signal.`);
 								break;
 							}
-							const content = chunk.content;
-							if (content) {
-								assistantResponse += content;
-								controller.enqueue(encoder.encode(JSON.stringify({ content: content }) + '\n'));
+							if (chunk) { // chunk is already a string from LLMService
+								assistantResponse += chunk;
+								controller.enqueue(encoder.encode(JSON.stringify({ content: chunk }) + '\n'));
 							}
 						}
 
@@ -249,7 +232,7 @@ class ChatService {
 						}
 					} catch (error) {
 						console.error(
-							`Chat for dream ${dreamId}: Error during LangChain stream processing:`,
+							`Chat for dream ${dreamId}: Error during LLM stream processing:`,
 							error
 						);
 						controller.enqueue(
@@ -271,7 +254,7 @@ class ChatService {
 
 			return readableStream;
 		} catch (error) {
-			console.error('Error initiating LangChain chat:', error);
+			console.error('Error initiating chat service:', error);
 			return new ReadableStream({
 				start(controller) {
 					controller.enqueue(
@@ -289,11 +272,11 @@ class ChatService {
 	}
 }
 
-let chatServiceInstance: ChatService;
+let chatServiceInstance: ServerChatService; // Renamed to ServerChatService
 
-export function getChatService(): ChatService {
+export function getChatService(): ServerChatService {
 	if (!chatServiceInstance) {
-		chatServiceInstance = new ChatService();
+		chatServiceInstance = new ServerChatService();
 	}
 	return chatServiceInstance;
 }
