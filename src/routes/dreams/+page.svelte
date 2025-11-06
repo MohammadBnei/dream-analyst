@@ -95,11 +95,11 @@
 	{#if dreams.length === 0}
 		<NoDreamsMessage />
 	{:else}
-		<div class="join-vertical join w-full">
+		<ul class="list bg-base-100 rounded-box shadow-md">
 			{#each dreams as dream (dream.id)}
 				<DreamCard {dream} />
 			{/each}
-		</div>
+		</ul>
 
 		<div class="mt-8 flex justify-center">
 			<DreamPagination
