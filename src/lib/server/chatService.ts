@@ -4,14 +4,10 @@ import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
-import { getLLMService } from '$lib/server/services/llmService'; // Import the new LLMService
-
-const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY; // Still needed for error check, but LLMService uses it
-const YOUR_SITE_URL = env.ORIGIN; // Still needed for error check, but LLMService uses it
+import { getLLMService } from '$lib/server/llmService'; // Import the new LLMService
 
 class ServerChatService {
 	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
-	private creditService: ReturnType<typeof getCreditService>;
 	private llmService: ReturnType<typeof getLLMService>; // Add LLMService instance
 
 	constructor() {
@@ -19,7 +15,6 @@ class ServerChatService {
 		getPrismaClient().then((client) => {
 			this.prisma = client;
 		});
-		this.creditService = getCreditService();
 		this.llmService = getLLMService(); // Initialize LLMService
 	}
 
@@ -38,7 +33,7 @@ class ServerChatService {
 	 */
 	async loadChatHistory(dreamId: string, userId: string): Promise<App.ChatMessage[]> {
 		const prisma = await this.getPrisma();
-		const dbMessages = await prisma.dreamChat.findMany({
+		return prisma.dreamChat.findMany({
 			where: {
 				dreamId: dreamId,
 				userId: userId
@@ -47,12 +42,7 @@ class ServerChatService {
 				createdAt: 'asc'
 			}
 		});
-		return dbMessages.map((msg) => ({
-			id: msg.id, // Include id
-			role: msg.role as 'user' | 'assistant', // Assuming role is always 'user' or 'assistant'
-			content: msg.content,
-			promptType: msg.promptType as DreamPromptType
-		}));
+
 	}
 
 	/**
@@ -72,7 +62,7 @@ class ServerChatService {
 		promptType?: DreamPromptType
 	): Promise<App.ChatMessage> {
 		const prisma = await this.getPrisma();
-		const createdMessage = await prisma.dreamChat.create({
+		return prisma.dreamChat.create({
 			data: {
 				dreamId: dreamId,
 				userId: userId,
@@ -81,12 +71,6 @@ class ServerChatService {
 				promptType: promptType // Save the prompt type
 			}
 		});
-		return {
-			id: createdMessage.id,
-			role: createdMessage.role as 'user' | 'assistant',
-			content: createdMessage.content,
-			promptType: createdMessage.promptType as DreamPromptType
-		};
 	}
 
 	/**
@@ -274,7 +258,7 @@ class ServerChatService {
 
 let chatServiceInstance: ServerChatService; // Renamed to ServerChatService
 
-export function getChatService(): ServerChatService {
+export function getServerChatService(): ServerChatService {
 	if (!chatServiceInstance) {
 		chatServiceInstance = new ServerChatService();
 	}
