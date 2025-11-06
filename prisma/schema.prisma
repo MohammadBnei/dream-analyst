@@ -2,7 +2,7 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["fullTextSearchPostgres"]
 }
 
@@ -48,7 +48,7 @@ model Dream {
   user              User?               @relation(fields: [userId], references: [id])
   rawText           String              @map("raw_text")
   analysisText      String?             @map("analysis_text")
-  interpretation    String?             
+  interpretation    String?
   status            DreamStatus         @default(PENDING_ANALYSIS)
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
@@ -58,11 +58,8 @@ model Dream {
   updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at")
   CreditTransaction CreditTransaction[]
 
-  // Many-to-many relationship for related dreams
-  // A dream can have many related dreams
-  relatedTo Dreams[] @relation("RelatedDreams")
-  // And a dream can be related by many other dreams
-  relatedBy Dreams[] @relation("RelatedDreams")
+  relatedTo Dream[] @relation("RelatedDreams")
+  relatedBy Dream[] @relation("RelatedDreams")
 
   @@map("dreams")
 }
