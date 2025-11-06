@@ -46,6 +46,10 @@ const ResetAnalysisSchema = v.object({
 	promptType: v.string() // Expect promptType from the form
 });
 
+const SearchDreamsSchema = v.object({
+	query: v.pipe(v.string(), v.minLength(3, 'Search query must be at least 3 characters long.'))
+});
+
 export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const dreamId = params.id;
 	const sessionUser = locals.user;
@@ -59,32 +63,6 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 	}
 
 	const prisma = await getPrismaClient();
-
-	// Handle searchDreams action if requested
-	if (url.searchParams.has('searchDreams')) {
-		const query = url.searchParams.get('query') || '';
-		if (query.length >= 3) {
-			const dreams = await prisma.dream.findMany({
-				where: {
-					userId: sessionUser.id,
-					id: { not: dreamId }, // Exclude the current dream
-					OR: [
-						{ title: { contains: query, mode: 'insensitive' } },
-						{ rawText: { contains: query, mode: 'insensitive' } }
-					]
-				},
-				select: {
-					id: true,
-					title: true,
-					rawText: true,
-					dreamDate: true
-				},
-				take: 10 // Limit search results
-			});
-			return json({ dreams });
-		}
-		return json({ dreams: [] });
-	}
 
 	try {
 		const dream = await prisma.dream.findUnique({
@@ -485,6 +463,51 @@ export const actions: Actions = {
 		} catch (e) {
 			console.error('Error regenerating related dreams:', e);
 			return fail(500, { error: 'Failed to regenerate related dreams due to a server error.' });
+		}
+	},
+
+	searchDreams: async ({ request, params, locals }) => {
+		const dreamId = params.id;
+		const sessionUser = locals.user;
+		if (!sessionUser) {
+			return fail(401, { message: 'Unauthorized' });
+		}
+
+		const formData = await request.formData();
+		const query = formData.get('query');
+
+		let validatedData;
+		try {
+			validatedData = v.parse(SearchDreamsSchema, { query });
+		} catch (e: any) {
+			const issues = e.issues.map((issue: any) => issue.message);
+			return fail(400, { query, error: issues.join(', ') });
+		}
+
+		const prisma = await getPrismaClient();
+
+		try {
+			const dreams = await prisma.dream.findMany({
+				where: {
+					userId: sessionUser.id,
+					id: { not: dreamId }, // Exclude the current dream
+					OR: [
+						{ title: { contains: validatedData.query, mode: 'insensitive' } },
+						{ rawText: { contains: validatedData.query, mode: 'insensitive' } }
+					]
+				},
+				select: {
+					id: true,
+					title: true,
+					rawText: true,
+					dreamDate: true
+				},
+				take: 10 // Limit search results
+			});
+			return { success: true, dreams };
+		} catch (e) {
+			console.error('Error searching dreams:', e);
+			return fail(500, { query, error: 'Failed to search dreams due to a server error.' });
 		}
 	},
 

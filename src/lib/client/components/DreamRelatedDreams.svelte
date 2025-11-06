@@ -25,7 +25,6 @@
 
 	let isEditing = $state(false);
 	let currentRelatedIds = $state<string[]>(relatedDreams.map((d) => d.id || ''));
-	let availableDreams = $state<Partial<App.Dream>[]>([]); // For searching and adding
 	let searchQuery = $state('');
 	let searchResults = $state<Partial<App.Dream>[]>([]);
 	let isSearching = $state(false);
@@ -42,13 +41,6 @@
 
 	function handleEditClick() {
 		isEditing = true;
-		// Optionally fetch all dreams here for selection, or do it on demand
-	}
-
-	async function handleSaveClick() {
-		// This will now be handled by the form action
-		// await onUpdateRelatedDreams(currentRelatedIds);
-		// isEditing = false;
 	}
 
 	function handleCancelClick() {
@@ -74,43 +66,6 @@
 		searchResults = [];
 	}
 
-	async function searchDreams(query: string) {
-		if (query.length < 3) {
-			searchResults = [];
-			return;
-		}
-
-		isSearching = true;
-		try {
-			const response = await fetch(`/dreams/${dreamId}?/searchDreams&query=${query}`);
-			if (response.ok) {
-				const data = await response.json();
-				searchResults = data.dreams.filter(
-					(d: Partial<App.Dream>) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')
-				);
-			} else {
-				console.error('Failed to search dreams:', response.statusText);
-				searchResults = [];
-			}
-		} catch (error) {
-			console.error('Error searching dreams:', error);
-			searchResults = [];
-		} finally {
-			isSearching = false;
-		}
-	}
-
-	$effect(() => {
-		clearTimeout(searchTimeout);
-		if (searchQuery) {
-			searchTimeout = setTimeout(() => {
-				searchDreams(searchQuery);
-			}, 300); // Debounce search
-		} else {
-			searchResults = [];
-		}
-	});
-
 	// Form action for updating related dreams
 	const updateRelatedDreamsAction = enhance(
 		({ form, data, action, cancel }) => {
@@ -129,7 +84,6 @@
 		},
 		({ form, data, action, cancel }) => {
 			// This function runs before the request is sent
-			// You can modify the form data here if needed
 			data.set('relatedDreamIds', JSON.stringify(currentRelatedIds));
 		}
 	);
@@ -148,6 +102,49 @@
 			isRegeneratingRelatedDreams = false;
 			await update();
 		};
+	});
+
+	// Form action for searching dreams
+	const searchDreamsAction = enhance(
+		({ form, data, action, cancel }) => {
+			isSearching = true;
+			return async ({ result, update }) => {
+				if (result.type === 'success') {
+					searchResults = result.data?.dreams || [];
+				} else if (result.type === 'error') {
+					console.error('Failed to search dreams:', result.error);
+					searchResults = [];
+				}
+				isSearching = false;
+				await update();
+			};
+		},
+		({ form, data, action, cancel }) => {
+			// This function runs before the request is sent
+			// Only send if query is long enough
+			if (searchQuery.length < 3) {
+				cancel(); // Prevent form submission
+				searchResults = [];
+			} else {
+				data.set('query', searchQuery);
+			}
+		}
+	);
+
+	// Debounce search input
+	$effect(() => {
+		clearTimeout(searchTimeout);
+		if (searchQuery.length >= 3) {
+			searchTimeout = setTimeout(() => {
+				// Manually submit the search form
+				const searchForm = document.getElementById('search-dreams-form') as HTMLFormElement;
+				if (searchForm) {
+					searchForm.requestSubmit();
+				}
+			}, 300);
+		} else {
+			searchResults = [];
+		}
 	});
 </script>
 
@@ -236,12 +233,16 @@
 	{#if isEditing}
 		<div class="mt-4">
 			<h4 class="text-md mb-2 font-semibold">{m.add_related_dream_title()}</h4>
-			<input
-				type="text"
-				placeholder={m.search_dreams_placeholder()}
-				class="input-bordered input w-full"
-				bind:value={searchQuery}
-			/>
+			<form id="search-dreams-form" method="POST" action="?/searchDreams" use:searchDreamsAction>
+				<input
+					type="text"
+					name="query"
+					placeholder={m.search_dreams_placeholder()}
+					class="input-bordered input w-full"
+					bind:value={searchQuery}
+					disabled={isSearching}
+				/>
+			</form>
 			<div class="mt-2">
 				{#if isSearching}
 					<p class="text-sm text-gray-500">Searching...</p>
