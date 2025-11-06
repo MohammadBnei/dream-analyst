@@ -32,6 +32,12 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 			...whereClause,
 			OR: [
 				{
+					title: {
+						search: safeSearchQuery,
+						mode: 'insensitive'
+					}
+				},
+				{
 					rawText: {
 						search: safeSearchQuery,
 						mode: 'insensitive'
