@@ -63,21 +63,51 @@ class DreamAnalysisService {
 	}
 
 	/**
-	 * Orchestrates the dream analysis process, including fetching past dream context
-	 * and initiating the LLM stream.
-	 * @param dream The dream object to analyze.
-	 * @param promptType The type of interpretation prompt to use.
-	 * @param signal An AbortSignal to cancel the LLM request.
-	 * @returns An AsyncIterable<string> of raw LLM content (string chunks).
+	 * Fetches the user's last five dreams (excluding the current one) and formats them as context.
+	 * @param dream The current dream being analyzed.
+	 * @returns A formatted string of the last five dreams or an empty string if none.
 	 */
-	public async initiateDreamAnalysis(
-		dream: Dream,
-		promptType: DreamPromptType = 'jungian',
-		signal?: AbortSignal
-	): Promise<AsyncIterable<string>> {
+	private async _getPastFiveDreamsContext(dream: Dream): Promise<string> {
 		const prisma = await this.getPrisma();
-		let pastDreamsContext = '';
+		try {
+			const lastFiveDreams = await prisma.dream.findMany({
+				where: {
+					userId: dream.userId,
+					id: { not: dream.id } // Exclude the current dream
+				},
+				orderBy: {
+					dreamDate: 'desc'
+				},
+				take: 5,
+				select: {
+					rawText: true,
+					interpretation: true
+				}
+			});
 
+			if (lastFiveDreams.length > 0) {
+				return lastFiveDreams
+					.map(
+						(d, index) =>
+							`Last Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
+					)
+					.join('\n\n');
+			}
+		} catch (e) {
+			console.warn(`Dream ${dream.id}: Failed to fetch last five dreams context:`, e);
+		}
+		return '';
+	}
+
+	/**
+	 * Generates search terms from the current dream and performs a full-text search
+	 * on past dreams, formatting the results as context.
+	 * @param dream The current dream being analyzed.
+	 * @param signal An AbortSignal for the LLM call.
+	 * @returns A formatted string of relevant past dreams or an empty string if none.
+	 */
+	private async _getRelevantPastDreamsContext(dream: Dream, signal?: AbortSignal): Promise<string> {
+		const prisma = await this.getPrisma();
 		try {
 			// 1. Generate search terms from the new dream using the weak model
 			const searchTermsPrompt = `Given the following dream text, extract 7 distinct keywords or short phrases (2-3 words max) that best describe its core themes, objects, or emotions. Separate them with commas. Use the same language as the dream text.
@@ -122,18 +152,47 @@ Keywords:`;
 
 				// 3. Construct the pastDreamsContext string from the filtered dreams
 				if (relevantPastDreams.length > 0) {
-					pastDreamsContext = relevantPastDreams
+					return relevantPastDreams
 						.map(
 							(d, index) =>
-								`Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
+								`Relevant Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
 						)
 						.join('\n\n');
 				}
 			}
 		} catch (e) {
-			console.warn(`Dream ${dream.id}: Failed to fetch or process past dreams context:`, e);
-			// Continue without past dream context if there's an error
-			pastDreamsContext = '';
+			console.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams context:`, e);
+		}
+		return '';
+	}
+
+	/**
+	 * Orchestrates the dream analysis process, including fetching past dream context
+	 * and initiating the LLM stream.
+	 * @param dream The dream object to analyze.
+	 * @param promptType The type of interpretation prompt to use.
+	 * @param signal An AbortSignal to cancel the LLM request.
+	 * @returns An AsyncIterable<string> of raw LLM content (string chunks).
+	 */
+	public async initiateDreamAnalysis(
+		dream: Dream,
+		promptType: DreamPromptType = 'jungian',
+		signal?: AbortSignal
+	): Promise<AsyncIterable<string>> {
+		let pastDreamsContext = '';
+
+		// Run both context-gathering methods in parallel
+		const [lastFiveDreamsResult, relevantDreamsResult] = await Promise.allSettled([
+			this._getPastFiveDreamsContext(dream),
+			this._getRelevantPastDreamsContext(dream, signal)
+		]);
+
+		if (lastFiveDreamsResult.status === 'fulfilled' && lastFiveDreamsResult.value) {
+			pastDreamsContext += lastFiveDreamsResult.value;
+		}
+		if (relevantDreamsResult.status === 'fulfilled' && relevantDreamsResult.value) {
+			if (pastDreamsContext) pastDreamsContext += '\n\n'; // Add separator if both exist
+			pastDreamsContext += relevantDreamsResult.value;
 		}
 
 		// Now, initiate the raw streamed analysis with the gathered context
