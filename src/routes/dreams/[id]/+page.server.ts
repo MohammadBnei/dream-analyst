@@ -558,14 +558,16 @@ export const actions: Actions = {
 		const prisma = await getPrismaClient();
 
 		try {
+			const safeSearchQuery = validatedData.query.trim().replaceAll(' ', '|');
+
 			const dreams = await prisma.dream.findMany({
 				where: {
 					userId: sessionUser.id,
 					id: { not: dreamId }, // Exclude the current dream
 					OR: [
-						{ title: { search: validatedData.query, mode: 'insensitive' } }, // Use 'search' for full-text search
-						{ rawText: { search: validatedData.query, mode: 'insensitive' } }, // Use 'search' for full-text search
-						{ interpretation: { search: validatedData.query, mode: 'insensitive' } } // Use 'search' for full-text search
+						{ title: { search: safeSearchQuery, mode: 'insensitive' } }, // Use 'search' for full-text search
+						{ rawText: { search: safeSearchQuery, mode: 'insensitive' } }, // Use 'search' for full-text search
+						{ interpretation: { search: safeSearchQuery, mode: 'insensitive' } } // Use 'search' for full-text search
 					]
 				},
 				select: {

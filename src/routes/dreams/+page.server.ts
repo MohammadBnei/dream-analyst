@@ -27,24 +27,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	};
 
 	if (searchQuery) {
+		const safeSearchQuery = searchQuery.trim().replaceAll(' ', '|');
 		whereClause = {
 			...whereClause,
 			OR: [
 				{
 					rawText: {
-						search: searchQuery,
+						search: safeSearchQuery,
 						mode: 'insensitive'
 					}
 				},
 				{
 					interpretation: {
-						search: searchQuery,
+						search: safeSearchQuery,
 						mode: 'insensitive'
 					}
 				}
 				// {
 				// 	tags: {
-				// 		has: searchQuery // Search within tags array
+				// 		has: safeSearchQuery // Search within tags array
 				// 	}
 				// }
 			]
