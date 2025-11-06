@@ -37,33 +37,34 @@
 	}
 </script>
 
-<div class="join-vertical join w-full lg:join-horizontal">
-	<div class="join-item">
-		<div class="join-horizontal join w-full">
-			<!-- Sort By Field -->
-			<select
-				class="select-bordered select join-item w-full lg:w-fit"
-				onchange={handleSortByChange}
-				value={sortBy}
-			>
-				<option value="dreamDate">{m.sort_by_date()}</option>
-				<option value="title">{m.sort_by_title()}</option>
-			</select>
+<!-- Main container using flexbox for overall layout -->
+<div class="flex w-full flex-col gap-2 lg:flex-row lg:items-center">
+	<!-- Sort controls group -->
+	<div class="join w-full lg:w-fit">
+		<!-- Sort By Field -->
+		<select
+			class="select-bordered select join-item w-full lg:w-fit"
+			onchange={handleSortByChange}
+			value={sortBy}
+		>
+			<option value="dreamDate">{m.sort_by_date()}</option>
+			<option value="title">{m.sort_by_title()}</option>
+		</select>
 
-			<!-- Sort Order -->
-			<select
-				class="select-bordered select join-item w-full lg:w-fit"
-				onchange={handleSortOrderChange}
-				value={sortOrder}
-			>
-				<option value="desc">{m.descending_option()}</option>
-				<option value="asc">{m.ascending_option()}</option>
-			</select>
-		</div>
+		<!-- Sort Order -->
+		<select
+			class="select-bordered select join-item w-full lg:w-fit"
+			onchange={handleSortOrderChange}
+			value={sortOrder}
+		>
+			<option value="desc">{m.descending_option()}</option>
+			<option value="asc">{m.ascending_option()}</option>
+		</select>
 	</div>
 
-	<div class="grow">
-		<form onsubmit={handleSubmit} class="flex h-full">
+	<!-- Search input and button group -->
+	<div class="flex grow">
+		<form onsubmit={handleSubmit} class="join flex h-full grow">
 			<input
 				type="text"
 				class="input-bordered input join-item grow"
@@ -85,21 +86,21 @@
 				>
 			</button>
 		</form>
-	</div>
 
-	{#if searchQuery}
-		<button
-			type="button"
-			class="btn join-item"
-			onclick={handleResetClick}
-			aria-label={m.reset_search_button()}
-		>
-			<span aria-label={m.reset_search_button()} class="h-4 w-4">
-				<svg class="h-auto w-full" viewBox="0 0 24 24">
-					<line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2" />
-					<line x1="22" y1="2" x2="2" y2="22" stroke="currentColor" stroke-width="2" />
-				</svg>
-			</span>
-		</button>
-	{/if}
+		{#if searchQuery}
+			<button
+				type="button"
+				class="btn join-item"
+				onclick={handleResetClick}
+				aria-label={m.reset_search_button()}
+			>
+				<span aria-label={m.reset_search_button()} class="h-4 w-4">
+					<svg class="h-auto w-full" viewBox="0 0 24 24">
+						<line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2" />
+						<line x1="22" y1="2" x2="2" y2="22" stroke="currentColor" stroke-width="2" />
+					</svg>
+				</span>
+			</button>
+		{/if}
+	</div>
 </div>
