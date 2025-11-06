@@ -206,7 +206,7 @@
 				id="search-dreams-form"
 				method="POST"
 				action="?/searchDreams"
-				use:enhance={({ form, data, action, cancel }) => {
+				use:enhance={({ formData, cancel }) => {
 					isSearching = true;
 					// Only send if query is long enough
 					if (searchQuery.length < 3) {
@@ -215,7 +215,7 @@
 						isSearching = false; // Reset loading state
 						return;
 					} else {
-						data.set('query', searchQuery);
+						formData.set('query', searchQuery);
 					}
 
 					return async ({ result, update }) => {
