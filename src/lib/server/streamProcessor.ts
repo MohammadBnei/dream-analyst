@@ -2,7 +2,8 @@ import { DreamStatus, type Dream } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { initiateRawStreamedDreamAnalysis } from './dreamAnalysisService'; // Corrected import path
+import { initiateRawStreamedDreamAnalysis } from './langchainService'; // Corrected import path to langchainService
+import { getLLMService } from './llmService'; // Import LLMService
 
 // Utility function to convert AsyncIterable<string> to ReadableStream<Uint8Array>
 function asyncIterableToReadableStream(
@@ -284,15 +285,80 @@ export function getOrCreateStreamProcessor(
 	processor
 		.init()
 		.then(async () => {
+			const prisma = await getPrismaClient(); // Get prisma client here
+			const llmService = getLLMService(); // Get LLM service here
+
 			// If promptType is not provided, try to get it from the dream object or Redis state
 			const effectivePromptType = promptType || (dream.promptType as DreamPromptType) || 'jungian';
 			processor.setPromptType(effectivePromptType);
+
+			let pastDreamsContext = '';
+
+			try {
+				// 1. Fetch last 5 dreams in parallel
+				const lastFiveDreamsPromise = prisma.dream.findMany({
+					where: {
+						userId: dream.userId,
+						id: { not: dream.id } // Exclude the current dream
+					},
+					orderBy: {
+						createdAt: 'desc'
+					},
+					take: 5,
+					select: {
+						rawText: true,
+						interpretation: true,
+						tags: true
+					}
+				});
+
+				// 2. Generate search terms from the new dream using the weak model
+				const searchTermsPrompt = `Given the following dream text, extract 7 distinct keywords or short phrases (2-3 words max) that best describe its core themes, objects, or emotions. Separate them with commas.
+Dream: "${dream.rawText}"
+Keywords:`;
+				const searchTermsPromise = llmService.generateText(
+					searchTermsPrompt,
+					processor.abortController.signal
+				);
+
+				const [lastFiveDreams, rawSearchTerms] = await Promise.all([
+					lastFiveDreamsPromise,
+					searchTermsPromise
+				]);
+
+				const searchTerms = rawSearchTerms
+					.split(',')
+					.map((term) => term.trim().toLowerCase())
+					.filter(Boolean);
+
+				// 3. Filter the fetched dreams based on these search terms (simple full-text search)
+				const relevantPastDreams = lastFiveDreams.filter((pastDream) => {
+					const dreamContent =
+						`${pastDream.rawText} ${pastDream.interpretation} ${pastDream.tags?.join(' ')}`.toLowerCase();
+					return searchTerms.some((term) => dreamContent.includes(term));
+				});
+
+				// 4. Construct the pastDreamsContext string from the filtered dreams
+				if (relevantPastDreams.length > 0) {
+					pastDreamsContext = relevantPastDreams
+						.map(
+							(d, index) =>
+								`Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}\nTags: ${d.tags?.join(', ') || 'N/A'}`
+						)
+						.join('\n\n');
+				}
+			} catch (e) {
+				console.warn(`Stream ${dream.id}: Failed to fetch or process past dreams context:`, e);
+				// Continue without past dream context if there's an error
+				pastDreamsContext = '';
+			}
 
 			// Create the LangChain stream here, passing the processor's internal abort signal
 			const llmAsyncIterable = await initiateRawStreamedDreamAnalysis(
 				dream,
 				effectivePromptType,
-				processor.abortController.signal
+				processor.abortController.signal,
+				pastDreamsContext // Pass the generated context
 			);
 
 			// Convert the AsyncIterable<string> to ReadableStream<Uint8Array>
