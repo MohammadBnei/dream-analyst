@@ -4,9 +4,6 @@ import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
 import { getLLMService } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
-import { getLogger } from '$lib/server/logger';
-
-const logger = getLogger('dreamAnalysisService');
 
 class DreamAnalysisService {
 	private llmService: ReturnType<typeof getLLMService>;
@@ -59,7 +56,7 @@ class DreamAnalysisService {
 			// Return the raw LLM stream as an AsyncIterable<string>
 			return stream;
 		} catch (error) {
-			logger.error(`Error initiating LLM stream for dream ${dream.id}:`, error);
+			console.error(`Error initiating LLM stream for dream ${dream.id}:`, error);
 			// Re-throw the error to be handled by the caller (StreamProcessor)
 			throw error;
 		}
@@ -98,7 +95,7 @@ class DreamAnalysisService {
 			});
 			return lastFiveDreams;
 		} catch (e) {
-			logger.warn(`Dream ${dream.id}: Failed to fetch last five dreams:`, e);
+			console.warn(`Dream ${dream.id}: Failed to fetch last five dreams:`, e);
 		}
 		return [];
 	}
@@ -165,7 +162,7 @@ Keywords:`;
 				return relevantPastDreams;
 			}
 		} catch (e) {
-			logger.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams:`, e);
+			console.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams:`, e);
 		}
 		return [];
 	}
@@ -206,6 +203,14 @@ Keywords:`;
 				.join('\n\n');
 		}
 		if (relevantDreamsResult.status === 'fulfilled' && relevantDreamsResult.value.length > 0) {
+			prisma.dream.update({
+				where: { id: dream.id },
+				data: {
+					relatedTo: {
+						connect: relevantDreamsResult.value.map(({ id }) => ({ id }))
+					}
+				}
+			});
 			// Filter out duplicates if a dream appears in both lists
 			const newRelevantDreams = relevantDreamsResult.value.filter(
 				(rd) => !allRelatedDreams.some((ard) => ard.id === rd.id)
@@ -223,32 +228,6 @@ Keywords:`;
 
 		// Collect all unique related dream IDs
 		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
-
-		// Update the current dream's relatedTo field and the related dreams' relatedBy field
-		if (relatedDreamIds.length > 0) {
-			logger.debug(`Dream ${dream.id}: Found ${relatedDreamIds.length} related dreams. Updating relations.`);
-			// Update the current dream's relatedTo field
-			await prisma.dream.update({
-				where: { id: dream.id },
-				data: {
-					relatedTo: {
-						connect: relatedDreamIds.map((id) => ({ id }))
-					}
-				}
-			});
-
-			// Update the related dreams' relatedBy field
-			for (const relatedId of relatedDreamIds) {
-				await prisma.dream.update({
-					where: { id: relatedId },
-					data: {
-						relatedBy: {
-							connect: { id: dream.id }
-						}
-					}
-				});
-			}
-		}
 
 		// Now, initiate the raw streamed analysis with the gathered context
 		const stream = await this._initiateRawStreamedDreamAnalysis(

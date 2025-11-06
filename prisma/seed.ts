@@ -1,5 +1,5 @@
 import { PrismaClient, UserRole, DreamStatus } from '@prisma/client';
-import { hash } from 'argon2';
+import { hash } from 'bcrypt';
 
 const prisma = new PrismaClient();
 
@@ -7,7 +7,7 @@ async function main() {
 	console.log('Start seeding...');
 
 	// Create an admin user
-	const adminPassword = await hash('admin123');
+	const adminPassword = await hash('admin123', 10);
 	const adminUser = await prisma.user.upsert({
 		where: { email: 'admin@example.com' },
 		update: {},
@@ -22,7 +22,7 @@ async function main() {
 	console.log(`Created admin user: ${adminUser.username}`);
 
 	// Create a basic user
-	const basicPassword = await hash('basic123');
+	const basicPassword = await hash('basic123', 10);
 	const basicUser = await prisma.user.upsert({
 		where: { email: 'basic@example.com' },
 		update: {},

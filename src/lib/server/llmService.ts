@@ -4,7 +4,7 @@ import { BaseMessage, HumanMessage, SystemMessage } from '@langchain/core/messag
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
-const OPENROUTER_WEAK_MODEL_NAME = env.OPENROUTER_WEAK_MODEL || 'google/gemini-flash-1.5'; // Add weak model env var
+const OPENROUTER_WEAK_MODEL_NAME = env.OPENROUTER_WEAK_MODEL || 'meta-llama/llama-3.1-70b-instruct'; // Add weak model env var
 const YOUR_SITE_URL = env.ORIGIN;
 
 class LLMService {
@@ -81,7 +81,7 @@ class LLMService {
 	public async generateText(prompt: string, signal?: AbortSignal): Promise<string> {
 		try {
 			const response = await this.weakChat.invoke([new HumanMessage(prompt)], {
-				signal: signal
+				signal: signal,
 			});
 			return response.content as string;
 		} catch (error) {

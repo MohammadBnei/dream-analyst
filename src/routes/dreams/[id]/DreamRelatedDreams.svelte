@@ -1,5 +1,4 @@
 <script lang="ts">
-	import type { App } from '$lib/types';
 	import { goto } from '$app/navigation';
 
 	let { relatedDreams } = $props<{ relatedDreams: App.Dream[] }>();
