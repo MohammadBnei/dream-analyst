@@ -1,5 +1,49 @@
 # Changelog
 
+# [0.23.0](https://github.com/MohammadBnei/dream-analyst/compare/0.22.2...0.23.0) (2025-11-06)
+
+
+### Bug Fixes
+
+* Allow editing of dream title in DreamHeader component ([2434ea8](https://github.com/MohammadBnei/dream-analyst/commit/2434ea8728be92d3fc61d7945cf87d76e9cbdd55))
+* Correct self-referencing model name in Dream schema ([5d023f3](https://github.com/MohammadBnei/dream-analyst/commit/5d023f3d749fd13ed90f32953c3f0cef374704d2))
+* Ensure dream title updates reactively after regeneration ([a45aad4](https://github.com/MohammadBnei/dream-analyst/commit/a45aad41faef15b84e8811adf551ea89517531dd))
+* Handle failed dream title generation and update DreamMetadata import ([afb9f9d](https://github.com/MohammadBnei/dream-analyst/commit/afb9f9d29490c88becb37dd381f4aa3fec3fe867))
+* Implement sequential dream processing for title, related dreams, and analysis ([2323998](https://github.com/MohammadBnei/dream-analyst/commit/2323998744d7fa1cd6ae40766c0e21ac9e3e0876))
+* Improve dream search functionality with `contains` operator ([b2daed5](https://github.com/MohammadBnei/dream-analyst/commit/b2daed5fa760c0891d81b49704d6362ae1f83df4))
+* Improve dream search functionality with debounce and full-text search ([56907a3](https://github.com/MohammadBnei/dream-analyst/commit/56907a331ce3948ae1c8297a9ee068a035283646))
+* Improve dream title generation and related dreams type ([70bbc2b](https://github.com/MohammadBnei/dream-analyst/commit/70bbc2b2a3fba39aa2ab68c1224568083388fd46))
+* Refactor dream state management to ensure UI updates consistently ([2657a4d](https://github.com/MohammadBnei/dream-analyst/commit/2657a4d9bf7ecd08ae275345a6d426eeb86e92b7))
+* Remove commented-out props from DreamHeader component ([9d3944f](https://github.com/MohammadBnei/dream-analyst/commit/9d3944f4b6429ff03f97b3fba440d9e14c009e93))
+* Remove commented-out props from DreamHeader component ([7cc7d8f](https://github.com/MohammadBnei/dream-analyst/commit/7cc7d8f7d061253adc824f0713173074767fba74))
+* Sync editedTitle with dreamTitle prop in DreamHeader ([6bd869f](https://github.com/MohammadBnei/dream-analyst/commit/6bd869f3f5876930330f0b283e7fe2b038aa3b33))
+* Update SvelteKit enhance function to use formData ([a177432](https://github.com/MohammadBnei/dream-analyst/commit/a1774328445ae6e20fe15881e0c9a254ee29f798))
+
+
+### Features
+
+* Add "no dreams found" message ([72049a5](https://github.com/MohammadBnei/dream-analyst/commit/72049a51e4c6f5d34d661319714b38c8059c8f33))
+* Add AI-generated dream title functionality ([d6bc8a6](https://github.com/MohammadBnei/dream-analyst/commit/d6bc8a6c8eca045d467bb44f19b970e1c53a7785))
+* add deleteChatMessage method to ServerChatService and update docs ([1de81c2](https://github.com/MohammadBnei/dream-analyst/commit/1de81c2cf9e49edd4016e678c7958455dbac0538))
+* Add interpretation to dream search query ([f4350cb](https://github.com/MohammadBnei/dream-analyst/commit/f4350cbd38feec0c4afac99ee00b271fe6676f18))
+* Add new keys for related dreams and search hints ([77f82a5](https://github.com/MohammadBnei/dream-analyst/commit/77f82a5c835fe1ab7dfd0a72a6f792792faf6034))
+* add option to regenerate dream title ([e24142b](https://github.com/MohammadBnei/dream-analyst/commit/e24142b269577732abec60bd968ac6f2a91aead4))
+* add Prisma seed script for users and dreams ([127d753](https://github.com/MohammadBnei/dream-analyst/commit/127d75361d8d484f9c2fe3e9f61a978f7c5883c8))
+* Add regenerateTitle form action and remove client-side API call ([b6ae75e](https://github.com/MohammadBnei/dream-analyst/commit/b6ae75e7d23e69791033bb749453ad1157cbcea3))
+* Add related dreams editing and regeneration functionality ([2e0bdfa](https://github.com/MohammadBnei/dream-analyst/commit/2e0bdfa0da067ba5f60c59eca978c84c64f8c113))
+* Add related dreams title to translations ([5f0e17d](https://github.com/MohammadBnei/dream-analyst/commit/5f0e17de4d2da763a426a9e84c21468433393103))
+* Add related dreams to dream details page ([c0197f7](https://github.com/MohammadBnei/dream-analyst/commit/c0197f7fd7813ebaa388aa560dfdc48c6a4883fd))
+* Add relatedDreamId and relatedDream fields to Dream model ([b23cb47](https://github.com/MohammadBnei/dream-analyst/commit/b23cb47e76f9841ae336420620a467700ddd83bf))
+* display dream title in DreamHeader component ([ce6272c](https://github.com/MohammadBnei/dream-analyst/commit/ce6272cf351589ab5758fe87d73728ae0b62d479))
+* display related dreams in dream detail view ([72d3184](https://github.com/MohammadBnei/dream-analyst/commit/72d3184caa14b89a387fdce7bef91e53de631726))
+* Implement past dream context logic in DreamAnalysisService ([f598115](https://github.com/MohammadBnei/dream-analyst/commit/f59811568bfa12a07fce34be0c37a7edc3b0e66d))
+* Implement RAG for dream analysis using past dreams and weak LLM for search terms ([87c22c5](https://github.com/MohammadBnei/dream-analyst/commit/87c22c55028db7582b72c6994bc80783e443f112))
+* Implement related dream management with search, add, and delete ([c39c45d](https://github.com/MohammadBnei/dream-analyst/commit/c39c45d662a9a85130ffb170342210b55eaca9a0))
+* Implement server-side action for removing related dreams ([202a675](https://github.com/MohammadBnei/dream-analyst/commit/202a67551edc304717c5bb3680c1fc60dae03bea))
+* Make dream title editable in DreamHeader component ([8b8cabf](https://github.com/MohammadBnei/dream-analyst/commit/8b8cabf40eed17be3d9162ee220a3177dde3703c))
+* Migrate regenerate related dreams to API endpoint ([2bb65b8](https://github.com/MohammadBnei/dream-analyst/commit/2bb65b8eb8f400dbc39e3fbded0d00326c05802c))
+* Migrate title regeneration to a dedicated POST API endpoint ([efe6273](https://github.com/MohammadBnei/dream-analyst/commit/efe627369862e8d3cde4b06e65b8a58a8ce4e010))
+
 ## [0.22.2](https://github.com/MohammadBnei/dream-analyst/compare/0.22.1...0.22.2) (2025-11-02)
 
 ## [0.22.1](https://github.com/MohammadBnei/dream-analyst/compare/0.22.0...0.22.1) (2025-11-02)
