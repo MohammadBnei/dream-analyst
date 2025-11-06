@@ -146,5 +146,9 @@
 	"sort_by_label": "Trier par",
 	"date_descending_option": "Date (Du plus récent au plus ancien)",
 	"date_ascending_option": "Date (Du plus ancien au plus récent)",
-	"related_dreams_title": "Rêves Associés"
+	"related_dreams_title": "Rêves Associés",
+	"search_dreams_hint": "Rechercher des rêves par mots-clés, balises ou contenu d'interprétation.",
+	"add_related_dream_title": "Ajouter un Rêve Associé",
+	"no_related_dreams": "Aucun rêve associé trouvé.",
+	"regenerate_relations_button": "Régénérer les Relations"
 }

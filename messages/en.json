@@ -146,5 +146,9 @@
 	"sort_by_label": "Sort by",
 	"date_descending_option": "Date (Newest first)",
 	"date_ascending_option": "Date (Oldest first)",
-	"related_dreams_title": "Related Dreams"
+	"related_dreams_title": "Related Dreams",
+	"search_dreams_hint": "Search dreams by keywords, tags, or interpretation content.",
+	"add_related_dream_title": "Add Related Dream",
+	"no_related_dreams": "No related dreams found.",
+	"regenerate_relations_button": "Regenerate Relations"
 }
