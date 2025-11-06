@@ -48,7 +48,7 @@ model Dream {
   user              User?               @relation(fields: [userId], references: [id])
   rawText           String              @map("raw_text")
   analysisText      String?             @map("analysis_text")
-  interpretation    String? // Made interpretation optional
+  interpretation    String?
   status            DreamStatus         @default(PENDING_ANALYSIS)
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
