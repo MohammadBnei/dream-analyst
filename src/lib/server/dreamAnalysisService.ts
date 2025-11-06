@@ -63,11 +63,11 @@ class DreamAnalysisService {
 	}
 
 	/**
-	 * Fetches the user's last five dreams (excluding the current one) and formats them as context.
+	 * Fetches the user's last five dreams (excluding the current one).
 	 * @param dream The current dream being analyzed.
-	 * @returns A formatted string of the last five dreams or an empty string if none.
+	 * @returns An array of the last five Dream objects or an empty array if none.
 	 */
-	private async _getPastFiveDreamsContext(dream: Dream): Promise<string> {
+	private async _getPastFiveDreams(dream: Dream): Promise<Dream[]> {
 		const prisma = await this.getPrisma();
 		try {
 			const lastFiveDreams = await prisma.dream.findMany({
@@ -80,33 +80,34 @@ class DreamAnalysisService {
 				},
 				take: 5,
 				select: {
+					id: true,
 					rawText: true,
-					interpretation: true
+					interpretation: true,
+					userId: true,
+					status: true,
+					dreamDate: true,
+					createdAt: true,
+					updatedAt: true,
+					analysisText: true,
+					promptType: true,
+					tags: true
 				}
 			});
-
-			if (lastFiveDreams.length > 0) {
-				return lastFiveDreams
-					.map(
-						(d, index) =>
-							`Last Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
-					)
-					.join('\n\n');
-			}
+			return lastFiveDreams;
 		} catch (e) {
-			console.warn(`Dream ${dream.id}: Failed to fetch last five dreams context:`, e);
+			console.warn(`Dream ${dream.id}: Failed to fetch last five dreams:`, e);
 		}
-		return '';
+		return [];
 	}
 
 	/**
 	 * Generates search terms from the current dream and performs a full-text search
-	 * on past dreams, formatting the results as context.
+	 * on past dreams, returning the relevant Dream objects.
 	 * @param dream The current dream being analyzed.
 	 * @param signal An AbortSignal for the LLM call.
-	 * @returns A formatted string of relevant past dreams or an empty string if none.
+	 * @returns An array of relevant Dream objects or an empty array if none.
 	 */
-	private async _getRelevantPastDreamsContext(dream: Dream, signal?: AbortSignal): Promise<string> {
+	private async _getRelevantPastDreams(dream: Dream, signal?: AbortSignal): Promise<Dream[]> {
 		const prisma = await this.getPrisma();
 		try {
 			// 1. Generate search terms from the new dream using the weak model
@@ -145,25 +146,25 @@ Keywords:`;
 					},
 					take: 5, // Limit to a reasonable number of relevant dreams
 					select: {
+						id: true,
 						rawText: true,
-						interpretation: true
+						interpretation: true,
+						userId: true,
+						status: true,
+						dreamDate: true,
+						createdAt: true,
+						updatedAt: true,
+						analysisText: true,
+						promptType: true,
+						tags: true
 					}
 				});
-
-				// 3. Construct the pastDreamsContext string from the filtered dreams
-				if (relevantPastDreams.length > 0) {
-					return relevantPastDreams
-						.map(
-							(d, index) =>
-								`Relevant Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
-						)
-						.join('\n\n');
-				}
+				return relevantPastDreams;
 			}
 		} catch (e) {
-			console.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams context:`, e);
+			console.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams:`, e);
 		}
-		return '';
+		return [];
 	}
 
 	/**
@@ -172,31 +173,61 @@ Keywords:`;
 	 * @param dream The dream object to analyze.
 	 * @param promptType The type of interpretation prompt to use.
 	 * @param signal An AbortSignal to cancel the LLM request.
-	 * @returns An AsyncIterable<string> of raw LLM content (string chunks).
+	 * @returns An AsyncIterable<string> of raw LLM content (string chunks) and an array of related dream IDs.
 	 */
 	public async initiateDreamAnalysis(
 		dream: Dream,
 		promptType: DreamPromptType = 'jungian',
 		signal?: AbortSignal
-	): Promise<AsyncIterable<string>> {
+	): Promise<{ stream: AsyncIterable<string>; relatedDreamIds: string[] }> {
 		let pastDreamsContext = '';
+		const relatedDreamIds: string[] = [];
 
 		// Run both context-gathering methods in parallel
 		const [lastFiveDreamsResult, relevantDreamsResult] = await Promise.allSettled([
-			this._getPastFiveDreamsContext(dream),
-			this._getRelevantPastDreamsContext(dream, signal)
+			this._getPastFiveDreams(dream),
+			this._getRelevantPastDreams(dream, signal)
 		]);
 
-		if (lastFiveDreamsResult.status === 'fulfilled' && lastFiveDreamsResult.value) {
-			pastDreamsContext += lastFiveDreamsResult.value;
+		const allRelatedDreams: Dream[] = [];
+
+		if (lastFiveDreamsResult.status === 'fulfilled' && lastFiveDreamsResult.value.length > 0) {
+			allRelatedDreams.push(...lastFiveDreamsResult.value);
+			pastDreamsContext += lastFiveDreamsResult.value
+				.map(
+					(d, index) =>
+						`Last Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
+				)
+				.join('\n\n');
 		}
-		if (relevantDreamsResult.status === 'fulfilled' && relevantDreamsResult.value) {
-			if (pastDreamsContext) pastDreamsContext += '\n\n'; // Add separator if both exist
-			pastDreamsContext += relevantDreamsResult.value;
+		if (relevantDreamsResult.status === 'fulfilled' && relevantDreamsResult.value.length > 0) {
+			// Filter out duplicates if a dream appears in both lists
+			const newRelevantDreams = relevantDreamsResult.value.filter(
+				(rd) => !allRelatedDreams.some((ard) => ard.id === rd.id)
+			);
+			allRelatedDreams.push(...newRelevantDreams);
+
+			if (pastDreamsContext && newRelevantDreams.length > 0) pastDreamsContext += '\n\n'; // Add separator if both exist
+			pastDreamsContext += newRelevantDreams
+				.map(
+					(d, index) =>
+						`Relevant Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
+				)
+				.join('\n\n');
 		}
 
+		// Collect all unique related dream IDs
+		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
+
 		// Now, initiate the raw streamed analysis with the gathered context
-		return this._initiateRawStreamedDreamAnalysis(dream, promptType, signal, pastDreamsContext);
+		const stream = await this._initiateRawStreamedDreamAnalysis(
+			dream,
+			promptType,
+			signal,
+			pastDreamsContext
+		);
+
+		return { stream, relatedDreamIds };
 	}
 }
 
