@@ -145,5 +145,6 @@
 	"next_button": "Next",
 	"sort_by_label": "Sort by",
 	"date_descending_option": "Date (Newest first)",
-	"date_ascending_option": "Date (Oldest first)"
+	"date_ascending_option": "Date (Oldest first)",
+	"related_dreams_title": "Related Dreams"
 }

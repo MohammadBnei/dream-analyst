@@ -145,5 +145,6 @@
 	"next_button": "Suivant",
 	"sort_by_label": "Trier par",
 	"date_descending_option": "Date (Du plus récent au plus ancien)",
-	"date_ascending_option": "Date (Du plus ancien au plus récent)"
+	"date_ascending_option": "Date (Du plus ancien au plus récent)",
+	"related_dreams_title": "Rêves Associés"
 }
