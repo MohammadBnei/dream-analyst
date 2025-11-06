@@ -84,7 +84,12 @@
 	</div>
 
 	{#if searchQuery}
-		<button type="button" class="btn join-item" onclick={handleResetClick}>
+		<button
+			type="button"
+			class="btn join-item"
+			onclick={handleResetClick}
+			aria-label={m.reset_search_button()}
+		>
 			<span aria-label={m.reset_search_button()} class="h-4 w-4">
 				<svg class="h-auto w-full" viewBox="0 0 24 24">
 					<line x1="2" y1="2" x2="22" y2="22" stroke="currentColor" stroke-width="2" />
