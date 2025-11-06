@@ -15,6 +15,7 @@
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
 	import DeleteDreamModal from '$lib/client/components/DeleteDreamModal.svelte';
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
+	import DreamRelatedDreams from './DreamRelatedDreams.svelte'; // Import the new component
 
 	let { data, form } = $props();
 
@@ -184,6 +185,8 @@
 				{#if !isLoadingStream}
 					<DreamChatSection dreamId={dream.id} />
 				{/if}
+
+				<DreamRelatedDreams relatedDreams={dream.relatedTo || []} />
 
 				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />
 			</div>
