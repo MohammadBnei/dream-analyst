@@ -2,8 +2,7 @@ import { DreamStatus, type Dream } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { initiateRawStreamedDreamAnalysis } from './langchainService';
-import { getAnalystService } from './analystService'; // Import the new AnalystService
+import { getDreamAnalysisService } from './dreamAnalysisService'; // Import the new DreamAnalysisService
 
 // Utility function to convert AsyncIterable<string> to ReadableStream<Uint8Array>
 function asyncIterableToReadableStream(
@@ -285,24 +284,17 @@ export function getOrCreateStreamProcessor(
 	processor
 		.init()
 		.then(async () => {
-			const analystService = getAnalystService(); // Get AnalystService here
+			const dreamAnalysisService = getDreamAnalysisService(); // Get DreamAnalysisService here
 
 			// If promptType is not provided, try to get it from the dream object or Redis state
 			const effectivePromptType = promptType || (dream.promptType as DreamPromptType) || 'jungian';
 			processor.setPromptType(effectivePromptType);
 
-			// Get past dreams context from the new AnalystService
-			const pastDreamsContext = await analystService.getPastDreamContext(
-				dream,
-				processor.abortController.signal
-			);
-
 			// Create the LangChain stream here, passing the processor's internal abort signal
-			const llmAsyncIterable = await initiateRawStreamedDreamAnalysis(
+			const llmAsyncIterable = await dreamAnalysisService.initiateDreamAnalysis(
 				dream,
 				effectivePromptType,
-				processor.abortController.signal,
-				pastDreamsContext // Pass the generated context
+				processor.abortController.signal
 			);
 
 			// Convert the AsyncIterable<string> to ReadableStream<Uint8Array>
