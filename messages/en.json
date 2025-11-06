@@ -150,5 +150,6 @@
 	"search_dreams_hint": "Search dreams by keywords, tags, or interpretation content.",
 	"add_related_dream_title": "Add Related Dream",
 	"no_related_dreams": "No related dreams found.",
-	"regenerate_relations_button": "Regenerate Relations"
+	"regenerate_relations_button": "Regenerate Relations",
+	"no_dreams_found": "No dreams found."
 }

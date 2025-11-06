@@ -150,5 +150,6 @@
 	"search_dreams_hint": "Rechercher des rêves par mots-clés, balises ou contenu d'interprétation.",
 	"add_related_dream_title": "Ajouter un Rêve Associé",
 	"no_related_dreams": "Aucun rêve associé trouvé.",
-	"regenerate_relations_button": "Régénérer les Relations"
+	"regenerate_relations_button": "Régénérer les Relations",
+	"no_dreams_found": "Aucun rêve trouvé."
 }
