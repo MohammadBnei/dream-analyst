@@ -8,11 +8,8 @@
 	const dispatch = createEventDispatcher();
 
 	let {
-		dreamId,
 		relatedDreams,
-		onUpdateRelatedDreams, // This will now be handled by form actions internally
 		isUpdatingRelatedDreams,
-		onRegenerateRelatedDreams, // This will now be handled by form actions internally
 		isRegeneratingRelatedDreams
 	} = $props<{
 		dreamId: string;
@@ -250,10 +247,10 @@
 					<ul class="menu w-full rounded-box bg-base-200">
 						{#each searchResults as dream}
 							<li>
-								<a href="#" on:click|preventDefault={() => handleAddRelated(dream)}>
+								<span class="btn" onclick={() => handleAddRelated(dream)}>
 									{dream.title ||
 										(dream.rawText ? dream.rawText.substring(0, 50) + '...' : 'Untitled')}
-								</a>
+								</span>
 							</li>
 						{/each}
 					</ul>
