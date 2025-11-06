@@ -7,17 +7,14 @@
 
 	const dispatch = createEventDispatcher();
 
-	let {
-		relatedDreams,
-		isUpdatingRelatedDreams,
-		isRegeneratingRelatedDreams
-	} = $props<{
+	let { relatedDreams } = $props<{
 		dreamId: string;
 		relatedDreams: Partial<App.Dream[]>;
-		onUpdateRelatedDreams: (updatedRelatedIds: string[]) => Promise<void>; // Keep for now, but will be replaced
-		isUpdatingRelatedDreams: boolean;
-		onRegenerateRelatedDreams: () => Promise<void>; // Keep for now, but will be replaced
-		isRegeneratingRelatedDreams: boolean;
+		// These props are no longer needed as form actions will manage their own loading states
+		// onUpdateRelatedDreams: (updatedRelatedIds: string[]) => Promise<void>;
+		// isUpdatingRelatedDreams: boolean;
+		// onRegenerateRelatedDreams: () => Promise<void>;
+		// isRegeneratingRelatedDreams: boolean;
 	}>();
 
 	let isEditing = $state(false);
@@ -26,6 +23,10 @@
 	let searchResults = $state<Partial<App.Dream>[]>([]);
 	let isSearching = $state(false);
 	let searchTimeout: ReturnType<typeof setTimeout>;
+
+	// Local loading states for form actions
+	let isUpdatingRelatedDreams = $state(false);
+	let isRegeneratingRelatedDreams = $state(false);
 
 	// Effect to update currentRelatedIds when relatedDreams prop changes
 	$effect(() => {
@@ -55,6 +56,7 @@
 		if (dreamToAdd.id && !currentRelatedIds.includes(dreamToAdd.id)) {
 			currentRelatedIds = [...currentRelatedIds, dreamToAdd.id];
 			// Also add to the displayed relatedDreams if it's not already there
+			// This is a client-side optimistic update for immediate feedback
 			if (!relatedDreams.some((d) => d.id === dreamToAdd.id)) {
 				relatedDreams = [...relatedDreams, dreamToAdd];
 			}
@@ -62,71 +64,6 @@
 		searchQuery = ''; // Clear search after adding
 		searchResults = [];
 	}
-
-	// Form action for updating related dreams
-	const updateRelatedDreamsAction = enhance(
-		({ form, data, action, cancel }) => {
-			isUpdatingRelatedDreams = true;
-			return async ({ result, update }) => {
-				if (result.type === 'success') {
-					dispatch('relatedDreamsUpdated', result.data?.dream);
-					isEditing = false;
-				} else if (result.type === 'error') {
-					console.error('Failed to update related dreams:', result.error);
-					// Optionally display error message to user
-				}
-				isUpdatingRelatedDreams = false;
-				await update();
-			};
-		},
-		({ form, data, action, cancel }) => {
-			// This function runs before the request is sent
-			data.set('relatedDreamIds', JSON.stringify(currentRelatedIds));
-		}
-	);
-
-	// Form action for regenerating related dreams
-	const regenerateRelatedDreamsAction = enhance(({ form, data, action, cancel }) => {
-		isRegeneratingRelatedDreams = true;
-		return async ({ result, update }) => {
-			if (result.type === 'success') {
-				dispatch('relatedDreamsUpdated', result.data?.dream);
-				isEditing = false; // Exit edit mode after regeneration
-			} else if (result.type === 'error') {
-				console.error('Failed to regenerate related dreams:', result.error);
-				// Optionally display error message to user
-			}
-			isRegeneratingRelatedDreams = false;
-			await update();
-		};
-	});
-
-	// Form action for searching dreams
-	const searchDreamsAction = enhance(
-		({ form, data, action, cancel }) => {
-			isSearching = true;
-			return async ({ result, update }) => {
-				if (result.type === 'success') {
-					searchResults = result.data?.dreams || [];
-				} else if (result.type === 'error') {
-					console.error('Failed to search dreams:', result.error);
-					searchResults = [];
-				}
-				isSearching = false;
-				await update();
-			};
-		},
-		({ form, data, action, cancel }) => {
-			// This function runs before the request is sent
-			// Only send if query is long enough
-			if (searchQuery.length < 3) {
-				cancel(); // Prevent form submission
-				searchResults = [];
-			} else {
-				data.set('query', searchQuery);
-			}
-		}
-	);
 
 	// Debounce search input
 	$effect(() => {
@@ -150,7 +87,25 @@
 		<h3 class="text-lg font-semibold">{m.related_dreams_title()}</h3>
 		<div class="flex gap-2">
 			{#if isEditing}
-				<form method="POST" action="?/updateRelatedDreams" use:updateRelatedDreamsAction>
+				<form
+					method="POST"
+					action="?/updateRelatedDreams"
+					use:enhance={() => {
+						isUpdatingRelatedDreams = true;
+						return async ({ result, update }) => {
+							if (result.type === 'success') {
+								dispatch('relatedDreamsUpdated', result.data?.dream);
+								isEditing = false;
+							} else if (result.type === 'error') {
+								console.error('Failed to update related dreams:', result.error);
+								// Optionally display error message to user
+							}
+							isUpdatingRelatedDreams = false;
+							await update();
+						};
+					}}
+				>
+					<input type="hidden" name="relatedDreamIds" value={JSON.stringify(currentRelatedIds)} />
 					<button type="submit" class="btn btn-sm btn-primary" disabled={isUpdatingRelatedDreams}>
 						{#if isUpdatingRelatedDreams}
 							<span class="loading loading-sm loading-spinner"></span>
@@ -187,7 +142,24 @@
 						/>
 					</svg>
 				</button>
-				<form method="POST" action="?/regenerateRelatedDreams" use:regenerateRelatedDreamsAction>
+				<form
+					method="POST"
+					action="?/regenerateRelatedDreams"
+					use:enhance={() => {
+						isRegeneratingRelatedDreams = true;
+						return async ({ result, update }) => {
+							if (result.type === 'success') {
+								dispatch('relatedDreamsUpdated', result.data?.dream);
+								isEditing = false; // Exit edit mode after regeneration
+							} else if (result.type === 'error') {
+								console.error('Failed to regenerate related dreams:', result.error);
+								// Optionally display error message to user
+							}
+							isRegeneratingRelatedDreams = false;
+							await update();
+						};
+					}}
+				>
 					<button
 						type="submit"
 						class="btn btn-outline btn-sm"
@@ -230,7 +202,34 @@
 	{#if isEditing}
 		<div class="mt-4">
 			<h4 class="text-md mb-2 font-semibold">{m.add_related_dream_title()}</h4>
-			<form id="search-dreams-form" method="POST" action="?/searchDreams" use:searchDreamsAction>
+			<form
+				id="search-dreams-form"
+				method="POST"
+				action="?/searchDreams"
+				use:enhance={({ form, data, action, cancel }) => {
+					isSearching = true;
+					// Only send if query is long enough
+					if (searchQuery.length < 3) {
+						cancel(); // Prevent form submission
+						searchResults = [];
+						isSearching = false; // Reset loading state
+						return;
+					} else {
+						data.set('query', searchQuery);
+					}
+
+					return async ({ result, update }) => {
+						if (result.type === 'success') {
+							searchResults = result.data?.dreams || [];
+						} else if (result.type === 'error') {
+							console.error('Failed to search dreams:', result.error);
+							searchResults = [];
+						}
+						isSearching = false;
+						await update();
+					};
+				}}
+			>
 				<input
 					type="text"
 					name="query"
