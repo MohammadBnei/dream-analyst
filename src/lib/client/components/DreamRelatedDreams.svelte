@@ -66,18 +66,12 @@
 		if (dreamToAdd.id && !currentRelatedIds.includes(dreamToAdd.id)) {
 			currentRelatedIds = [...currentRelatedIds, dreamToAdd.id];
 			// Also add to the displayed relatedDreams if it's not already there
-			if (!relatedDreams.some(d => d.id === dreamToAdd.id)) {
+			if (!relatedDreams.some((d) => d.id === dreamToAdd.id)) {
 				relatedDreams = [...relatedDreams, dreamToAdd];
 			}
 		}
 		searchQuery = ''; // Clear search after adding
 		searchResults = [];
-	}
-
-	async function handleRegenerateClick() {
-		// This will now be handled by the form action
-		// await onRegenerateRelatedDreams();
-		// isEditing = false; // Exit edit mode after regeneration
 	}
 
 	async function searchDreams(query: string) {
@@ -91,7 +85,9 @@
 			const response = await fetch(`/dreams/${dreamId}?/searchDreams&query=${query}`);
 			if (response.ok) {
 				const data = await response.json();
-				searchResults = data.dreams.filter((d: Partial<App.Dream>) => d.id !== dreamId && !currentRelatedIds.includes(d.id || ''));
+				searchResults = data.dreams.filter(
+					(d: Partial<App.Dream>) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')
+				);
 			} else {
 				console.error('Failed to search dreams:', response.statusText);
 				searchResults = [];
@@ -139,22 +135,20 @@
 	);
 
 	// Form action for regenerating related dreams
-	const regenerateRelatedDreamsAction = enhance(
-		({ form, data, action, cancel }) => {
-			isRegeneratingRelatedDreams = true;
-			return async ({ result, update }) => {
-				if (result.type === 'success') {
-					dispatch('relatedDreamsUpdated', result.data?.dream);
-					isEditing = false; // Exit edit mode after regeneration
-				} else if (result.type === 'error') {
-					console.error('Failed to regenerate related dreams:', result.error);
-					// Optionally display error message to user
-				}
-				isRegeneratingRelatedDreams = false;
-				await update();
-			};
-		}
-	);
+	const regenerateRelatedDreamsAction = enhance(({ form, data, action, cancel }) => {
+		isRegeneratingRelatedDreams = true;
+		return async ({ result, update }) => {
+			if (result.type === 'success') {
+				dispatch('relatedDreamsUpdated', result.data?.dream);
+				isEditing = false; // Exit edit mode after regeneration
+			} else if (result.type === 'error') {
+				console.error('Failed to regenerate related dreams:', result.error);
+				// Optionally display error message to user
+			}
+			isRegeneratingRelatedDreams = false;
+			await update();
+		};
+	});
 </script>
 
 <div class="mb-6">
@@ -163,11 +157,7 @@
 		<div class="flex gap-2">
 			{#if isEditing}
 				<form method="POST" action="?/updateRelatedDreams" use:updateRelatedDreamsAction>
-					<button
-						type="submit"
-						class="btn btn-sm btn-primary"
-						disabled={isUpdatingRelatedDreams}
-					>
+					<button type="submit" class="btn btn-sm btn-primary" disabled={isUpdatingRelatedDreams}>
 						{#if isUpdatingRelatedDreams}
 							<span class="loading loading-sm loading-spinner"></span>
 						{:else}
@@ -183,7 +173,11 @@
 					{m.cancel_button()}
 				</button>
 			{:else}
-				<button class="btn btn-outline btn-sm" onclick={handleEditClick} aria-label="edit related dreams">
+				<button
+					class="btn btn-outline btn-sm"
+					onclick={handleEditClick}
+					aria-label="edit related dreams"
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						class="h-5 w-5"
@@ -252,11 +246,12 @@
 				{#if isSearching}
 					<p class="text-sm text-gray-500">Searching...</p>
 				{:else if searchResults.length > 0}
-					<ul class="menu bg-base-200 rounded-box w-full">
+					<ul class="menu w-full rounded-box bg-base-200">
 						{#each searchResults as dream}
 							<li>
 								<a href="#" on:click|preventDefault={() => handleAddRelated(dream)}>
-									{dream.title || (dream.rawText ? dream.rawText.substring(0, 50) + '...' : 'Untitled')}
+									{dream.title ||
+										(dream.rawText ? dream.rawText.substring(0, 50) + '...' : 'Untitled')}
 								</a>
 							</li>
 						{/each}
