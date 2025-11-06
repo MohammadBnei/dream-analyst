@@ -86,18 +86,18 @@ class DreamAnalysisService {
 					id: { not: dream.id } // Exclude the current dream
 				},
 				orderBy: {
-					createdAt: 'desc'
+					dreamDate: 'desc'
 				},
 				take: 5,
 				select: {
 					rawText: true,
 					interpretation: true,
-					tags: true
 				}
 			});
 
 			// 2. Generate search terms from the new dream using the weak model
-			const searchTermsPrompt = `Given the following dream text, extract 7 distinct keywords or short phrases (2-3 words max) that best describe its core themes, objects, or emotions. Separate them with commas.
+			const searchTermsPrompt = `Given the following dream text, extract 7 distinct keywords or short phrases (2-3 words max) that best describe its core themes, objects, or emotions. Separate them with commas. Use the same language as the dream text.
+Example: "water,fire,mountain,shame"
 Dream: "${dream.rawText}"
 Keywords:`;
 			const searchTermsPromise = this.llmService.generateText(searchTermsPrompt, signal);
@@ -115,7 +115,7 @@ Keywords:`;
 			// 3. Filter the fetched dreams based on these search terms (simple full-text search)
 			const relevantPastDreams = lastFiveDreams.filter((pastDream) => {
 				const dreamContent =
-					`${pastDream.rawText} ${pastDream.interpretation} ${pastDream.tags?.join(' ')}`.toLowerCase();
+					pastDream.rawText.toLowerCase();
 				return searchTerms.some((term) => dreamContent.includes(term));
 			});
 
@@ -124,7 +124,7 @@ Keywords:`;
 				pastDreamsContext = relevantPastDreams
 					.map(
 						(d, index) =>
-							`Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}\nTags: ${d.tags?.join(', ') || 'N/A'}`
+							`Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
 					)
 					.join('\n\n');
 			}
