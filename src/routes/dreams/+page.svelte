@@ -15,6 +15,7 @@
 	let totalPages = $derived(data.totalPages);
 	let totalDreams = $derived(data.totalDreams);
 	let sortOrder = $derived(data.sortOrder);
+	let sortBy = $derived(data.sortBy || 'dreamDate'); // New: Get sortBy from data, default to 'dreamDate'
 	let pageSize = $derived(data.pageSize); // Get pageSize from data
 
 	let clientError: string | null = $state(null);
@@ -35,31 +36,33 @@
 	async function updateUrl(
 		newQuery: string = searchQuery,
 		newPage: number = currentPage,
-		newSortOrder: string = sortOrder
+		newSortBy: 'dreamDate' | 'title' = sortBy, // New: sortBy parameter
+		newSortOrder: 'asc' | 'desc' = sortOrder
 	) {
 		const params = new URLSearchParams();
 		if (newQuery) params.set('query', newQuery);
 		if (newPage !== 1) params.set('page', String(newPage));
+		if (newSortBy !== 'dreamDate') params.set('sortBy', newSortBy); // Only set if not default 'dreamDate'
 		if (newSortOrder !== 'desc') params.set('sortOrder', newSortOrder); // Only set if not default 'desc'
 		await goto(`?${params.toString()}`);
 	}
 
 	async function handleSearch(query: string) {
 		searchQuery = query;
-		await updateUrl(query, 1, sortOrder); // Reset to page 1 on new search
+		await updateUrl(query, 1, sortBy, sortOrder); // Reset to page 1 on new search
 	}
 
 	function handleResetSearch() {
 		searchQuery = '';
-		updateUrl('', 1, sortOrder); // Reset to page 1 on reset
+		updateUrl('', 1, 'dreamDate', 'desc'); // Reset to page 1, default sort
 	}
 
 	async function handlePageChange(page: number) {
-		await updateUrl(searchQuery, page, sortOrder);
+		await updateUrl(searchQuery, page, sortBy, sortOrder);
 	}
 
-	async function handleSortChange(order: 'asc' | 'desc') {
-		await updateUrl(searchQuery, 1, order); // Reset to page 1 on sort change
+	async function handleSortChange(newSortBy: 'dreamDate' | 'title', newSortOrder: 'asc' | 'desc') {
+		await updateUrl(searchQuery, 1, newSortBy, newSortOrder); // Reset to page 1 on sort change
 	}
 </script>
 
@@ -84,6 +87,7 @@
 		<DreamSearchAndSort
 			initialQuery={data.query || ''}
 			currentSortOrder={sortOrder as 'asc' | 'desc'}
+			currentSortBy={sortBy as 'dreamDate' | 'title'}
 			onSearch={handleSearch}
 			onReset={handleResetSearch}
 			onSortChange={handleSortChange}

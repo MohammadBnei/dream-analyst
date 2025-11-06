@@ -1,24 +1,34 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 
-	let { initialQuery, currentSortOrder, onSearch, onReset, onSortChange } = $props<{
+	let { initialQuery, currentSortOrder, onSearch, onReset, onSortChange, currentSortBy } = $props<{
 		initialQuery: string;
 		currentSortOrder: 'asc' | 'desc';
+		currentSortBy: 'dreamDate' | 'title'; // New prop for current sort by field
 		onSearch: (query: string) => void;
 		onReset: () => void;
-		onSortChange: (order: 'asc' | 'desc') => void;
+		onSortChange: (sortBy: 'dreamDate' | 'title', sortOrder: 'asc' | 'desc') => void;
 	}>();
 
 	let searchQuery: string = $state(initialQuery);
+	let sortBy: 'dreamDate' | 'title' = $state(currentSortBy); // State for sort by field
+	let sortOrder: 'asc' | 'desc' = $state(currentSortOrder); // State for sort order
 
 	function handleSubmit(e: SubmitEvent) {
 		e.preventDefault();
 		onSearch(searchQuery);
 	}
 
-	function handleSortSelectChange(event: Event) {
+	function handleSortByChange(event: Event) {
 		const target = event.target as HTMLSelectElement;
-		onSortChange(target.value as 'asc' | 'desc');
+		sortBy = target.value as 'dreamDate' | 'title';
+		onSortChange(sortBy, sortOrder);
+	}
+
+	function handleSortOrderChange(event: Event) {
+		const target = event.target as HTMLSelectElement;
+		sortOrder = target.value as 'asc' | 'desc';
+		onSortChange(sortBy, sortOrder);
 	}
 
 	function handleResetClick() {
@@ -28,13 +38,24 @@
 </script>
 
 <div class="join-vertical join w-full lg:join-horizontal">
+	<!-- Sort By Field -->
 	<select
 		class="select-bordered select join-item w-full lg:w-fit"
-		onchange={handleSortSelectChange}
-		value={currentSortOrder}
+		onchange={handleSortByChange}
+		value={sortBy}
 	>
-		<option value="desc">{m.date_descending_option()}</option>
-		<option value="asc">{m.date_ascending_option()}</option>
+		<option value="dreamDate">{m.sort_by_date()}</option>
+		<option value="title">{m.sort_by_title()}</option>
+	</select>
+
+	<!-- Sort Order -->
+	<select
+		class="select-bordered select join-item w-full lg:w-fit"
+		onchange={handleSortOrderChange}
+		value={sortOrder}
+	>
+		<option value="desc">{m.descending_option()}</option>
+		<option value="asc">{m.ascending_option()}</option>
 	</select>
 
 	<div class="grow">
