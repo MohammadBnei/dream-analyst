@@ -16,10 +16,7 @@
 
 	// This effect ensures editedTitle is always in sync with the prop when it changes from outside
 	$effect(() => {
-		if (!isEditingTitle) {
-			// Only update if not currently editing to avoid overwriting user input
-			editedTitle = dreamTitle || '';
-		}
+		editedTitle = dreamTitle || '';
 	});
 
 	function handleEditClick() {
@@ -31,8 +28,6 @@
 			await onUpdateTitle(editedTitle.trim());
 		}
 		isEditingTitle = false;
-		// After saving, the parent component will update dreamTitle prop,
-		// and the $effect above will sync editedTitle.
 	}
 
 	function handleCancelClick() {

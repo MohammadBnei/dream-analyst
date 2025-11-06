@@ -212,6 +212,8 @@
 				body: formData
 			});
 
+			console.log({ response });
+
 			if (response.ok) {
 				// On success, invalidate to re-fetch the dream with the new title
 				await invalidate('dream');
@@ -298,9 +300,9 @@
 				onDeleteClick={openDeleteModal}
 				dreamTitle={dream.title}
 				onRegenerateTitle={handleRegenerateTitle}
-				isRegeneratingTitle={isRegeneratingTitle}
+				{isRegeneratingTitle}
 				onUpdateTitle={handleUpdateTitle}
-				isUpdatingTitle={isUpdatingTitle}
+				{isUpdatingTitle}
 			/>
 		</div>
 
@@ -335,9 +337,9 @@
 					dreamId={dream.id}
 					relatedDreams={dream.relatedTo || []}
 					onUpdateRelatedDreams={handleUpdateRelatedDreams}
-					isUpdatingRelatedDreams={isUpdatingRelatedDreams}
+					{isUpdatingRelatedDreams}
 					onRegenerateRelatedDreams={handleRegenerateRelatedDreams}
-					isRegeneratingRelatedDreams={isRegeneratingRelatedDreams}
+					{isRegeneratingRelatedDreams}
 				/>
 
 				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />
