@@ -247,7 +247,7 @@
 			return;
 		}
 		isRegeneratingRelatedDreams = true;
-		const response = await fetch(`/dreams/${dream.id}?/regenerateRelatedDreams`, {
+		const response = await fetch(`/api/dreams/${dream.id}/regenerate-related-dreams`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'

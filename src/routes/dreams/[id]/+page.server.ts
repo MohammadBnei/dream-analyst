@@ -399,35 +399,6 @@ export const actions: Actions = {
 		}
 	},
 
-	regenerateRelatedDreams: async ({ params, locals }) => {
-		const dreamId = params.id;
-		const sessionUser = locals.user;
-		if (!sessionUser) {
-			return fail(401, { message: 'Unauthorized' });
-		}
-
-		const prisma = await getPrismaClient();
-		const dreamAnalysisService = getDreamAnalysisService();
-
-		try {
-			const dream = await prisma.dream.findUnique({
-				where: { id: dreamId }
-			});
-
-			if (!dream || dream.userId !== sessionUser.id) {
-				return fail(403, { error: 'Forbidden: Dream does not belong to user or does not exist.' });
-			}
-
-			// Use the service to find and set related dreams
-			const updatedDream = await dreamAnalysisService.findAndSetRelatedDreams(dream);
-
-			return { success: true, dream: updatedDream };
-		} catch (e) {
-			console.error('Error regenerating related dreams:', e);
-			return fail(500, { error: 'Failed to regenerate related dreams.' });
-		}
-	},
-
 	deleteDream: async ({ params, locals }) => {
 		const dreamId = params.id;
 		const sessionUser = locals.user;
