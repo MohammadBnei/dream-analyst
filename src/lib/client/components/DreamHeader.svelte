@@ -1,11 +1,17 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 
-	let { dreamStatus, onDeleteClick } = $props();
+	let { dreamStatus, onDeleteClick, dreamTitle } = $props();
 </script>
 
 <div class="mb-6 flex w-full flex-col items-center justify-between">
-	<h1 class="grow text-center text-3xl font-bold">{m.dream_details_title()}</h1>
+	<h1 class="grow text-center text-3xl font-bold">
+		{#if dreamTitle}
+			{dreamTitle}
+		{:else}
+			{m.dream_details_title()}
+		{/if}
+	</h1>
 	<div class="mt-2 flex w-full justify-between">
 		<a href="/dreams" class="btn btn-ghost">
 			<svg
