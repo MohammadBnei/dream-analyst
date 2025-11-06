@@ -446,6 +446,7 @@ export const actions: Actions = {
 
 		const prisma = await getPrismaClient();
 		const creditService = getCreditService();
+		const dreamAnalysisService = getDreamAnalysisService(); // Get the service
 
 		const formData = await request.formData();
 		const promptType = formData.get('promptType');
@@ -477,7 +478,8 @@ export const actions: Actions = {
 				});
 			}
 
-			const updatedDream = await prisma.dream.update({
+			// Regenerate title and related dreams before resetting analysis
+			let updatedDream = await prisma.dream.update({
 				where: { id: dreamId },
 				data: {
 					status: DreamStatus.PENDING_ANALYSIS, // Use enum
@@ -486,6 +488,16 @@ export const actions: Actions = {
 					updatedAt: new Date()
 				}
 			});
+
+			// 1. Generate Title
+			const generatedTitle = await dreamAnalysisService.generateDreamTitle(updatedDream.rawText);
+			updatedDream = await prisma.dream.update({
+				where: { id: updatedDream.id },
+				data: { title: generatedTitle }
+			});
+
+			// 2. Find and Set Related Dreams
+			updatedDream = await dreamAnalysisService.findAndSetRelatedDreams(updatedDream);
 
 			// Deduct credits for the new analysis
 			await creditService.deductCredits(sessionUser.id, cost, 'DREAM_ANALYSIS', updatedDream.id);

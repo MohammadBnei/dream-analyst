@@ -3,6 +3,7 @@ import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { Actions } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
 
 const CreateDreamSchema = v.object({
 	rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.'))
@@ -27,15 +28,30 @@ export const actions: Actions = {
 		}
 
 		const prisma = await getPrismaClient();
+		const dreamAnalysisService = getDreamAnalysisService();
 
 		try {
-			const newDream = await prisma.dream.create({
+			let newDream = await prisma.dream.create({
 				data: {
 					userId: sessionUser.id,
 					rawText: validatedData.rawText,
 					status: DreamStatus.PENDING_ANALYSIS // Use enum
 				}
 			});
+
+			// --- New Sequential Logic ---
+
+			// 1. Generate Title
+			const generatedTitle = await dreamAnalysisService.generateDreamTitle(newDream.rawText);
+			newDream = await prisma.dream.update({
+				where: { id: newDream.id },
+				data: { title: generatedTitle }
+			});
+
+			// 2. Find and Set Related Dreams
+			newDream = await dreamAnalysisService.findAndSetRelatedDreams(newDream);
+
+			// --- End New Sequential Logic ---
 
 			throw redirect(303, `/dreams/${newDream.id}`);
 		} catch (e: any) {

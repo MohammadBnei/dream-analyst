@@ -269,8 +269,9 @@ Title:`;
 
 	/**
 	 * Orchestrates the dream analysis process, including fetching past dream context
-	 * and initiating the LLM stream. It also updates the relatedTo and relatedBy fields
-	 * for the current dream and its related dreams.
+	 * and initiating the LLM stream.
+	 * NOTE: This method no longer handles `findAndSetRelatedDreams` or `generateDreamTitle`.
+	 * Those operations are expected to be completed *before* calling this method.
 	 * @param dream The dream object to analyze.
 	 * @param promptType The type of interpretation prompt to use.
 	 * @param signal An AbortSignal to cancel the LLM request.
@@ -281,14 +282,44 @@ Title:`;
 		promptType: DreamPromptType = 'jungian',
 		signal?: AbortSignal
 	): Promise<AsyncIterable<string>> {
+		const prisma = await this.getPrisma();
 		let pastDreamsContext = '';
 
-		// Find and set related dreams first
-		const updatedDreamWithRelations = await this.findAndSetRelatedDreams(dream, signal);
+		// Fetch the dream again to ensure we have the latest relatedTo data
+		const dreamWithRelations = await prisma.dream.findUnique({
+			where: { id: dream.id },
+			select: {
+				id: true,
+				rawText: true,
+				title: true,
+				interpretation: true,
+				status: true,
+				dreamDate: true,
+				createdAt: true,
+				updatedAt: true,
+				userId: true,
+				analysisText: true,
+				promptType: true,
+				tags: true,
+				relatedTo: {
+					select: {
+						id: true,
+						title: true,
+						dreamDate: true,
+						rawText: true,
+						interpretation: true // Ensure interpretation is selected for context
+					}
+				}
+			}
+		});
 
-		// Now, build the pastDreamsContext from the newly established relations
-		if (updatedDreamWithRelations.relatedTo && updatedDreamWithRelations.relatedTo.length > 0) {
-			pastDreamsContext += updatedDreamWithRelations.relatedTo
+		if (!dreamWithRelations) {
+			throw new Error(`Dream with ID ${dream.id} not found for analysis context.`);
+		}
+
+		// Build the pastDreamsContext from the already established relations
+		if (dreamWithRelations.relatedTo && dreamWithRelations.relatedTo.length > 0) {
+			pastDreamsContext += dreamWithRelations.relatedTo
 				.map(
 					(d, index) =>
 						`Related Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
