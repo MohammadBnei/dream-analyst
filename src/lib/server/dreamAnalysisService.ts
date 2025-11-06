@@ -112,7 +112,7 @@ class DreamAnalysisService {
 		const prisma = await this.getPrisma();
 		try {
 			// 1. Generate search terms from the new dream using the weak model
-			const searchTermsPrompt = `Given the following dream text, extract 7 distinct keywords or short phrases (2-3 words max) that best describe its core themes, objects, or emotions. Separate them with commas. Use the same language as the dream text.
+			const searchTermsPrompt = `Given the following dream text, extract 7 distinct keywords or short phrases (2-3 words max) that best describe its core themes, objects, or emotions. Separate them with commas. Use the same language as the dream text. Do not respond with anything else than the keywords, separated by commas.
 Example: "water,fire,mountain,shame"
 Dream: "${dream.rawText}"
 Keywords:`;
@@ -234,8 +234,7 @@ Title:`;
 			}
 		});
 
-		// Connect new related dreams
-		const updatedDream = await prisma.dream.update({
+		return prisma.dream.update({
 			where: { id: dream.id },
 			data: {
 				relatedTo: {
@@ -252,6 +251,7 @@ Title:`;
 				dreamDate: true,
 				createdAt: true,
 				updatedAt: true,
+				userId: true,
 				analysisText: true,
 				promptType: true,
 				tags: true,
@@ -265,8 +265,6 @@ Title:`;
 				}
 			}
 		});
-
-		return updatedDream;
 	}
 
 	/**
@@ -283,7 +281,6 @@ Title:`;
 		promptType: DreamPromptType = 'jungian',
 		signal?: AbortSignal
 	): Promise<AsyncIterable<string>> {
-		const prisma = await this.getPrisma();
 		let pastDreamsContext = '';
 
 		// Find and set related dreams first
