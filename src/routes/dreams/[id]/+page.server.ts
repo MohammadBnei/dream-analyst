@@ -56,6 +56,24 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			where: {
 				id: dreamId,
 				userId: sessionUser.id
+			},
+			select: {
+				id: true,
+				rawText: true,
+				title: true,
+				interpretation: true,
+				status: true,
+				dreamDate: true,
+				createdAt: true,
+				updatedAt: true,
+				relatedTo: {
+					select: {
+						id: true,
+						title: true,
+						dreamDate: true,
+						rawText: true
+					}
+				}
 			}
 		});
 
