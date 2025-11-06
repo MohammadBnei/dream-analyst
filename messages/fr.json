@@ -151,5 +151,8 @@
 	"add_related_dream_title": "Ajouter un Rêve Associé",
 	"no_related_dreams": "Aucun rêve associé trouvé.",
 	"regenerate_relations_button": "Régénérer les Relations",
-	"no_dreams_found": "Aucun rêve trouvé."
+	"no_dreams_found": "Aucun rêve trouvé.",
+	"show_dream_text": "Afficher le texte du rêve",
+	"show_full_dream_text": "Afficher le texte complet du rêve",
+	"hide_dream_text": "Masquer le texte du rêve"
 }

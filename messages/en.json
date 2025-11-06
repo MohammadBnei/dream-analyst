@@ -151,5 +151,8 @@
 	"add_related_dream_title": "Add Related Dream",
 	"no_related_dreams": "No related dreams found.",
 	"regenerate_relations_button": "Regenerate Relations",
-	"no_dreams_found": "No dreams found."
+	"no_dreams_found": "No dreams found.",
+	"show_dream_text": "Show dream text",
+	"show_full_dream_text": "Show full dream text",
+	"hide_dream_text": "Hide dream text"
 }
