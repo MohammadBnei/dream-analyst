@@ -33,6 +33,8 @@
 	let streamError = $state<string | null>(null);
 	let isRegeneratingTitle = $state(false); // New state for title regeneration
 	let isUpdatingTitle = $state(false); // New state for manual title update
+	let isUpdatingRelatedDreams = $state(false); // New state for updating related dreams
+	let isRegeneratingRelatedDreams = $state(false); // New state for regenerating related dreams
 
 	let analysisService: DreamAnalysisService | null = $state(null);
 	let clientChatService: ClientChatService | null = $state(null);
@@ -210,6 +212,60 @@
 			streamError = errorData.error;
 		}
 	}
+
+	async function handleUpdateRelatedDreams(updatedRelatedIds: string[]) {
+		if (!dream.id) {
+			console.warn('Cannot update related dreams: dream ID is not available.');
+			return;
+		}
+		isUpdatingRelatedDreams = true;
+		const formData = new FormData();
+		formData.append('relatedDreamIds', JSON.stringify(updatedRelatedIds));
+
+		const response = await fetch(`/dreams/${dream.id}?/updateRelatedDreams`, {
+			method: 'POST',
+			body: formData
+		});
+		isUpdatingRelatedDreams = false;
+
+		if (response.ok) {
+			const result = await response.json();
+			if (result.dream) {
+				dream = result.dream;
+				invalidate('dream'); // Invalidate to re-fetch related dreams with full data
+			}
+		} else {
+			const errorData = await response.json();
+			console.error('Error updating related dreams:', errorData.error);
+			streamError = errorData.error;
+		}
+	}
+
+	async function handleRegenerateRelatedDreams() {
+		if (!dream.id) {
+			console.warn('Cannot regenerate related dreams: dream ID is not available.');
+			return;
+		}
+		isRegeneratingRelatedDreams = true;
+		const response = await fetch(`/dreams/${dream.id}?/regenerateRelatedDreams`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+		isRegeneratingRelatedDreams = false;
+		if (response.ok) {
+			const result = await response.json();
+			if (result.dream) {
+				dream = result.dream;
+				invalidate('dream'); // Invalidate to re-fetch related dreams with full data
+			}
+		} else {
+			const errorData = await response.json();
+			console.error('Error regenerating related dreams:', errorData.error);
+			streamError = errorData.error;
+		}
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -253,7 +309,14 @@
 					<DreamChatSection dreamId={dream.id} />
 				{/if}
 
-				<DreamRelatedDreams relatedDreams={dream.relatedTo || []} />
+				<DreamRelatedDreams
+					dreamId={dream.id}
+					relatedDreams={dream.relatedTo || []}
+					onUpdateRelatedDreams={handleUpdateRelatedDreams}
+					isUpdatingRelatedDreams={isUpdatingRelatedDreams}
+					onRegenerateRelatedDreams={handleRegenerateRelatedDreams}
+					isRegeneratingRelatedDreams={isRegeneratingRelatedDreams}
+				/>
 
 				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />
 			</div>

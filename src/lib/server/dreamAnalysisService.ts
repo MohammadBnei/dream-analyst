@@ -189,6 +189,87 @@ Title:`;
 	}
 
 	/**
+	 * Finds and sets related dreams for a given dream. This method can be called
+	 * independently to regenerate or update related dreams.
+	 * @param dream The dream object for which to find and set relations.
+	 * @param signal An AbortSignal to cancel the LLM request.
+	 * @returns The updated dream object with new related dreams.
+	 */
+	public async findAndSetRelatedDreams(dream: Dream, signal?: AbortSignal): Promise<Dream> {
+		const prisma = await this.getPrisma();
+		const relatedDreamIds: string[] = [];
+
+		// Run both context-gathering methods in parallel
+		const [lastFiveDreamsResult, relevantDreamsResult] = await Promise.allSettled([
+			this._getPastFiveDreams(dream),
+			this._getRelevantPastDreams(dream, signal)
+		]);
+
+		const allRelatedDreams: Dream[] = [];
+
+		if (lastFiveDreamsResult.status === 'fulfilled' && lastFiveDreamsResult.value.length > 0) {
+			allRelatedDreams.push(...lastFiveDreamsResult.value);
+		}
+		if (relevantDreamsResult.status === 'fulfilled' && relevantDreamsResult.value.length > 0) {
+			// Filter out duplicates if a dream appears in both lists
+			const newRelevantDreams = relevantDreamsResult.value.filter(
+				(rd) => !allRelatedDreams.some((ard) => ard.id === rd.id)
+			);
+			allRelatedDreams.push(...newRelevantDreams);
+		}
+
+		// Collect all unique related dream IDs
+		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
+
+		// Disconnect all existing related dreams first to ensure a clean update
+		await prisma.dream.update({
+			where: { id: dream.id },
+			data: {
+				relatedTo: {
+					set: [] // Disconnect all
+				},
+				relatedBy: {
+					set: [] // Disconnect all inverse relations
+				}
+			}
+		});
+
+		// Connect new related dreams
+		const updatedDream = await prisma.dream.update({
+			where: { id: dream.id },
+			data: {
+				relatedTo: {
+					connect: relatedDreamIds.map((id) => ({ id }))
+				},
+				updatedAt: new Date()
+			},
+			select: {
+				id: true,
+				rawText: true,
+				title: true,
+				interpretation: true,
+				status: true,
+				dreamDate: true,
+				createdAt: true,
+				updatedAt: true,
+				analysisText: true,
+				promptType: true,
+				tags: true,
+				relatedTo: {
+					select: {
+						id: true,
+						title: true,
+						dreamDate: true,
+						rawText: true
+					}
+				}
+			}
+		});
+
+		return updatedDream;
+	}
+
+	/**
 	 * Orchestrates the dream analysis process, including fetching past dream context
 	 * and initiating the LLM stream. It also updates the relatedTo and relatedBy fields
 	 * for the current dream and its related dreams.
@@ -204,51 +285,19 @@ Title:`;
 	): Promise<AsyncIterable<string>> {
 		const prisma = await this.getPrisma();
 		let pastDreamsContext = '';
-		const relatedDreamIds: string[] = [];
 
-		// Run both context-gathering methods in parallel
-		const [lastFiveDreamsResult, relevantDreamsResult] = await Promise.allSettled([
-			this._getPastFiveDreams(dream),
-			this._getRelevantPastDreams(dream, signal)
-		]);
+		// Find and set related dreams first
+		const updatedDreamWithRelations = await this.findAndSetRelatedDreams(dream, signal);
 
-		const allRelatedDreams: Dream[] = [];
-
-		if (lastFiveDreamsResult.status === 'fulfilled' && lastFiveDreamsResult.value.length > 0) {
-			allRelatedDreams.push(...lastFiveDreamsResult.value);
-			pastDreamsContext += lastFiveDreamsResult.value
+		// Now, build the pastDreamsContext from the newly established relations
+		if (updatedDreamWithRelations.relatedTo && updatedDreamWithRelations.relatedTo.length > 0) {
+			pastDreamsContext += updatedDreamWithRelations.relatedTo
 				.map(
 					(d, index) =>
-						`Last Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
+						`Related Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
 				)
 				.join('\n\n');
 		}
-		if (relevantDreamsResult.status === 'fulfilled' && relevantDreamsResult.value.length > 0) {
-			prisma.dream.update({
-				where: { id: dream.id },
-				data: {
-					relatedTo: {
-						connect: relevantDreamsResult.value.map(({ id }) => ({ id }))
-					}
-				}
-			});
-			// Filter out duplicates if a dream appears in both lists
-			const newRelevantDreams = relevantDreamsResult.value.filter(
-				(rd) => !allRelatedDreams.some((ard) => ard.id === rd.id)
-			);
-			allRelatedDreams.push(...newRelevantDreams);
-
-			if (pastDreamsContext && newRelevantDreams.length > 0) pastDreamsContext += '\n\n'; // Add separator if both exist
-			pastDreamsContext += newRelevantDreams
-				.map(
-					(d, index) =>
-						`Relevant Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
-				)
-				.join('\n\n');
-		}
-
-		// Collect all unique related dream IDs
-		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
 
 		// Now, initiate the raw streamed analysis with the gathered context
 		const stream = await this._initiateRawStreamedDreamAnalysis(
