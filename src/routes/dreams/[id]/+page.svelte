@@ -1,10 +1,9 @@
 <script lang="ts">
 	import { invalidate } from '$app/navigation';
-	import { onDestroy, onMount } from 'svelte';
+	import { onMount } from 'svelte';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import { ClientChatService } from '$lib/client/services/chatService';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-	import { enhance } from '$app/forms';
 
 	// New Components
 	import DreamHeader from '$lib/client/components/DreamHeader.svelte';
@@ -13,10 +12,10 @@
 	import DreamRawTextSection from '$lib/client/components/DreamRawTextSection.svelte';
 	import DreamInterpretationSection from '$lib/client/components/DreamInterpretationSection.svelte';
 	import DreamChatSection from '$lib/client/components/DreamChatSection.svelte';
-	import DreamMetadata from '$lib/client/components/DreamMetadata';
 	import DeleteDreamModal from '$lib/client/components/DeleteDreamModal.svelte';
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from './DreamRelatedDreams.svelte'; // Import the new component
+	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
 
 	let { data, form } = $props();
 

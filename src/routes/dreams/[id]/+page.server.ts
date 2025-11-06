@@ -437,11 +437,14 @@ export const actions: Actions = {
 
 			const newTitle = await dreamAnalysisService.generateDreamTitle(dream.rawText);
 
+			if (!newTitle) {
+				return fail(500, { error: 'Failed to generate dream title.' });
+			}
+
 			const updatedDream = await prisma.dream.update({
 				where: { id: dreamId },
 				data: {
 					title: newTitle,
-					updatedAt: new Date()
 				}
 			});
 
