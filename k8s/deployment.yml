@@ -3,7 +3,9 @@ kind: Deployment
 metadata:
   name: dream-analyst
   annotations:
-    secrets.infisical.com/auto-reload: 'true'
+    secrets.infisical.com/auto-reload: "true"
+  labels:
+    monitor.bnei.dev/enabled: "true"
 spec:
   replicas: 1
   revisionHistoryLimit: 2
