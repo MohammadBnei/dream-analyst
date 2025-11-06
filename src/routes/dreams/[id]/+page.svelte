@@ -169,8 +169,11 @@
 		if (response.ok) {
 			const result = await response.json();
 			if (result.dream) {
+				// Replace the entire dream object to ensure reactivity for all its properties
 				dream = result.dream;
-				invalidate('dream'); // Invalidate to ensure latest DB state
+				// Invalidate 'dream' to ensure the latest DB state is fetched,
+				// especially if other parts of the page rely on the load function's data.
+				invalidate('dream');
 			}
 		} else {
 			const errorData = await response.json();
