@@ -159,7 +159,7 @@
 			return;
 		}
 		isRegeneratingTitle = true;
-		const response = await fetch(`/dreams/${dream.id}?/regenerateTitle`, {
+		const response = await fetch(`/api/dreams/${dream.id}/regenerate-title`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json'

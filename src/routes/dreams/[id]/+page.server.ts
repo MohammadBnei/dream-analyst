@@ -410,48 +410,5 @@ export const actions: Actions = {
 			console.error('Error updating dream status:', e);
 			return fail(500, { status, error: 'Failed to update dream status due to a server error.' });
 		}
-	},
-
-	regenerateTitle: async ({ params, locals }) => {
-		const dreamId = params.id;
-		const sessionUser = locals.user;
-		if (!sessionUser) {
-			return fail(401, { message: 'Unauthorized' });
-		}
-
-		const prisma = await getPrismaClient();
-		const dreamAnalysisService = getDreamAnalysisService();
-
-		try {
-			const dream = await prisma.dream.findUnique({
-				where: { id: dreamId }
-			});
-
-			if (!dream || dream.userId !== sessionUser.id) {
-				return fail(403, { error: 'Forbidden: Dream does not belong to user or does not exist.' });
-			}
-
-			if (!dream.rawText) {
-				return fail(400, { error: 'Dream has no raw text to generate a title from.' });
-			}
-
-			const newTitle = await dreamAnalysisService.generateDreamTitle(dream.rawText);
-
-			if (!newTitle) {
-				return fail(500, { error: 'Failed to generate dream title.' });
-			}
-
-			const updatedDream = await prisma.dream.update({
-				where: { id: dreamId },
-				data: {
-					title: newTitle,
-				}
-			});
-
-			return { success: true, dream: updatedDream };
-		} catch (e) {
-			console.error('Error regenerating dream title:', e);
-			return fail(500, { error: 'Failed to regenerate dream title.' });
-		}
 	}
 };
