@@ -4,6 +4,9 @@ import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
 import { getLLMService } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
+import { getLogger } from '$lib/server/logger';
+
+const logger = getLogger('dreamAnalysisService');
 
 class DreamAnalysisService {
 	private llmService: ReturnType<typeof getLLMService>;
@@ -56,7 +59,7 @@ class DreamAnalysisService {
 			// Return the raw LLM stream as an AsyncIterable<string>
 			return stream;
 		} catch (error) {
-			console.error(`Error initiating LLM stream for dream ${dream.id}:`, error);
+			logger.error(`Error initiating LLM stream for dream ${dream.id}:`, error);
 			// Re-throw the error to be handled by the caller (StreamProcessor)
 			throw error;
 		}
@@ -95,7 +98,7 @@ class DreamAnalysisService {
 			});
 			return lastFiveDreams;
 		} catch (e) {
-			console.warn(`Dream ${dream.id}: Failed to fetch last five dreams:`, e);
+			logger.warn(`Dream ${dream.id}: Failed to fetch last five dreams:`, e);
 		}
 		return [];
 	}
@@ -162,24 +165,26 @@ Keywords:`;
 				return relevantPastDreams;
 			}
 		} catch (e) {
-			console.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams:`, e);
+			logger.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams:`, e);
 		}
 		return [];
 	}
 
 	/**
 	 * Orchestrates the dream analysis process, including fetching past dream context
-	 * and initiating the LLM stream.
+	 * and initiating the LLM stream. It also updates the relatedTo and relatedBy fields
+	 * for the current dream and its related dreams.
 	 * @param dream The dream object to analyze.
 	 * @param promptType The type of interpretation prompt to use.
 	 * @param signal An AbortSignal to cancel the LLM request.
-	 * @returns An AsyncIterable<string> of raw LLM content (string chunks) and an array of related dream IDs.
+	 * @returns An AsyncIterable<string> of raw LLM content (string chunks).
 	 */
 	public async initiateDreamAnalysis(
 		dream: Dream,
 		promptType: DreamPromptType = 'jungian',
 		signal?: AbortSignal
-	): Promise<{ stream: AsyncIterable<string>; relatedDreamIds: string[] }> {
+	): Promise<AsyncIterable<string>> {
+		const prisma = await this.getPrisma();
 		let pastDreamsContext = '';
 		const relatedDreamIds: string[] = [];
 
@@ -219,6 +224,32 @@ Keywords:`;
 		// Collect all unique related dream IDs
 		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
 
+		// Update the current dream's relatedTo field and the related dreams' relatedBy field
+		if (relatedDreamIds.length > 0) {
+			logger.debug(`Dream ${dream.id}: Found ${relatedDreamIds.length} related dreams. Updating relations.`);
+			// Update the current dream's relatedTo field
+			await prisma.dream.update({
+				where: { id: dream.id },
+				data: {
+					relatedTo: {
+						connect: relatedDreamIds.map((id) => ({ id }))
+					}
+				}
+			});
+
+			// Update the related dreams' relatedBy field
+			for (const relatedId of relatedDreamIds) {
+				await prisma.dream.update({
+					where: { id: relatedId },
+					data: {
+						relatedBy: {
+							connect: { id: dream.id }
+						}
+					}
+				});
+			}
+		}
+
 		// Now, initiate the raw streamed analysis with the gathered context
 		const stream = await this._initiateRawStreamedDreamAnalysis(
 			dream,
@@ -227,7 +258,7 @@ Keywords:`;
 			pastDreamsContext
 		);
 
-		return { stream, relatedDreamIds };
+		return stream;
 	}
 }
 
