@@ -8,18 +8,18 @@
 	let editedTitle = $state(dreamTitle || '');
 	let isUpdatingTitle = $state(false); // Local state for form submission loading
 
-	// This effect ensures editedTitle is always in sync with the prop when it changes from outside
+	// Effect to synchronize editedTitle with dreamTitle prop when not editing
 	$effect(() => {
-		// Only update editedTitle from dreamTitle if we are not currently editing
-		// or if the dreamTitle prop has changed and we are not in the middle of an update.
-		if (!isEditingTitle || (dreamTitle && editedTitle !== dreamTitle && !isUpdatingTitle)) {
+		// Only update editedTitle from dreamTitle if we are NOT in editing mode.
+		// This allows the user to type freely when isEditingTitle is true.
+		if (!isEditingTitle) {
 			editedTitle = dreamTitle || '';
 		}
 	});
 
 	function handleEditClick() {
 		isEditingTitle = true;
-		editedTitle = dreamTitle || ''; // Ensure editedTitle starts with the current dreamTitle
+		editedTitle = dreamTitle || ''; // Ensure editedTitle starts with the current dreamTitle when entering edit mode
 	}
 
 	function handleCancelClick() {
