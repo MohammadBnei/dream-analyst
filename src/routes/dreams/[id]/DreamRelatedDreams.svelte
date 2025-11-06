@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 
-	let { relatedDreams } = $props<{ relatedDreams: App.Dream[] }>();
+	let { relatedDreams } = $props<{ relatedDreams: Partial<App.Dream[]> }>();
 
 	function navigateToDream(dreamId: string) {
 		goto(`/dreams/${dreamId}`);

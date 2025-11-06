@@ -203,7 +203,6 @@
 			const result = await response.json();
 			if (result.dream) {
 				dream = result.dream;
-				invalidate('dream');
 			}
 		} else {
 			const errorData = await response.json();

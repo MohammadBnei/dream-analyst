@@ -176,7 +176,7 @@ Keywords:`;
 	 * @returns A promise that resolves to the generated title string.
 	 */
 	public async generateDreamTitle(dreamText: string, signal?: AbortSignal): Promise<string> {
-		const titlePrompt = `Create a very short, evocative title (under 10 words) for the following dream. Focus on the most prominent image or feeling.
+		const titlePrompt = `Create a very short, evocative title (under 10 words) for the following dream. Focus on the most prominent image or feeling. Use the same language as the dream text. Do not respond anything besides the dream's title.
 Dream: "${dreamText}"
 Title:`;
 		try {
