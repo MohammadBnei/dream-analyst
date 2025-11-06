@@ -57,7 +57,7 @@
 		}[rawTextDisplayState];
 	});
 
-	const isSwapChecked = $derived(() => rawTextDisplayState === 2); // Checkbox is 'on' when full text is shown
+	const isSwapChecked = $derived.by(() => rawTextDisplayState === 2); // Checkbox is 'on' when full text is shown
 </script>
 
 <li class="list-row" transition:fade>
@@ -133,7 +133,7 @@
 	<!-- View Details Button -->
 	<a
 		href={`/dreams/${dream.id}`}
-		class="tooltip btn btn-primary tooltip-left btn-square btn-ghost"
+		class="tooltip btn btn-primary tooltip-left btn-square"
 		data-tip={m.view_details_button()}
 		aria-label="go to details"
 	>
