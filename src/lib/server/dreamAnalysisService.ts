@@ -90,7 +90,8 @@ class DreamAnalysisService {
 					updatedAt: true,
 					analysisText: true,
 					promptType: true,
-					tags: true
+					tags: true,
+					title: true // Include title
 				}
 			});
 			return lastFiveDreams;
@@ -156,7 +157,8 @@ Keywords:`;
 						updatedAt: true,
 						analysisText: true,
 						promptType: true,
-						tags: true
+						tags: true,
+						title: true // Include title
 					}
 				});
 				return relevantPastDreams;
@@ -165,6 +167,25 @@ Keywords:`;
 			console.warn(`Dream ${dream.id}: Failed to fetch or process relevant past dreams:`, e);
 		}
 		return [];
+	}
+
+	/**
+	 * Generates a concise title for the dream using the weak LLM.
+	 * @param dreamText The raw text of the dream.
+	 * @param signal An AbortSignal to cancel the LLM request.
+	 * @returns A promise that resolves to the generated title string.
+	 */
+	public async generateDreamTitle(dreamText: string, signal?: AbortSignal): Promise<string> {
+		const titlePrompt = `Create a very short, evocative title (under 10 words) for the following dream. Focus on the most prominent image or feeling.
+Dream: "${dreamText}"
+Title:`;
+		try {
+			const title = await this.llmService.generateText(titlePrompt, signal);
+			return title.trim().replace(/^"|"$/g, ''); // Remove leading/trailing quotes if LLM adds them
+		} catch (error) {
+			console.error('Error generating dream title:', error);
+			return 'Untitled Dream'; // Fallback title
+		}
 	}
 
 	/**

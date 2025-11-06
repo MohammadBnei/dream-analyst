@@ -49,6 +49,7 @@ model Dream {
   rawText           String              @map("raw_text")
   analysisText      String?             @map("analysis_text")
   interpretation    String?
+  title             String?             // New field for AI-generated title
   status            DreamStatus         @default(PENDING_ANALYSIS)
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
