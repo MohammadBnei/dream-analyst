@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types';
-import { error } from '@sveltejs/kit';
+import { error, json } from '@sveltejs/kit'; // Import json
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
@@ -46,7 +46,7 @@ const ResetAnalysisSchema = v.object({
 	promptType: v.string() // Expect promptType from the form
 });
 
-export const load: PageServerLoad = async ({ params, locals }) => {
+export const load: PageServerLoad = async ({ params, locals, url }) => {
 	const dreamId = params.id;
 	const sessionUser = locals.user;
 
@@ -59,6 +59,32 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	const prisma = await getPrismaClient();
+
+	// Handle searchDreams action if requested
+	if (url.searchParams.has('searchDreams')) {
+		const query = url.searchParams.get('query') || '';
+		if (query.length >= 3) {
+			const dreams = await prisma.dream.findMany({
+				where: {
+					userId: sessionUser.id,
+					id: { not: dreamId }, // Exclude the current dream
+					OR: [
+						{ title: { contains: query, mode: 'insensitive' } },
+						{ rawText: { contains: query, mode: 'insensitive' } }
+					]
+				},
+				select: {
+					id: true,
+					title: true,
+					rawText: true,
+					dreamDate: true
+				},
+				take: 10 // Limit search results
+			});
+			return json({ dreams });
+		}
+		return json({ dreams: [] });
+	}
 
 	try {
 		const dream = await prisma.dream.findUnique({
@@ -431,6 +457,34 @@ export const actions: Actions = {
 				relatedDreamIds: relatedDreamIdsString,
 				error: 'Failed to update related dreams due to a server error.'
 			});
+		}
+	},
+
+	regenerateRelatedDreams: async ({ params, locals }) => {
+		const dreamId = params.id;
+		const sessionUser = locals.user;
+		if (!sessionUser) {
+			return fail(401, { message: 'Unauthorized' });
+		}
+
+		const prisma = await getPrismaClient();
+		const dreamAnalysisService = getDreamAnalysisService();
+
+		try {
+			const existingDream = await prisma.dream.findUnique({
+				where: { id: dreamId }
+			});
+
+			if (!existingDream || existingDream.userId !== sessionUser.id) {
+				return fail(403, { error: 'Forbidden: You do not own this dream or it does not exist.' });
+			}
+
+			const updatedDream = await dreamAnalysisService.findAndSetRelatedDreams(existingDream);
+
+			return { success: true, dream: updatedDream };
+		} catch (e) {
+			console.error('Error regenerating related dreams:', e);
+			return fail(500, { error: 'Failed to regenerate related dreams due to a server error.' });
 		}
 	},
 

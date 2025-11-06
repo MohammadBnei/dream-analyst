@@ -1,26 +1,35 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
+	import { enhance } from '$app/forms';
+	import { page } from '$app/stores';
+	import { createEventDispatcher } from 'svelte';
+
+	const dispatch = createEventDispatcher();
 
 	let {
 		dreamId,
 		relatedDreams,
-		onUpdateRelatedDreams,
+		onUpdateRelatedDreams, // This will now be handled by form actions internally
 		isUpdatingRelatedDreams,
-		onRegenerateRelatedDreams,
+		onRegenerateRelatedDreams, // This will now be handled by form actions internally
 		isRegeneratingRelatedDreams
 	} = $props<{
 		dreamId: string;
 		relatedDreams: Partial<App.Dream[]>;
-		onUpdateRelatedDreams: (updatedRelatedIds: string[]) => Promise<void>;
+		onUpdateRelatedDreams: (updatedRelatedIds: string[]) => Promise<void>; // Keep for now, but will be replaced
 		isUpdatingRelatedDreams: boolean;
-		onRegenerateRelatedDreams: () => Promise<void>;
+		onRegenerateRelatedDreams: () => Promise<void>; // Keep for now, but will be replaced
 		isRegeneratingRelatedDreams: boolean;
 	}>();
 
 	let isEditing = $state(false);
 	let currentRelatedIds = $state<string[]>(relatedDreams.map((d) => d.id || ''));
 	let availableDreams = $state<Partial<App.Dream>[]>([]); // For searching and adding
+	let searchQuery = $state('');
+	let searchResults = $state<Partial<App.Dream>[]>([]);
+	let isSearching = $state(false);
+	let searchTimeout: ReturnType<typeof setTimeout>;
 
 	// Effect to update currentRelatedIds when relatedDreams prop changes
 	$effect(() => {
@@ -37,31 +46,115 @@
 	}
 
 	async function handleSaveClick() {
-		await onUpdateRelatedDreams(currentRelatedIds);
-		isEditing = false;
+		// This will now be handled by the form action
+		// await onUpdateRelatedDreams(currentRelatedIds);
+		// isEditing = false;
 	}
 
 	function handleCancelClick() {
 		currentRelatedIds = relatedDreams.map((d) => d.id || ''); // Reset to original
 		isEditing = false;
+		searchQuery = '';
+		searchResults = [];
 	}
 
 	function handleRemoveRelated(idToRemove: string) {
 		currentRelatedIds = currentRelatedIds.filter((id) => id !== idToRemove);
 	}
 
-	async function handleRegenerateClick() {
-		await onRegenerateRelatedDreams();
-		isEditing = false; // Exit edit mode after regeneration
+	function handleAddRelated(dreamToAdd: Partial<App.Dream>) {
+		if (dreamToAdd.id && !currentRelatedIds.includes(dreamToAdd.id)) {
+			currentRelatedIds = [...currentRelatedIds, dreamToAdd.id];
+			// Also add to the displayed relatedDreams if it's not already there
+			if (!relatedDreams.some(d => d.id === dreamToAdd.id)) {
+				relatedDreams = [...relatedDreams, dreamToAdd];
+			}
+		}
+		searchQuery = ''; // Clear search after adding
+		searchResults = [];
 	}
 
-	// Placeholder for search functionality (will be implemented later if needed)
-	async function searchDreams(query: string) {
-		// This would call an API endpoint to search for dreams
-		console.log('Searching for dreams:', query);
-		// For now, just return an empty array
-		return [];
+	async function handleRegenerateClick() {
+		// This will now be handled by the form action
+		// await onRegenerateRelatedDreams();
+		// isEditing = false; // Exit edit mode after regeneration
 	}
+
+	async function searchDreams(query: string) {
+		if (query.length < 3) {
+			searchResults = [];
+			return;
+		}
+
+		isSearching = true;
+		try {
+			const response = await fetch(`/dreams/${dreamId}?/searchDreams&query=${query}`);
+			if (response.ok) {
+				const data = await response.json();
+				searchResults = data.dreams.filter((d: Partial<App.Dream>) => d.id !== dreamId && !currentRelatedIds.includes(d.id || ''));
+			} else {
+				console.error('Failed to search dreams:', response.statusText);
+				searchResults = [];
+			}
+		} catch (error) {
+			console.error('Error searching dreams:', error);
+			searchResults = [];
+		} finally {
+			isSearching = false;
+		}
+	}
+
+	$effect(() => {
+		clearTimeout(searchTimeout);
+		if (searchQuery) {
+			searchTimeout = setTimeout(() => {
+				searchDreams(searchQuery);
+			}, 300); // Debounce search
+		} else {
+			searchResults = [];
+		}
+	});
+
+	// Form action for updating related dreams
+	const updateRelatedDreamsAction = enhance(
+		({ form, data, action, cancel }) => {
+			isUpdatingRelatedDreams = true;
+			return async ({ result, update }) => {
+				if (result.type === 'success') {
+					dispatch('relatedDreamsUpdated', result.data?.dream);
+					isEditing = false;
+				} else if (result.type === 'error') {
+					console.error('Failed to update related dreams:', result.error);
+					// Optionally display error message to user
+				}
+				isUpdatingRelatedDreams = false;
+				await update();
+			};
+		},
+		({ form, data, action, cancel }) => {
+			// This function runs before the request is sent
+			// You can modify the form data here if needed
+			data.set('relatedDreamIds', JSON.stringify(currentRelatedIds));
+		}
+	);
+
+	// Form action for regenerating related dreams
+	const regenerateRelatedDreamsAction = enhance(
+		({ form, data, action, cancel }) => {
+			isRegeneratingRelatedDreams = true;
+			return async ({ result, update }) => {
+				if (result.type === 'success') {
+					dispatch('relatedDreamsUpdated', result.data?.dream);
+					isEditing = false; // Exit edit mode after regeneration
+				} else if (result.type === 'error') {
+					console.error('Failed to regenerate related dreams:', result.error);
+					// Optionally display error message to user
+				}
+				isRegeneratingRelatedDreams = false;
+				await update();
+			};
+		}
+	);
 </script>
 
 <div class="mb-6">
@@ -69,17 +162,19 @@
 		<h3 class="text-lg font-semibold">{m.related_dreams_title()}</h3>
 		<div class="flex gap-2">
 			{#if isEditing}
-				<button
-					class="btn btn-sm btn-primary"
-					onclick={handleSaveClick}
-					disabled={isUpdatingRelatedDreams}
-				>
-					{#if isUpdatingRelatedDreams}
-						<span class="loading loading-sm loading-spinner"></span>
-					{:else}
-						{m.save_button()}
-					{/if}
-				</button>
+				<form method="POST" action="?/updateRelatedDreams" use:updateRelatedDreamsAction>
+					<button
+						type="submit"
+						class="btn btn-sm btn-primary"
+						disabled={isUpdatingRelatedDreams}
+					>
+						{#if isUpdatingRelatedDreams}
+							<span class="loading loading-sm loading-spinner"></span>
+						{:else}
+							{m.save_button()}
+						{/if}
+					</button>
+				</form>
 				<button
 					class="btn btn-ghost btn-sm"
 					onclick={handleCancelClick}
@@ -104,17 +199,19 @@
 						/>
 					</svg>
 				</button>
-				<button
-					class="btn btn-outline btn-sm"
-					onclick={handleRegenerateClick}
-					disabled={isRegeneratingRelatedDreams}
-				>
-					{#if isRegeneratingRelatedDreams}
-						<span class="loading loading-sm loading-spinner"></span>
-					{:else}
-						{m.regenerate_relations_button()}
-					{/if}
-				</button>
+				<form method="POST" action="?/regenerateRelatedDreams" use:regenerateRelatedDreamsAction>
+					<button
+						type="submit"
+						class="btn btn-outline btn-sm"
+						disabled={isRegeneratingRelatedDreams}
+					>
+						{#if isRegeneratingRelatedDreams}
+							<span class="loading loading-sm loading-spinner"></span>
+						{:else}
+							{m.regenerate_relations_button()}
+						{/if}
+					</button>
+				</form>
 			{/if}
 		</div>
 	</div>
@@ -145,15 +242,30 @@
 	{#if isEditing}
 		<div class="mt-4">
 			<h4 class="text-md mb-2 font-semibold">{m.add_related_dream_title()}</h4>
-			<!-- Placeholder for dream search and add functionality -->
 			<input
 				type="text"
 				placeholder={m.search_dreams_placeholder()}
 				class="input-bordered input w-full"
+				bind:value={searchQuery}
 			/>
 			<div class="mt-2">
-				<!-- Search results would go here -->
-				<p class="text-sm text-gray-500">{m.search_dreams_hint()}</p>
+				{#if isSearching}
+					<p class="text-sm text-gray-500">Searching...</p>
+				{:else if searchResults.length > 0}
+					<ul class="menu bg-base-200 rounded-box w-full">
+						{#each searchResults as dream}
+							<li>
+								<a href="#" on:click|preventDefault={() => handleAddRelated(dream)}>
+									{dream.title || (dream.rawText ? dream.rawText.substring(0, 50) + '...' : 'Untitled')}
+								</a>
+							</li>
+						{/each}
+					</ul>
+				{:else if searchQuery.length >= 3}
+					<p class="text-sm text-gray-500">{m.no_dreams_found()}</p>
+				{:else}
+					<p class="text-sm text-gray-500">{m.search_dreams_hint()}</p>
+				{/if}
 			</div>
 		</div>
 	{/if}
