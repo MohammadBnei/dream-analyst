@@ -1,5 +1,23 @@
 # Changelog
 
+# [0.24.0](https://github.com/MohammadBnei/dream-analyst/compare/0.23.1...0.24.0) (2025-11-06)
+
+
+### Bug Fixes
+
+* Migrate reactive declarations to Svelte 5 runes ($state, $derived) ([6e7b1aa](https://github.com/MohammadBnei/dream-analyst/commit/6e7b1aaafd9efdc378478d6de6f475f1330bb3bc))
+* Update DreamCard button icons and fix show/hide text functionality ([064dd99](https://github.com/MohammadBnei/dream-analyst/commit/064dd99570c584fe334b89b86de8a88a27764b91))
+
+
+### Features
+
+* Add aria-label to search button for accessibility ([4a97ea7](https://github.com/MohammadBnei/dream-analyst/commit/4a97ea7f11d0cb15d8fa1f3383e1a8e7af3c4a75))
+* Add new sorting and order options to translations ([c12b9c3](https://github.com/MohammadBnei/dream-analyst/commit/c12b9c3d15640092cfc202354a8304202d7c3696))
+* Add sorting by title to dream list ([a484a9a](https://github.com/MohammadBnei/dream-analyst/commit/a484a9a3fb19fd0e96df2dba3b272c1110dc27c3))
+* Add translations for dream text visibility options ([fdd6979](https://github.com/MohammadBnei/dream-analyst/commit/fdd6979c366ff29ce5c43366c15747f87bb31d40))
+* Implement 3-mode raw text display with DaisyUI swap component ([5849638](https://github.com/MohammadBnei/dream-analyst/commit/5849638040e0d7bc3586fc97f0eb19ab5080b488))
+* **search:** added title to the searched fields for the dreams page ([5ca49c4](https://github.com/MohammadBnei/dream-analyst/commit/5ca49c46465a334e47aac31a2d3239088532beab))
+
 ## [0.23.1](https://github.com/MohammadBnei/dream-analyst/compare/0.23.0...0.23.1) (2025-11-06)
 
 
