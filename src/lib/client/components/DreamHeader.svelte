@@ -2,11 +2,12 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms'; // Import enhance
 
-	let { dreamStatus, onDeleteClick, dreamTitle, onRegenerateTitle, isRegeneratingTitle } = $props();
+	let { dreamStatus, onDeleteClick, dreamTitle } = $props(); // Removed onRegenerateTitle, isRegeneratingTitle
 
 	let isEditingTitle = $state(false);
 	let editedTitle = $state(dreamTitle || '');
 	let isUpdatingTitle = $state(false); // Local state for form submission loading
+	let isRegeneratingTitle = $state(false); // Local state for regeneration loading
 
 	// Effect to synchronize editedTitle with dreamTitle prop when not editing
 	$effect(() => {
@@ -35,19 +36,26 @@
 		// Enter key submission is handled by the form's default behavior
 	}
 
-	// Function to be used with use:enhance
-	async function handleSubmit({ update }) {
+	// Function to be used with use:enhance for title update
+	async function handleUpdateSubmit({ update }) {
 		isUpdatingTitle = true;
 		await update(); // This will trigger the form action and invalidate
 		isUpdatingTitle = false;
 		isEditingTitle = false; // Exit edit mode after update attempt
+	}
+
+	// Function to be used with use:enhance for title regeneration
+	async function handleRegenerateSubmit({ update }) {
+		isRegeneratingTitle = true;
+		await update(); // This will trigger the form action and invalidate
+		isRegeneratingTitle = false;
 	}
 </script>
 
 <div class="mb-6 flex w-full flex-col items-center justify-between">
 	<div class="flex items-center justify-center gap-2">
 		{#if isEditingTitle}
-			<form method="POST" action="?/updateTitle" use:enhance={() => handleSubmit} class="flex items-center gap-2">
+			<form method="POST" action="?/updateTitle" use:enhance={() => handleUpdateSubmit} class="flex items-center gap-2">
 				<input
 					type="text"
 					name="title"
@@ -115,31 +123,33 @@
 					></path>
 				</svg>
 			</button>
-			<button
-				class="btn btn-ghost btn-sm"
-				onclick={onRegenerateTitle}
-				disabled={isRegeneratingTitle || dreamStatus === 'PENDING_ANALYSIS'}
-			>
-				{#if isRegeneratingTitle}
-					<span class="loading loading-sm loading-spinner"></span>
-				{:else}
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke-width="1.5"
-						stroke="currentColor"
-						class="h-5 w-5"
-					>
-						<path d="M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8" />
-						<path d="M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8" />
-						<path d="M17.5 16a3.5 3.5 0 0 0 0 -7h-.5" />
-						<path d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0" />
-						<path d="M6.5 16a3.5 3.5 0 0 1 0 -7h.5" />
-						<path d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10" />
-					</svg>
-				{/if}
-			</button>
+			<form method="POST" action="?/regenerateTitle" use:enhance={() => handleRegenerateSubmit} class="inline-block">
+				<button
+					type="submit"
+					class="btn btn-ghost btn-sm"
+					disabled={isRegeneratingTitle || dreamStatus === 'PENDING_ANALYSIS'}
+				>
+					{#if isRegeneratingTitle}
+						<span class="loading loading-sm loading-spinner"></span>
+					{:else}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="h-5 w-5"
+						>
+							<path d="M15.5 13a3.5 3.5 0 0 0 -3.5 3.5v1a3.5 3.5 0 0 0 7 0v-1.8" />
+							<path d="M8.5 13a3.5 3.5 0 0 1 3.5 3.5v1a3.5 3.5 0 0 1 -7 0v-1.8" />
+							<path d="M17.5 16a3.5 3.5 0 0 0 0 -7h-.5" />
+							<path d="M19 9.3v-2.8a3.5 3.5 0 0 0 -7 0" />
+							<path d="M6.5 16a3.5 3.5 0 0 1 0 -7h.5" />
+							<path d="M5 9.3v-2.8a3.5 3.5 0 0 1 7 0v10" />
+						</svg>
+					{/if}
+				</button>
+			</form>
 		{/if}
 	</div>
 	<div class="mt-2 flex w-full justify-between">

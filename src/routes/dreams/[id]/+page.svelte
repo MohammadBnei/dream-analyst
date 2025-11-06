@@ -32,7 +32,7 @@
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
-	let isRegeneratingTitle = $state(false); // New state for title regeneration
+	// isRegeneratingTitle is now managed locally within DreamHeader.svelte
 	// isUpdatingTitle is now managed locally within DreamHeader.svelte
 	let isUpdatingRelatedDreams = $state(false); // New state for updating related dreams
 	let isRegeneratingRelatedDreams = $state(false); // New state for regenerating related dreams
@@ -167,67 +167,34 @@
 		invalidate('dream');
 	}
 
-	async function handleRegenerateTitle() {
-		if (!dream.id) {
-			console.warn('Cannot regenerate title: dream ID is not available.');
-			return;
-		}
-		isRegeneratingTitle = true;
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}/regenerate-title`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (response.ok) {
-				// On success, invalidate to re-fetch the dream with the new title
-				await invalidate('dream');
-			} else {
-				const errorData = await response.json();
-				console.error('Error regenerating title:', errorData.error);
-				streamError = errorData.error;
-			}
-		} catch (error) {
-			console.error('Network error regenerating title:', error);
-			streamError = 'Network error regenerating title.';
-		} finally {
-			isRegeneratingTitle = false;
-		}
-	}
-
-	// handleUpdateTitle function is removed as DreamHeader now handles its own form submission.
-	// async function handleUpdateTitle(newTitle: string) {
+	// handleRegenerateTitle function is removed as DreamHeader now handles its own form submission.
+	// async function handleRegenerateTitle() {
 	// 	if (!dream.id) {
-	// 		console.warn('Cannot update title: dream ID is not available.');
+	// 		console.warn('Cannot regenerate title: dream ID is not available.');
 	// 		return;
 	// 	}
-	// 	isUpdatingTitle = true;
-	// 	const formData = new FormData();
-	// 	formData.append('title', newTitle);
-
+	// 	isRegeneratingTitle = true;
 	// 	try {
-	// 		const response = await fetch(`/dreams/${dream.id}?/updateTitle`, {
+	// 		const response = await fetch(`/api/dreams/${dream.id}/regenerate-title`, {
 	// 			method: 'POST',
-	// 			body: formData
+	// 			headers: {
+	// 				'Content-Type': 'application/json'
+	// 			}
 	// 		});
-
-	// 		console.log({ response });
 
 	// 		if (response.ok) {
 	// 			// On success, invalidate to re-fetch the dream with the new title
 	// 			await invalidate('dream');
 	// 		} else {
 	// 			const errorData = await response.json();
-	// 			console.error('Error updating title:', errorData.error);
+	// 			console.error('Error regenerating title:', errorData.error);
 	// 			streamError = errorData.error;
 	// 		}
 	// 	} catch (error) {
-	// 		console.error('Network error updating title:', error);
-	// 		streamError = 'Network error updating title.';
+	// 		console.error('Network error regenerating title:', error);
+	// 		streamError = 'Network error regenerating title.';
 	// 	} finally {
-	// 		isUpdatingTitle = false;
+	// 		isRegeneratingTitle = false;
 	// 	}
 	// }
 
@@ -300,8 +267,8 @@
 				dreamStatus={dream.status}
 				onDeleteClick={openDeleteModal}
 				dreamTitle={dream.title}
-				onRegenerateTitle={handleRegenerateTitle}
-				{isRegeneratingTitle}
+				<!-- onRegenerateTitle prop is removed -->
+				<!-- isRegeneratingTitle prop is removed -->
 			/>
 		</div>
 
