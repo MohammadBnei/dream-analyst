@@ -302,8 +302,6 @@
 				dreamTitle={dream.title}
 				onRegenerateTitle={handleRegenerateTitle}
 				{isRegeneratingTitle}
-				<!-- onUpdateTitle prop is removed -->
-				<!-- isUpdatingTitle prop is removed -->
 			/>
 		</div>
 
