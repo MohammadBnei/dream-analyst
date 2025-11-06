@@ -154,5 +154,9 @@
 	"no_dreams_found": "Aucun rêve trouvé.",
 	"show_dream_text": "Afficher le texte du rêve",
 	"show_full_dream_text": "Afficher le texte complet du rêve",
-	"hide_dream_text": "Masquer le texte du rêve"
+	"hide_dream_text": "Masquer le texte du rêve",
+	"sort_by_date": "Trier par Date",
+	"sort_by_title": "Trier par Titre",
+	"descending_option": "Décroissant",
+	"ascending_option": "Croissant"
 }

@@ -154,5 +154,9 @@
 	"no_dreams_found": "No dreams found.",
 	"show_dream_text": "Show dream text",
 	"show_full_dream_text": "Show full dream text",
-	"hide_dream_text": "Hide dream text"
+	"hide_dream_text": "Hide dream text",
+	"sort_by_date": "Sort by Date",
+	"sort_by_title": "Sort by Title",
+	"descending_option": "Descending",
+	"ascending_option": "Ascending"
 }
