@@ -563,9 +563,9 @@ export const actions: Actions = {
 					userId: sessionUser.id,
 					id: { not: dreamId }, // Exclude the current dream
 					OR: [
-						{ title: { search: validatedData.query } }, // Use 'search' for full-text search
-						{ rawText: { search: validatedData.query } }, // Use 'search' for full-text search
-						{ interpretation: { search: validatedData.query } } // Use 'search' for full-text search
+						{ title: { search: validatedData.query, mode: 'insensitive' } }, // Use 'search' for full-text search
+						{ rawText: { search: validatedData.query, mode: 'insensitive' } }, // Use 'search' for full-text search
+						{ interpretation: { search: validatedData.query, mode: 'insensitive' } } // Use 'search' for full-text search
 					]
 				},
 				select: {
@@ -576,6 +576,7 @@ export const actions: Actions = {
 				},
 				take: 10 // Limit search results
 			});
+
 			return { success: true, dreams };
 		} catch (e) {
 			console.error('Error searching dreams:', e);
