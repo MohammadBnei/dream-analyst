@@ -1,33 +1,25 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
+	import { enhance } from '$app/forms'; // Import enhance
 
-	let {
-		dreamStatus,
-		onDeleteClick,
-		dreamTitle,
-		onRegenerateTitle,
-		isRegeneratingTitle,
-		onUpdateTitle,
-		isUpdatingTitle
-	} = $props();
+	let { dreamStatus, onDeleteClick, dreamTitle, onRegenerateTitle, isRegeneratingTitle } = $props();
 
 	let isEditingTitle = $state(false);
 	let editedTitle = $state(dreamTitle || '');
+	let isUpdatingTitle = $state(false); // Local state for form submission loading
 
 	// This effect ensures editedTitle is always in sync with the prop when it changes from outside
 	$effect(() => {
-		editedTitle = dreamTitle || '';
+		// Only update editedTitle from dreamTitle if we are not currently editing
+		// or if the dreamTitle prop has changed and we are not in the middle of an update.
+		if (!isEditingTitle || (dreamTitle && editedTitle !== dreamTitle && !isUpdatingTitle)) {
+			editedTitle = dreamTitle || '';
+		}
 	});
 
 	function handleEditClick() {
 		isEditingTitle = true;
-	}
-
-	async function handleSaveClick() {
-		if (editedTitle.trim() !== dreamTitle) {
-			await onUpdateTitle(editedTitle.trim());
-		}
-		isEditingTitle = false;
+		editedTitle = dreamTitle || ''; // Ensure editedTitle starts with the current dreamTitle
 	}
 
 	function handleCancelClick() {
@@ -36,30 +28,57 @@
 	}
 
 	function handleKeyDown(event: KeyboardEvent) {
-		if (event.key === 'Enter') {
-			event.preventDefault();
-			handleSaveClick();
-		} else if (event.key === 'Escape') {
+		if (event.key === 'Escape') {
 			event.preventDefault();
 			handleCancelClick();
 		}
+		// Enter key submission is handled by the form's default behavior
+	}
+
+	// Function to be used with use:enhance
+	async function handleSubmit({ update }) {
+		isUpdatingTitle = true;
+		await update(); // This will trigger the form action and invalidate
+		isUpdatingTitle = false;
+		isEditingTitle = false; // Exit edit mode after update attempt
 	}
 </script>
 
 <div class="mb-6 flex w-full flex-col items-center justify-between">
 	<div class="flex items-center justify-center gap-2">
 		{#if isEditingTitle}
-			<input
-				type="text"
-				class="input input-lg w-full input-ghost text-center text-3xl font-bold"
-				bind:value={editedTitle}
-				onkeydown={handleKeyDown}
-				disabled={isUpdatingTitle}
-			/>
-			<button class="btn btn-ghost btn-sm" onclick={handleSaveClick} disabled={isUpdatingTitle}>
-				{#if isUpdatingTitle}
-					<span class="loading loading-sm loading-spinner"></span>
-				{:else}
+			<form method="POST" action="?/updateTitle" use:enhance={() => handleSubmit} class="flex items-center gap-2">
+				<input
+					type="text"
+					name="title"
+					class="input input-lg w-full input-ghost text-center text-3xl font-bold"
+					bind:value={editedTitle}
+					onkeydown={handleKeyDown}
+					disabled={isUpdatingTitle}
+				/>
+				<button type="submit" class="btn btn-ghost btn-sm" disabled={isUpdatingTitle}>
+					{#if isUpdatingTitle}
+						<span class="loading loading-sm loading-spinner"></span>
+					{:else}
+						<svg
+							xmlns="http://www.w3.org/2000/svg"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke-width="1.5"
+							stroke="currentColor"
+							class="h-5 w-5"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
+						</svg>
+					{/if}
+				</button>
+				<button
+					type="button"
+					class="btn btn-ghost btn-sm"
+					onclick={handleCancelClick}
+					disabled={isUpdatingTitle}
+					aria-label="cancel title edit"
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
@@ -68,27 +87,10 @@
 						stroke="currentColor"
 						class="h-5 w-5"
 					>
-						<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
 					</svg>
-				{/if}
-			</button>
-			<button
-				class="btn btn-ghost btn-sm"
-				onclick={handleCancelClick}
-				disabled={isUpdatingTitle}
-				aria-label="cancel title edit"
-			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke-width="1.5"
-					stroke="currentColor"
-					class="h-5 w-5"
-				>
-					<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
-				</svg>
-			</button>
+				</button>
+			</form>
 		{:else}
 			<h1 class="grow text-center text-3xl font-bold">
 				{#if dreamTitle}

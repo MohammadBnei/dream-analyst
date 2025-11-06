@@ -33,7 +33,7 @@
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
 	let isRegeneratingTitle = $state(false); // New state for title regeneration
-	let isUpdatingTitle = $state(false); // New state for manual title update
+	// isUpdatingTitle is now managed locally within DreamHeader.svelte
 	let isUpdatingRelatedDreams = $state(false); // New state for updating related dreams
 	let isRegeneratingRelatedDreams = $state(false); // New state for regenerating related dreams
 
@@ -197,38 +197,39 @@
 		}
 	}
 
-	async function handleUpdateTitle(newTitle: string) {
-		if (!dream.id) {
-			console.warn('Cannot update title: dream ID is not available.');
-			return;
-		}
-		isUpdatingTitle = true;
-		const formData = new FormData();
-		formData.append('title', newTitle);
+	// handleUpdateTitle function is removed as DreamHeader now handles its own form submission.
+	// async function handleUpdateTitle(newTitle: string) {
+	// 	if (!dream.id) {
+	// 		console.warn('Cannot update title: dream ID is not available.');
+	// 		return;
+	// 	}
+	// 	isUpdatingTitle = true;
+	// 	const formData = new FormData();
+	// 	formData.append('title', newTitle);
 
-		try {
-			const response = await fetch(`/dreams/${dream.id}?/updateTitle`, {
-				method: 'POST',
-				body: formData
-			});
+	// 	try {
+	// 		const response = await fetch(`/dreams/${dream.id}?/updateTitle`, {
+	// 			method: 'POST',
+	// 			body: formData
+	// 		});
 
-			console.log({ response });
+	// 		console.log({ response });
 
-			if (response.ok) {
-				// On success, invalidate to re-fetch the dream with the new title
-				await invalidate('dream');
-			} else {
-				const errorData = await response.json();
-				console.error('Error updating title:', errorData.error);
-				streamError = errorData.error;
-			}
-		} catch (error) {
-			console.error('Network error updating title:', error);
-			streamError = 'Network error updating title.';
-		} finally {
-			isUpdatingTitle = false;
-		}
-	}
+	// 		if (response.ok) {
+	// 			// On success, invalidate to re-fetch the dream with the new title
+	// 			await invalidate('dream');
+	// 		} else {
+	// 			const errorData = await response.json();
+	// 			console.error('Error updating title:', errorData.error);
+	// 			streamError = errorData.error;
+	// 		}
+	// 	} catch (error) {
+	// 		console.error('Network error updating title:', error);
+	// 		streamError = 'Network error updating title.';
+	// 	} finally {
+	// 		isUpdatingTitle = false;
+	// 	}
+	// }
 
 	async function handleUpdateRelatedDreams(updatedRelatedIds: string[]) {
 		if (!dream.id) {
@@ -301,8 +302,8 @@
 				dreamTitle={dream.title}
 				onRegenerateTitle={handleRegenerateTitle}
 				{isRegeneratingTitle}
-				onUpdateTitle={handleUpdateTitle}
-				{isUpdatingTitle}
+				<!-- onUpdateTitle prop is removed -->
+				<!-- isUpdatingTitle prop is removed -->
 			/>
 		</div>
 
