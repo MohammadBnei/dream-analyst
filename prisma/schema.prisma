@@ -58,11 +58,11 @@ model Dream {
   updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at")
   CreditTransaction CreditTransaction[]
 
-  relatedDreamId    String?             @unique @map("related_dream_id") // New: Optional link to a related dream
-  relatedDream      Dream?              @relation("RelatedDreams", fields: [relatedDreamId], references: [id], onDelete: SetNull)
-  // To allow a dream to be related *by* another dream, we need a back-relation
-  // This allows us to find dreams that consider *this* dream as their relatedDream
-  relatedByDreams   Dream[]             @relation("RelatedDreams")
+  // Many-to-many relationship for related dreams
+  // A dream can have many related dreams
+  relatedTo Dreams[] @relation("RelatedDreams")
+  // And a dream can be related by many other dreams
+  relatedBy Dreams[] @relation("RelatedDreams")
 
   @@map("dreams")
 }
