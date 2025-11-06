@@ -3,7 +3,7 @@ import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import Drea
 
 interface StreamCallbacks {
 	onMessage: (data: App.AnalysisStreamChunk) => void;
-	onEnd: (data: { status?: string; message?: string }) => void;
+	onEnd: (data: { status?: string; message?: string }) => void; // Changed to include finalStatus
 	onError: (error: string) => void;
 	onClose?: () => void;
 }
@@ -76,7 +76,7 @@ export class DreamAnalysisService {
 									);
 								}
 							}
-							this.callbacks.onEnd({}); // Indicate stream end
+							this.callbacks.onEnd({}); // Indicate stream end, let the component invalidate
 							break;
 						}
 
@@ -92,6 +92,7 @@ export class DreamAnalysisService {
 									const parsed: App.AnalysisStreamChunk = JSON.parse(line);
 									// Check for finalStatus from the server
 									if (parsed.finalStatus) {
+										// Pass finalStatus and message to onEnd
 										this.callbacks.onEnd({ status: parsed.finalStatus, message: parsed.message });
 										this.closeStream(true); // Close the client stream silently
 										return; // Exit readStream
@@ -114,6 +115,7 @@ export class DreamAnalysisService {
 					} else if (!signal.aborted) {
 						console.error('Stream reading error for dream:', this.dreamId, error);
 						this.callbacks.onError(`Stream error: ${(error as Error).message}`);
+						this.callbacks.onEnd({ status: 'ANALYSIS_FAILED', message: (error as Error).message }); // Indicate failure
 					}
 				} finally {
 					reader.releaseLock();
@@ -130,6 +132,7 @@ export class DreamAnalysisService {
 			} else if (!signal.aborted) {
 				console.error('Fetch initiation error for dream:', this.dreamId, error);
 				this.callbacks.onError(`Failed to connect to analysis stream: ${(error as Error).message}`);
+				this.callbacks.onEnd({ status: 'ANALYSIS_FAILED', message: (error as Error).message }); // Indicate failure
 				this.abortController = null;
 			}
 		}

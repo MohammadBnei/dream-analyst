@@ -8,7 +8,7 @@ interface ChatStreamChunk {
 
 interface ChatCallbacks {
 	onMessage: (data: ChatStreamChunk) => void;
-	onEnd: (data: { message?: string }) => void;
+	onEnd: (data: { message?: string }) => void; // Changed to include finalStatus
 	onError: (error: string) => void;
 	onClose?: () => void;
 }
@@ -98,7 +98,7 @@ export class ClientChatService {
 						const { done, value } = await reader.read();
 						if (done) {
 							console.debug('Chat stream finished for dream:', this.dreamId);
-							this.callbacks.onEnd({});
+							this.callbacks.onEnd({}); // Indicate stream end, let the component invalidate
 							break;
 						}
 
@@ -115,7 +115,7 @@ export class ClientChatService {
 									this.callbacks.onMessage(parsed);
 
 									if (parsed.final) {
-										this.callbacks.onEnd({ message: parsed.message });
+										this.callbacks.onEnd({ message: parsed.message }); // Pass final message
 										// No need to call closeStream here, as the component manages the abortController
 										// this.closeStream();
 										return; // Exit readStream
@@ -136,6 +136,7 @@ export class ClientChatService {
 					} else {
 						console.error('Chat stream reading error for dream:', this.dreamId, error);
 						this.callbacks.onError(`Chat stream error: ${(error as Error).message}`);
+						this.callbacks.onEnd({ message: (error as Error).message }); // Indicate failure
 					}
 				} finally {
 					reader.releaseLock();
@@ -152,6 +153,7 @@ export class ClientChatService {
 			} else {
 				console.error('Chat fetch initiation error for dream:', this.dreamId, error);
 				this.callbacks.onError(`Failed to connect to chat stream: ${(error as Error).message}`);
+				this.callbacks.onEnd({ message: (error as Error).message }); // Indicate failure
 				// this.abortController = null; // Managed by component
 			}
 		}

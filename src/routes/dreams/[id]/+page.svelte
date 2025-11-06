@@ -19,12 +19,14 @@
 
 	let { data, form } = $props();
 
+	// Initialize with data from the load function
 	let dream = $state(data.dream);
 	let nextDreamId = $state(data.nextDreamId);
 	let prevDreamId = $state(data.prevDreamId);
 
 	type DreamStatus = typeof dream.status;
 
+	// These states are for real-time streaming updates, not direct dream properties
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>((dream.tags as string[]) || []);
 
@@ -36,35 +38,40 @@
 	let isRegeneratingRelatedDreams = $state(false); // New state for regenerating related dreams
 
 	let analysisService: DreamAnalysisService | null = $state(null);
-	let clientChatService: ClientChatService | null = $state(null);
+	// ClientChatService is instantiated within DreamChatSection, so no need for a top-level state here.
+	// let clientChatService: ClientChatService | null = $state(null);
 
 	// Initialize selectedPromptType from dream data
 	let selectedPromptType: DreamPromptType = $state(
 		(dream.promptType as DreamPromptType) || 'jungian'
 	);
 
-	// Update dream state when data from load function changes (e.g., after form action)
+	// Effect to update local state when data from load function changes
 	$effect(() => {
-		if (data.dream && dream.updatedAt !== data.dream.updatedAt) {
-			dream = data.dream;
-			nextDreamId = data.nextDreamId;
-			prevDreamId = data.prevDreamId;
-			if (!isLoadingStream) {
-				streamedInterpretation = dream.interpretation || '';
-				streamedTags = (dream.tags as string[]) || [];
+		if (data.dream) {
+			// Only update if the dream object itself has changed (e.g., ID or updatedAt)
+			// or if it's the initial load.
+			if (!dream || dream.id !== data.dream.id || dream.updatedAt !== data.dream.updatedAt) {
+				dream = data.dream;
+				nextDreamId = data.nextDreamId;
+				prevDreamId = data.prevDreamId;
+
+				// Reset streamed interpretation/tags if not actively streaming
+				// or if the dream ID has changed (navigating to a new dream)
+				if (!isLoadingStream || dream.id !== data.dream.id) {
+					streamedInterpretation = dream.interpretation || '';
+					streamedTags = (dream.tags as string[]) || [];
+				}
+				selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 			}
-			// Update selectedPromptType from the updated dream data
-			selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 		}
 	});
 
-	// Handle form action responses for errors
+	// Handle form action responses for errors and successful updates
 	$effect(() => {
 		if (form?.success) {
-			if (form.dream) {
-				dream = form.dream;
-			}
 			// Invalidate 'dream' to ensure the latest DB state is fetched after any successful form action
+			// The $effect watching `data.dream` will then update the local `dream` state.
 			invalidate('dream');
 		}
 		if (form?.error) {
@@ -100,7 +107,8 @@
 		streamError = null;
 		streamedInterpretation = ''; // Clear previous interpretation
 		streamedTags = []; // Clear previous tags
-		dream.status = 'PENDING_ANALYSIS'; // Optimistically set status
+		// Optimistically set status, but the final status will come from the stream or DB
+		dream.status = 'PENDING_ANALYSIS';
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -122,17 +130,19 @@
 				if (data.message) {
 					streamError = data.message;
 				}
-				await invalidate('dream'); // Invalidate to ensure latest DB state
+				await invalidate('dream'); // Invalidate to ensure latest DB state, including final interpretation/tags/status
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				dream.status = 'ANALYSIS_FAILED';
+				dream.status = 'ANALYSIS_FAILED'; // Update local status for immediate feedback
 				streamError = errorMsg;
+				invalidate('dream'); // Invalidate to persist the failed status
 			},
 			onClose: () => {
 				console.log('Analysis service stream closed.');
 				isLoadingStream = false;
+				// No invalidate here, as onEnd or onError would have already handled final state.
 			}
 		});
 		analysisService.startStream(promptType);
@@ -143,6 +153,7 @@
 		isLoadingStream = false;
 		streamError = 'Analysis cancelled by user.';
 		// The form submission for cancelling analysis is now handled by DreamInterpretationSection
+		// which should trigger an invalidate('dream') on success.
 	}
 
 	function openDeleteModal() {
@@ -162,26 +173,27 @@
 			return;
 		}
 		isRegeneratingTitle = true;
-		const response = await fetch(`/api/dreams/${dream.id}/regenerate-title`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
+		try {
+			const response = await fetch(`/api/dreams/${dream.id}/regenerate-title`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (response.ok) {
+				// On success, invalidate to re-fetch the dream with the new title
+				await invalidate('dream');
+			} else {
+				const errorData = await response.json();
+				console.error('Error regenerating title:', errorData.error);
+				streamError = errorData.error;
 			}
-		});
-		isRegeneratingTitle = false;
-		if (response.ok) {
-			const result = await response.json();
-			if (result.dream) {
-				// Replace the entire dream object to ensure reactivity for all its properties
-				dream = result.dream;
-				// Invalidate 'dream' to ensure the latest DB state is fetched,
-				// especially if other parts of the page rely on the load function's data.
-				invalidate('dream');
-			}
-		} else {
-			const errorData = await response.json();
-			console.error('Error regenerating title:', errorData.error);
-			streamError = errorData.error;
+		} catch (error) {
+			console.error('Network error regenerating title:', error);
+			streamError = 'Network error regenerating title.';
+		} finally {
+			isRegeneratingTitle = false;
 		}
 	}
 
@@ -194,21 +206,25 @@
 		const formData = new FormData();
 		formData.append('title', newTitle);
 
-		const response = await fetch(`/dreams/${dream.id}?/updateTitle`, {
-			method: 'POST',
-			body: formData
-		});
-		isUpdatingTitle = false;
+		try {
+			const response = await fetch(`/dreams/${dream.id}?/updateTitle`, {
+				method: 'POST',
+				body: formData
+			});
 
-		if (response.ok) {
-			const result = await response.json();
-			if (result.dream) {
-				dream = result.dream;
+			if (response.ok) {
+				// On success, invalidate to re-fetch the dream with the new title
+				await invalidate('dream');
+			} else {
+				const errorData = await response.json();
+				console.error('Error updating title:', errorData.error);
+				streamError = errorData.error;
 			}
-		} else {
-			const errorData = await response.json();
-			console.error('Error updating title:', errorData.error);
-			streamError = errorData.error;
+		} catch (error) {
+			console.error('Network error updating title:', error);
+			streamError = 'Network error updating title.';
+		} finally {
+			isUpdatingTitle = false;
 		}
 	}
 
@@ -221,22 +237,25 @@
 		const formData = new FormData();
 		formData.append('relatedDreamIds', JSON.stringify(updatedRelatedIds));
 
-		const response = await fetch(`/dreams/${dream.id}?/updateRelatedDreams`, {
-			method: 'POST',
-			body: formData
-		});
-		isUpdatingRelatedDreams = false;
+		try {
+			const response = await fetch(`/dreams/${dream.id}?/updateRelatedDreams`, {
+				method: 'POST',
+				body: formData
+			});
 
-		if (response.ok) {
-			const result = await response.json();
-			if (result.dream) {
-				dream = result.dream;
-				invalidate('dream'); // Invalidate to re-fetch related dreams with full data
+			if (response.ok) {
+				// On success, invalidate to re-fetch the dream with the new related dreams
+				await invalidate('dream');
+			} else {
+				const errorData = await response.json();
+				console.error('Error updating related dreams:', errorData.error);
+				streamError = errorData.error;
 			}
-		} else {
-			const errorData = await response.json();
-			console.error('Error updating related dreams:', errorData.error);
-			streamError = errorData.error;
+		} catch (error) {
+			console.error('Network error updating related dreams:', error);
+			streamError = 'Network error updating related dreams.';
+		} finally {
+			isUpdatingRelatedDreams = false;
 		}
 	}
 
@@ -246,23 +265,27 @@
 			return;
 		}
 		isRegeneratingRelatedDreams = true;
-		const response = await fetch(`/api/dreams/${dream.id}/regenerate-related-dreams`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json'
+		try {
+			const response = await fetch(`/api/dreams/${dream.id}/regenerate-related-dreams`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				}
+			});
+
+			if (response.ok) {
+				// On success, invalidate to re-fetch the dream with the new related dreams
+				await invalidate('dream');
+			} else {
+				const errorData = await response.json();
+				console.error('Error regenerating related dreams:', errorData.error);
+				streamError = errorData.error;
 			}
-		});
-		isRegeneratingRelatedDreams = false;
-		if (response.ok) {
-			const result = await response.json();
-			if (result.dream) {
-				dream = result.dream;
-				invalidate('dream'); // Invalidate to re-fetch related dreams with full data
-			}
-		} else {
-			const errorData = await response.json();
-			console.error('Error regenerating related dreams:', errorData.error);
-			streamError = errorData.error;
+		} catch (error) {
+			console.error('Network error regenerating related dreams:', error);
+			streamError = 'Network error regenerating related dreams.';
+		} finally {
+			isRegeneratingRelatedDreams = false;
 		}
 	}
 </script>
