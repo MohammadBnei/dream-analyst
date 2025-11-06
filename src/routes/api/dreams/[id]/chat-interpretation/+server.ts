@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import { getServerChatService } from '$lib/server/services/chatService'; // Import the new service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import { getServerChatService } from '$lib/server/chatService';
 
 function getCurrentUser(locals: App.Locals) {
 	if (!locals.user) {

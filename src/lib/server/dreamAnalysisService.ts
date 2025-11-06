@@ -2,7 +2,7 @@ import type { Dream } from '@prisma/client';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
-import { getLLMService } from '$lib/server/services/llmService'; // Import the new LLMService
+import { getLLMService } from '$lib/server/llmService'; // Import the new LLMService
 
 /**
  * Initiates a raw streamed dream analysis from the LLM.

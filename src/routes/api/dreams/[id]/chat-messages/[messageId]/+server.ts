@@ -1,5 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { getServerChatService } from '$lib/server/services/chatService'; // Import the new service
+import { getServerChatService } from '$lib/server/chatService'; // Import the new service
 
 export async function DELETE({ params, locals }) {
 	const dreamId = params.id;

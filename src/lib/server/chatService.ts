@@ -4,7 +4,7 @@ import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
-import { getLLMService } from '$lib/server/services/llmService'; // Import the new LLMService
+import { getLLMService } from './llmService';
 
 class ServerChatService {
 	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
@@ -85,7 +85,7 @@ class ServerChatService {
 				userId: userId
 			}
 		});
-		console.log(`Chat history for dream ${dreamId}, user ${userId} cleared from DB.`);
+		console.debug(`Chat history for dream ${dreamId}, user ${userId} cleared from DB.`);
 	}
 
 	/**
@@ -112,7 +112,7 @@ class ServerChatService {
 		await prisma.dreamChat.delete({
 			where: { id: messageId }
 		});
-		console.log(`Chat message ${messageId} for dream ${dreamId} deleted from DB.`);
+		console.debug(`Chat message ${messageId} for dream ${dreamId} deleted from DB.`);
 	}
 
 	/**
