@@ -34,6 +34,10 @@ const UpdateDreamDateSchema = v.object({
 	)
 });
 
+const UpdateTitleSchema = v.object({
+	title: v.pipe(v.string(), v.minLength(3, 'Title must be at least 3 characters long.'))
+});
+
 const ResetAnalysisSchema = v.object({
 	promptType: v.string() // Expect promptType from the form
 });
@@ -264,6 +268,49 @@ export const actions: Actions = {
 		} catch (e) {
 			console.error('Error updating dream date:', e);
 			return fail(500, { dreamDate, error: 'Failed to update dream date due to a server error.' });
+		}
+	},
+
+	updateTitle: async ({ request, params, locals }) => {
+		const dreamId = params.id;
+		const sessionUser = locals.user;
+		if (!sessionUser) {
+			return fail(401, { message: 'Unauthorized' });
+		}
+
+		const formData = await request.formData();
+		const title = formData.get('title');
+
+		let validatedData;
+		try {
+			validatedData = v.parse(UpdateTitleSchema, { title });
+		} catch (e: any) {
+			const issues = e.issues.map((issue: any) => issue.message);
+			return fail(400, { title, error: issues.join(', ') });
+		}
+
+		const prisma = await getPrismaClient();
+
+		try {
+			const existingDream = await prisma.dream.findUnique({
+				where: { id: dreamId }
+			});
+
+			if (!existingDream || existingDream.userId !== sessionUser.id) {
+				return fail(403, { error: 'Forbidden: You do not own this dream or it does not exist.' });
+			}
+
+			const updatedDream = await prisma.dream.update({
+				where: { id: dreamId },
+				data: {
+					title: validatedData.title,
+					updatedAt: new Date()
+				}
+			});
+			return { success: true, dream: updatedDream };
+		} catch (e) {
+			console.error('Error updating dream title:', e);
+			return fail(500, { title, error: 'Failed to update dream title due to a server error.' });
 		}
 	},
 

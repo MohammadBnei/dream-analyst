@@ -4,6 +4,7 @@
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import { ClientChatService } from '$lib/client/services/chatService';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+	import { enhance } from '$app/forms';
 
 	// New Components
 	import DreamHeader from '$lib/client/components/DreamHeader.svelte';
@@ -31,6 +32,7 @@
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
 	let isRegeneratingTitle = $state(false); // New state for title regeneration
+	let isUpdatingTitle = $state(false); // New state for manual title update
 
 	let analysisService: DreamAnalysisService | null = $state(null);
 	let clientChatService: ClientChatService | null = $state(null);
@@ -181,6 +183,34 @@
 			streamError = errorData.error;
 		}
 	}
+
+	async function handleUpdateTitle(newTitle: string) {
+		if (!dream.id) {
+			console.warn('Cannot update title: dream ID is not available.');
+			return;
+		}
+		isUpdatingTitle = true;
+		const formData = new FormData();
+		formData.append('title', newTitle);
+
+		const response = await fetch(`/dreams/${dream.id}?/updateTitle`, {
+			method: 'POST',
+			body: formData
+		});
+		isUpdatingTitle = false;
+
+		if (response.ok) {
+			const result = await response.json();
+			if (result.dream) {
+				dream = result.dream;
+				invalidate('dream');
+			}
+		} else {
+			const errorData = await response.json();
+			console.error('Error updating title:', errorData.error);
+			streamError = errorData.error;
+		}
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
@@ -192,6 +222,8 @@
 				dreamTitle={dream.title}
 				onRegenerateTitle={handleRegenerateTitle}
 				isRegeneratingTitle={isRegeneratingTitle}
+				onUpdateTitle={handleUpdateTitle}
+				isUpdatingTitle={isUpdatingTitle}
 			/>
 		</div>
 
