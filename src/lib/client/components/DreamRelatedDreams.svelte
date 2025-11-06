@@ -2,19 +2,13 @@
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
-	import { page } from '$app/stores';
 	import { createEventDispatcher } from 'svelte';
 
 	const dispatch = createEventDispatcher();
 
-	let { relatedDreams } = $props<{
+	let { dreamId, relatedDreams } = $props<{
 		dreamId: string;
 		relatedDreams: Partial<App.Dream[]>;
-		// These props are no longer needed as form actions will manage their own loading states
-		// onUpdateRelatedDreams: (updatedRelatedIds: string[]) => Promise<void>;
-		// isUpdatingRelatedDreams: boolean;
-		// onRegenerateRelatedDreams: () => Promise<void>;
-		// isRegeneratingRelatedDreams: boolean;
 	}>();
 
 	let isEditing = $state(false);
@@ -27,6 +21,7 @@
 	// Local loading states for form actions
 	let isUpdatingRelatedDreams = $state(false);
 	let isRegeneratingRelatedDreams = $state(false);
+	let isDeletingRelated = $state<{ [key: string]: boolean }>({}); // Track deletion state for each related dream
 
 	// Effect to update currentRelatedIds when relatedDreams prop changes
 	$effect(() => {
@@ -48,15 +43,10 @@
 		searchResults = [];
 	}
 
-	function handleRemoveRelated(idToRemove: string) {
-		currentRelatedIds = currentRelatedIds.filter((id) => id !== idToRemove);
-	}
-
 	function handleAddRelated(dreamToAdd: Partial<App.Dream>) {
 		if (dreamToAdd.id && !currentRelatedIds.includes(dreamToAdd.id)) {
 			currentRelatedIds = [...currentRelatedIds, dreamToAdd.id];
-			// Also add to the displayed relatedDreams if it's not already there
-			// This is a client-side optimistic update for immediate feedback
+			// Optimistically add to the displayed relatedDreams for immediate feedback
 			if (!relatedDreams.some((d) => d.id === dreamToAdd.id)) {
 				relatedDreams = [...relatedDreams, dreamToAdd];
 			}
@@ -185,12 +175,38 @@
 							(relatedDream.rawText ? relatedDream.rawText.substring(0, 30) + '...' : 'Untitled')}
 					</button>
 					{#if isEditing}
-						<button
-							class="btn btn-circle btn-ghost btn-xs"
-							onclick={() => handleRemoveRelated(relatedDream.id || '')}
+						<form
+							method="POST"
+							action="?/removeRelatedDream"
+							use:enhance={() => {
+								isDeletingRelated = { ...isDeletingRelated, [relatedDream.id || '']: true };
+								return async ({ result, update }) => {
+									if (result.type === 'success') {
+										dispatch('relatedDreamsUpdated', result.data?.dream);
+										// Optimistically remove from currentRelatedIds if not already done by dispatch
+										currentRelatedIds = currentRelatedIds.filter((id) => id !== relatedDream.id);
+									} else if (result.type === 'error') {
+										console.error('Failed to remove related dream:', result.error);
+										// Optionally display error message to user
+									}
+									isDeletingRelated = { ...isDeletingRelated, [relatedDream.id || '']: false };
+									await update();
+								};
+							}}
 						>
-							✕
-						</button>
+							<input type="hidden" name="relatedDreamId" value={relatedDream.id} />
+							<button
+								type="submit"
+								class="btn btn-circle btn-ghost btn-xs"
+								disabled={isDeletingRelated[relatedDream.id || '']}
+							>
+								{#if isDeletingRelated[relatedDream.id || '']}
+									<span class="loading loading-sm loading-spinner"></span>
+								{:else}
+									✕
+								{/if}
+							</button>
+						</form>
 					{/if}
 				</div>
 			{/each}

@@ -42,6 +42,10 @@ const UpdateRelatedDreamsSchema = v.object({
 	relatedDreamIds: v.pipe(v.string(), v.transform((s) => JSON.parse(s) as string[]))
 });
 
+const RemoveRelatedDreamSchema = v.object({
+	relatedDreamId: v.pipe(v.string(), v.minLength(1, 'Related dream ID is required.'))
+});
+
 const ResetAnalysisSchema = v.object({
 	promptType: v.string() // Expect promptType from the form
 });
@@ -434,6 +438,73 @@ export const actions: Actions = {
 			return fail(500, {
 				relatedDreamIds: relatedDreamIdsString,
 				error: 'Failed to update related dreams due to a server error.'
+			});
+		}
+	},
+
+	removeRelatedDream: async ({ request, params, locals }) => {
+		const dreamId = params.id;
+		const sessionUser = locals.user;
+		if (!sessionUser) {
+			return fail(401, { message: 'Unauthorized' });
+		}
+
+		const formData = await request.formData();
+		const relatedDreamId = formData.get('relatedDreamId');
+
+		let validatedData;
+		try {
+			validatedData = v.parse(RemoveRelatedDreamSchema, { relatedDreamId });
+		} catch (e: any) {
+			const issues = e.issues.map((issue: any) => issue.message);
+			return fail(400, { relatedDreamId, error: issues.join(', ') });
+		}
+
+		const prisma = await getPrismaClient();
+
+		try {
+			const existingDream = await prisma.dream.findUnique({
+				where: { id: dreamId }
+			});
+
+			if (!existingDream || existingDream.userId !== sessionUser.id) {
+				return fail(403, { error: 'Forbidden: You do not own this dream or it does not exist.' });
+			}
+
+			// Disconnect the specific related dream
+			const updatedDream = await prisma.dream.update({
+				where: { id: dreamId },
+				data: {
+					relatedTo: {
+						disconnect: { id: validatedData.relatedDreamId }
+					}
+				},
+				select: {
+					id: true,
+					rawText: true,
+					title: true,
+					interpretation: true,
+					status: true,
+					dreamDate: true,
+					createdAt: true,
+					updatedAt: true,
+					promptType: true,
+					relatedTo: {
+						select: {
+							id: true,
+							title: true,
+							dreamDate: true,
+							rawText: true
+						}
+					}
+				}
+			});
+			return { success: true, dream: updatedDream };
+		} catch (e) {
+			console.error('Error removing related dream:', e);
+			return fail(500, {
+				relatedDreamId,
+				error: 'Failed to remove related dream due to a server error.'
 			});
 		}
 	},
