@@ -267,8 +267,6 @@
 				dreamStatus={dream.status}
 				onDeleteClick={openDeleteModal}
 				dreamTitle={dream.title}
-				<!-- onRegenerateTitle prop is removed -->
-				<!-- isRegeneratingTitle prop is removed -->
 			/>
 		</div>
 
