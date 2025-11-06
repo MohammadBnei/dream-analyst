@@ -547,8 +547,6 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const query = formData.get('query');
 
-		console.log({ query })
-
 		let validatedData;
 		try {
 			validatedData = v.parse(SearchDreamsSchema, { query });
@@ -565,9 +563,9 @@ export const actions: Actions = {
 					userId: sessionUser.id,
 					id: { not: dreamId }, // Exclude the current dream
 					OR: [
-						{ title: { search: validatedData.query, contains: validatedData.query, mode: 'insensitive' } },
-						{ rawText: { search: validatedData.query, mode: 'insensitive' } },
-						{ interpretation: { search: validatedData.query, mode: 'insensitive' } }
+						{ title: { search: validatedData.query } }, // Use 'search' for full-text search
+						{ rawText: { search: validatedData.query } }, // Use 'search' for full-text search
+						{ interpretation: { search: validatedData.query } } // Use 'search' for full-text search
 					]
 				},
 				select: {

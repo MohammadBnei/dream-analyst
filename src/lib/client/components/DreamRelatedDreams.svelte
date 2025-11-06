@@ -51,8 +51,8 @@
 				relatedDreams = [...relatedDreams, dreamToAdd];
 			}
 		}
-		searchQuery = ''; // Clear search after adding
-		searchResults = [];
+		// Do NOT clear searchQuery here, let the user continue typing if they wish
+		searchResults = []; // Clear search results after adding
 	}
 
 	// Debounce search input
@@ -224,17 +224,17 @@
 				action="?/searchDreams"
 				use:enhance={({ formData, cancel }) => {
 					isSearching = true;
+					formData.set('query', searchQuery); // Always set the query from bind:value
+
 					// Only send if query is long enough
 					if (searchQuery.length < 3) {
 						cancel(); // Prevent form submission
 						searchResults = [];
 						isSearching = false; // Reset loading state
 						return;
-					} else {
-						formData.set('query', searchQuery);
 					}
 
-					return async ({ result, update }) => {
+					return async ({ result }) => { // Removed 'update' as it's not needed here
 						if (result.type === 'success') {
 							searchResults = result.data?.dreams || [];
 						} else if (result.type === 'error') {
@@ -242,7 +242,7 @@
 							searchResults = [];
 						}
 						isSearching = false;
-						await update();
+						// No update() call here, as we're only updating local state (searchResults)
 					};
 				}}
 			>
