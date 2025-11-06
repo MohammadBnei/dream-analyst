@@ -4,6 +4,7 @@
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import { ClientChatService } from '$lib/client/services/chatService';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+	import { enhance } from '$app/forms';
 
 	// New Components
 	import DreamHeader from '$lib/client/components/DreamHeader.svelte';
@@ -12,7 +13,7 @@
 	import DreamRawTextSection from '$lib/client/components/DreamRawTextSection.svelte';
 	import DreamInterpretationSection from '$lib/client/components/DreamInterpretationSection.svelte';
 	import DreamChatSection from '$lib/client/components/DreamChatSection.svelte';
-	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
+	import DreamMetadata from '$lib/client/components/DreamMetadata';
 	import DeleteDreamModal from '$lib/client/components/DeleteDreamModal.svelte';
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from './DreamRelatedDreams.svelte'; // Import the new component
@@ -30,6 +31,7 @@
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
+	let isRegeneratingTitle = $state(false); // New state for title regeneration
 
 	let analysisService: DreamAnalysisService | null = $state(null);
 	let clientChatService: ClientChatService | null = $state(null);
@@ -151,12 +153,44 @@
 		// if their internal state changes and needs to be reflected in the parent or other components.
 		invalidate('dream');
 	}
+
+	async function handleRegenerateTitle() {
+		if (!dream.id) {
+			console.warn('Cannot regenerate title: dream ID is not available.');
+			return;
+		}
+		isRegeneratingTitle = true;
+		const response = await fetch(`/dreams/${dream.id}?/regenerateTitle`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+		isRegeneratingTitle = false;
+		if (response.ok) {
+			const result = await response.json();
+			if (result.dream) {
+				dream = result.dream;
+				invalidate('dream'); // Invalidate to ensure latest DB state
+			}
+		} else {
+			const errorData = await response.json();
+			console.error('Error regenerating title:', errorData.error);
+			streamError = errorData.error;
+		}
+	}
 </script>
 
 <div class="container mx-auto max-w-4xl p-4">
 	{#if data.dream}
 		<div class="mb-4 flex items-center justify-between">
-			<DreamHeader dreamStatus={dream.status} onDeleteClick={openDeleteModal} />
+			<DreamHeader
+				dreamStatus={dream.status}
+				onDeleteClick={openDeleteModal}
+				dreamTitle={dream.title}
+				onRegenerateTitle={handleRegenerateTitle}
+				isRegeneratingTitle={isRegeneratingTitle}
+			/>
 		</div>
 
 		<div class="card bg-base-100 p-6 shadow-xl">
