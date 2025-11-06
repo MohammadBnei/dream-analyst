@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.23.1](https://github.com/MohammadBnei/dream-analyst/compare/0.23.0...0.23.1) (2025-11-06)
+
+
+### Bug Fixes
+
+* **search:** sanitizng search ([0545b92](https://github.com/MohammadBnei/dream-analyst/commit/0545b92803527c606db71efbcffe9acb80e17585))
+
 # [0.23.0](https://github.com/MohammadBnei/dream-analyst/compare/0.22.2...0.23.0) (2025-11-06)
 
 
