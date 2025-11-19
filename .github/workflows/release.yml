@@ -34,6 +34,6 @@ jobs:
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
       - name: Run release-it
-        run: bun run release
+        run: git update-index --refresh && git diff-index --quiet HEAD || git reset --hard && bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.PAT }}
