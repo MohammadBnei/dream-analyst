@@ -39,15 +39,15 @@ export const actions: Actions = {
 				}
 			});
 
-			await Promise.all([dreamAnalysisService.generateDreamTitle(newDream.rawText).then(
-				(title) => {
-					prisma.dream.update({
+			await Promise.all([
+				dreamAnalysisService.generateDreamTitle(newDream.rawText).then(
+					(title) => prisma.dream.update({
 						where: { id: newDream.id },
 						data: { title }
 					})
-				}
-			),
-			dreamAnalysisService.findAndSetRelatedDreams(newDream)])
+				),
+				dreamAnalysisService.findAndSetRelatedDreams(newDream)
+			])
 
 			// --- End New Sequential Logic ---
 
