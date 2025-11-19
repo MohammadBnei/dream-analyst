@@ -1,5 +1,17 @@
 # Changelog
 
+# [0.25.0](https://github.com/MohammadBnei/dream-analyst/compare/0.24.0...0.25.0) (2025-11-19)
+
+
+### Bug Fixes
+
+* Update Open Graph and Twitter URLs to new domain ([d8f20bd](https://github.com/MohammadBnei/dream-analyst/commit/d8f20bd8c5e5c1412f30f3073b7755eac4113fe6))
+
+
+### Features
+
+* Add "Dreamer" as the site title ([e34ccf0](https://github.com/MohammadBnei/dream-analyst/commit/e34ccf0fcb29adfad61228bbc656e46d35d6fa55))
+
 # [0.24.0](https://github.com/MohammadBnei/dream-analyst/compare/0.23.1...0.24.0) (2025-11-06)
 
 
