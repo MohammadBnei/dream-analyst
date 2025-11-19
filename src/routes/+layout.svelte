@@ -33,6 +33,7 @@
 </script>
 
 <svelte:head>
+	<title>Dreamer</title>
 	<link rel="icon" href={favicon} />
 	<link rel="manifest" href="/manifest.json" />
 	<meta name="theme-color" content="#3b82f6" />
