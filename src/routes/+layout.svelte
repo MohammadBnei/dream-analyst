@@ -43,17 +43,17 @@
 
 	<!-- Open Graph / Facebook -->
 	<meta property="og:type" content="website" />
-	<meta property="og:url" content="https://dreamjournalai.com/" />
+	<meta property="og:url" content="https://dreamer.bnei.dev/" />
 	<meta property="og:title" content={m.app_name()} />
 	<meta property="og:description" content={m.app_description()} />
-	<meta property="og:image" content="https://dreamjournalai.com/og-image.jpg" />
+	<meta property="og:image" content="https://dreamer.bnei.dev/og-image.jpg" />
 
 	<!-- Twitter -->
 	<meta property="twitter:card" content="summary_large_image" />
-	<meta property="twitter:url" content="https://dreamjournalai.com/" />
+	<meta property="twitter:url" content="https://dreamer.bnei.dev/" />
 	<meta property="twitter:title" content={m.app_name()} />
 	<meta property="twitter:description" content={m.app_description()} />
-	<meta property="twitter:image" content="https://dreamjournalai.com/twitter-image.jpg" />
+	<meta property="twitter:image" content="https://dreamer.bnei.dev/twitter-image.jpg" />
 </svelte:head>
 
 <div class="drawer">
