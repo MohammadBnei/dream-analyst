@@ -63,14 +63,14 @@ class DreamAnalysisService {
 	}
 
 	/**
-	 * Fetches the user's last five dreams (excluding the current one).
+	 * Fetches the user's last three dreams (excluding the current one) based on dreamDate.
 	 * @param dream The current dream being analyzed.
-	 * @returns An array of the last five Dream objects or an empty array if none.
+	 * @returns An array of the last three Dream objects or an empty array if none.
 	 */
-	private async _getPastFiveDreams(dream: Dream): Promise<Dream[]> {
+	private async _getPastDreams(dream: Dream): Promise<Dream[]> {
 		const prisma = await this.getPrisma();
 		try {
-			const lastFiveDreams = await prisma.dream.findMany({
+			const lastDreams = await prisma.dream.findMany({
 				where: {
 					userId: dream.userId,
 					id: { not: dream.id } // Exclude the current dream
@@ -78,7 +78,7 @@ class DreamAnalysisService {
 				orderBy: {
 					dreamDate: 'desc'
 				},
-				take: 5,
+				take: 3, // Changed from 5 to 3
 				select: {
 					id: true,
 					rawText: true,
@@ -94,9 +94,9 @@ class DreamAnalysisService {
 					title: true // Include title
 				}
 			});
-			return lastFiveDreams;
+			return lastDreams;
 		} catch (e) {
-			console.warn(`Dream ${dream.id}: Failed to fetch last five dreams:`, e);
+			console.warn(`Dream ${dream.id}: Failed to fetch last dreams:`, e);
 		}
 		return [];
 	}
@@ -200,15 +200,15 @@ Title:`;
 		const relatedDreamIds: string[] = [];
 
 		// Run both context-gathering methods in parallel
-		const [lastFiveDreamsResult, relevantDreamsResult] = await Promise.allSettled([
-			this._getPastFiveDreams(dream),
+		const [lastDreamsResult, relevantDreamsResult] = await Promise.allSettled([
+			this._getPastDreams(dream), // Renamed method
 			this._getRelevantPastDreams(dream, signal)
 		]);
 
 		const allRelatedDreams: Dream[] = [];
 
-		if (lastFiveDreamsResult.status === 'fulfilled' && lastFiveDreamsResult.value.length > 0) {
-			allRelatedDreams.push(...lastFiveDreamsResult.value);
+		if (lastDreamsResult.status === 'fulfilled' && lastDreamsResult.value.length > 0) {
+			allRelatedDreams.push(...lastDreamsResult.value);
 		}
 		if (relevantDreamsResult.status === 'fulfilled' && relevantDreamsResult.value.length > 0) {
 			// Filter out duplicates if a dream appears in both lists
@@ -305,9 +305,9 @@ Title:`;
 					select: {
 						id: true,
 						title: true,
-						dreamDate: true,
-						rawText: true,
-						interpretation: true // Ensure interpretation is selected for context
+						dreamDate: true, // Include dreamDate
+						rawText: true
+						// interpretation: true // Removed interpretation
 					}
 				}
 			}
@@ -322,7 +322,7 @@ Title:`;
 			pastDreamsContext += dreamWithRelations.relatedTo
 				.map(
 					(d, index) =>
-						`Related Dream ${index + 1}:\nRaw Text: ${d.rawText}\nInterpretation: ${d.interpretation || 'N/A'}`
+						`Related Dream ${index + 1} (Date: ${d.dreamDate?.toLocaleDateString()}):\nRaw Text: ${d.rawText}` // Added dreamDate, removed interpretation
 				)
 				.join('\n\n');
 		}
