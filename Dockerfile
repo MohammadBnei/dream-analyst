@@ -11,7 +11,8 @@ RUN bun ci
 # Copy source and build
 COPY . .
 
-RUN bun run prisma generate
+# Fake database for prisma generate
+RUN DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres bun run prisma generate
 RUN bun run build
 
 FROM node:22-alpine AS runner
