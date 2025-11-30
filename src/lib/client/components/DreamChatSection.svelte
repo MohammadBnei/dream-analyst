@@ -30,7 +30,6 @@
 					// Add new assistant message if it's the first chunk or previous was final
 					chatMessages = [...chatMessages, { role: 'assistant', content: data.content }];
 				}
-				scrollToBottom();
 			},
 			onEnd: async (data) => {
 				isSendingChatMessage = false;
