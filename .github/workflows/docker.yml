@@ -46,8 +46,8 @@ jobs:
             ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
             ORIGIN=${{ secrets.ORIGIN }}
           tags: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}, ${{ env.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:latest
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:latest,mode=max
+          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
       - name: Scan Docker image
         uses: aquasecurity/trivy-action@master
