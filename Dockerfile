@@ -1,7 +1,8 @@
-FROM node:alpine AS builder
+FROM node:22-alpine AS builder
 
-# Install Bun as package manager
-RUN npm install -g bun
+RUN apk update -qq && apk add bash curl unzip
+
+RUN curl -fsSl -o install https://bun.sh/install && chmod +x ./install && BUN_INSTALL="/usr/local" ./install
 
 WORKDIR /app
 COPY package.json bun.lock ./
@@ -13,9 +14,9 @@ COPY . .
 RUN bun run prisma generate
 RUN bun run build
 
-FROM node:alpine AS runner
+FROM node:22-alpine AS runner
 
-RUN npm install -g bun
+COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
 
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/build /app/build

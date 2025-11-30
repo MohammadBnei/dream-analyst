@@ -1,10 +1,17 @@
 import { PrismaClient } from '@prisma/client';
-import { withAccelerate } from '@prisma/extension-accelerate';
+import { PrismaPg } from '@prisma/adapter-pg'
+import { env } from '$env/dynamic/private';
 
 let prisma: PrismaClient;
 export const getPrismaClient = async () => {
 	if (!prisma) {
-		prisma = new PrismaClient().$extends(withAccelerate());
+		const connectionString = `${env.DATABASE_URL}`
+
+		const adapter = new PrismaPg({ connectionString })
+
+		prisma = new PrismaClient({
+			adapter
+		});
 	}
 	return prisma;
 };
