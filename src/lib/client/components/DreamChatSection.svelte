@@ -137,7 +137,7 @@
 	<h3 class="mb-4 text-lg font-semibold">{m.chat_with_ai_heading()}</h3>
 	<div
 		bind:this={chatContainer}
-		class="chat-container h-96 overflow-y-auto rounded-box bg-base-200 p-4"
+		class="chat-container h-[calc(100vh-200px)] overflow-y-auto rounded-box bg-base-200 p-4 md:min-h-[400px]"
 	>
 		{#each chatMessages as msg, i (msg.id || i)}
 			<div class="chat {msg.role === 'user' ? 'chat-end' : 'chat-start'}">
