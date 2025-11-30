@@ -67,7 +67,7 @@ class DreamAnalysisService {
 	 * @param dream The current dream being analyzed.
 	 * @returns An array of the last three Dream objects or an empty array if none.
 	 */
-	private async _getPastDreams(dream: Dream): Promise<Dream[]> {
+	private async _getPastDreams(dream: Dream) {
 		const prisma = await this.getPrisma();
 		try {
 			const lastDreams = await prisma.dream.findMany({
@@ -82,16 +82,8 @@ class DreamAnalysisService {
 				select: {
 					id: true,
 					rawText: true,
-					interpretation: true,
-					userId: true,
-					status: true,
 					dreamDate: true,
-					createdAt: true,
-					updatedAt: true,
-					analysisText: true,
-					promptType: true,
-					tags: true,
-					title: true // Include title
+					status: true
 				}
 			});
 			return lastDreams;
@@ -205,7 +197,7 @@ Title:`;
 			this._getRelevantPastDreams(dream, signal)
 		]);
 
-		const allRelatedDreams: Dream[] = [];
+		const allRelatedDreams: Partial<Dream>[] = [];
 
 		if (lastDreamsResult.status === 'fulfilled' && lastDreamsResult.value.length > 0) {
 			allRelatedDreams.push(...lastDreamsResult.value);
