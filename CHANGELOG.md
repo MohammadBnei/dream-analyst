@@ -1,5 +1,17 @@
 # Changelog
 
+# [0.26.0](https://github.com/MohammadBnei/dream-analyst/compare/0.25.1...0.26.0) (2025-11-30)
+
+
+### Bug Fixes
+
+* Remove unnecessary scroll to bottom call ([09e3ff6](https://github.com/MohammadBnei/dream-analyst/commit/09e3ff6604582ea370e612356356ccd24c8b8070))
+
+
+### Features
+
+* add full-screen toggle to chat section ([accea35](https://github.com/MohammadBnei/dream-analyst/commit/accea35999091dd370e961b72dc281434f1ec69f))
+
 ## [0.25.1](https://github.com/MohammadBnei/dream-analyst/compare/0.25.0...0.25.1) (2025-11-19)
 
 # [0.25.0](https://github.com/MohammadBnei/dream-analyst/compare/0.24.0...0.25.0) (2025-11-19)
