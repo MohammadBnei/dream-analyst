@@ -34,3 +34,19 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  dreamer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgres://user:password@postgres:5432/dreamer?sslmode=disable
+      REDIS_URL: redis://redis:6379
+      PORT: 4173
+    ports:
+      - '4173:4173'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
