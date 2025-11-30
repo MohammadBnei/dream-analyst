@@ -22,6 +22,7 @@ COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=builder /app/node_modules /app/node_modules
 COPY --from=builder /app/build /app/build
 COPY --from=builder /app/package.json /app
+COPY --from=builder /app/prisma.config.ts /app
 COPY --from=builder /app/prisma /app/prisma
 
 WORKDIR /app
