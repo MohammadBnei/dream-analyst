@@ -77,7 +77,7 @@
 	<meta property="twitter:description" content={m.dreams_page_description()} />
 </svelte:head>
 
-<div class="container mx-auto max-w-4xl p-4">
+<div class="container mx-auto max-w-4xl md:p-4">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-3xl font-bold">{m.your_dreams_title()}</h1>
 		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>

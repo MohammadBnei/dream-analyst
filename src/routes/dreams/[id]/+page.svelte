@@ -260,7 +260,7 @@
 	}
 </script>
 
-<div class="container mx-auto max-w-4xl p-4">
+<div class="container mx-auto max-w-4xl md:p-4">
 	{#if data.dream}
 		<div class="mb-4 flex items-center justify-between">
 			<DreamHeader
@@ -270,7 +270,7 @@
 			/>
 		</div>
 
-		<div class="card bg-base-100 p-6 shadow-xl">
+		<div class="card bg-base-100 p-3 py-6 md:p-6 shadow-xl">
 			<div class="card-body p-0">
 				<DreamNavigation dreamDate={dream.dreamDate} {prevDreamId} {nextDreamId}>
 					<svelte:fragment slot="status-badge">

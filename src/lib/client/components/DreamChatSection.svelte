@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { invalidate } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { ClientChatService } from '../services/chatService';
 	import { Streamdown } from 'svelte-streamdown';
 
@@ -13,6 +13,7 @@
 	let isSendingChatMessage = $state(false);
 	let chatError = $state<string | null>(null);
 	let chatContainer: HTMLElement; // Reference to the chat scroll container
+	let container: HTMLElement; // Reference to the chat scroll container
 	let abortController: AbortController | null = null; // To manage stream cancellation
 	let isFullScreen = $state(false); // New state for full screen toggle
 
@@ -132,14 +133,20 @@
 			}
 		}, 0);
 	}
+
+	$effect(() => {
+		if (isFullScreen) {
+			setTimeout(() => container.scrollIntoView({ behavior: 'smooth' }), 100);
+		}
+	});
 </script>
 
-<div class="mb-6">
+<div class="mb-6" bind:this={container}>
 	<div class="flex items-center justify-between">
 		<h3 class="mb-4 text-lg font-semibold">{m.chat_with_ai_heading()}</h3>
-		<button class="btn btn-ghost btn-sm mb-4" onclick={() => (isFullScreen = !isFullScreen)}>
-			{#if isFullScreen}
-				<!-- Shrink icon -->
+		<label class="swap">
+			<input type="checkbox" bind:checked={isFullScreen}/>
+			<div class="swap-on" aria-label="full screen">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -154,8 +161,8 @@
 						d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15L3.75 20.25M15 9V4.5M15 9H19.5M15 9L20.25 3.75M15 15v4.5M15 15H19.5M15 15L20.25 20.25"
 					/>
 				</svg>
-			{:else}
-				<!-- Expand icon -->
+			</div>
+			<div class="swap-off" aria-label="exit full screen">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -170,14 +177,14 @@
 						d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75v4.5m0-4.5h-4.5m4.5 0L15 9m5.25 11.25v-4.5m0 4.5h-4.5m4.5 0L15 15"
 					/>
 				</svg>
-			{/if}
-		</button>
+			</div>
+		</label>
 	</div>
 	<div
 		bind:this={chatContainer}
-		class="chat-container overflow-y-auto rounded-box bg-base-200 p-4 {isFullScreen
-			? 'h-[calc(100vh-100px)] md:h-[calc(100vh-100px)]'
-			: 'h-[calc(100vh-200px)] md:min-h-[400px]'}"
+		class="chat-container overflow-y-auto rounded-box bg-base-200 p-4 transition-all {isFullScreen
+			? 'h-[92vh]'
+			: 'h-96'}"
 	>
 		{#each chatMessages as msg, i (msg.id || i)}
 			<div class="chat {msg.role === 'user' ? 'chat-end' : 'chat-start'}">

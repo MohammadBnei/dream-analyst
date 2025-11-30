@@ -104,7 +104,7 @@
 		</div>
 	{/if}
 
-	<div class="card bg-base-100 p-6 shadow-xl">
+	<div class="card bg-base-100 p-3 py-6 md:p-6 shadow-xl">
 		<div class="card-body p-0">
 			<h2 class="mb-4 card-title text-2xl">{m.account_details_heading()}</h2>
 
