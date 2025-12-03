@@ -221,24 +221,11 @@ Title:`;
 		// Collect all unique related dream IDs
 		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
 
-		// Disconnect all existing related dreams first to ensure a clean update
-		await prisma.dream.update({
-			where: { id: dream.id },
-			data: {
-				relatedTo: {
-					set: [] // Disconnect all
-				},
-				relatedBy: {
-					set: [] // Disconnect all inverse relations
-				}
-			}
-		});
-
 		return prisma.dream.update({
 			where: { id: dream.id },
 			data: {
 				relatedTo: {
-					connect: relatedDreamIds.map((id) => ({ id }))
+					connect: relatedDreamIds.map((id) => ({ id })),
 				},
 				updatedAt: new Date()
 			},
@@ -319,12 +306,13 @@ Title:`;
 
 		// Build the pastDreamsContext from the already established relations
 		if (dreamWithRelations.relatedTo && dreamWithRelations.relatedTo.length > 0) {
+			pastDreamsContext += `Here are some of my past dreams for context:\n`;
 			pastDreamsContext += dreamWithRelations.relatedTo
 				.map(
-					(d, index) =>
-						`Related Dream ${index + 1} (Date: ${d.dreamDate?.toLocaleDateString()}):\nRaw Text: ${d.rawText}` // Added dreamDate, removed interpretation
+					(d) =>
+						`- ${d.title} (Date: ${d.dreamDate.toLocaleDateString()}):\nRaw Text: """${d.rawText}"""` // Added dreamDate, removed interpretation
 				)
-				.join('\n\n');
+				.join('\n');
 		}
 
 		// Now, initiate the raw streamed analysis with the gathered context
