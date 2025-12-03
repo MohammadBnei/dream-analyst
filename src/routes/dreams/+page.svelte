@@ -37,7 +37,7 @@
 		newQuery: string = searchQuery,
 		newPage: number = currentPage,
 		newSortBy: 'dreamDate' | 'title' = sortBy, // New: sortBy parameter
-		newSortOrder: 'asc' | 'desc' = sortOrder
+		newSortOrder = sortOrder as 'asc' | 'desc' | undefined
 	) {
 		const params = new URLSearchParams();
 		if (newQuery) params.set('query', newQuery);
