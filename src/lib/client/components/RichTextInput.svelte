@@ -1,19 +1,27 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 
-	export let value: string = $state('');
-	export let placeholder: string = 'Start typing or record your thoughts...';
-	export let rows: number = 5;
-	export let onInput: (value: string) => void = () => {}; // Callback prop for input changes
-	export let name = 'rawText';
+	const {
+		value = $state(''),
+		placeholder = 'Start typing or record your thoughts...',
+		rows = 5,
+		onInput = (value: string) => {}, // Callback prop for input changes
+		name = 'rawText'
+	} = $props<{
+		value?: string;
+		placeholder?: string;
+		rows?: number;
+		onInput?: (value: string) => void;
+		name?: string;
+	}>();
 
 	let isRecording = $state(false);
-	let mediaRecorder: MediaRecorder | null = $state(null);
-	let audioChunks: Blob[] = $state([]);
-	let recordingError: string | null = $state(null);
+	let mediaRecorder = $state<MediaRecorder | null>(null);
+	let audioChunks = $state<Blob[]>([]);
+	let recordingError = $state<string | null>(null);
 	let isTranscribing = $state(false);
-	let selectedLanguage: 'en' | 'fr' = $state('fr'); // Changed default to French
-	let abortController: AbortController | null = $state(null); // To manage transcription cancellation
+	let selectedLanguage = $state<'en' | 'fr'>('fr'); // Changed default to French
+	let abortController = $state<AbortController | null>(null); // To manage transcription cancellation
 
 	async function startRecording() {
 		recordingError = null;
