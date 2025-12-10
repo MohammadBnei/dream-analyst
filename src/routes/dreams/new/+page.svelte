@@ -6,24 +6,20 @@
 
 	let { form } = $props();
 
-	let dreamText = $state(form?.rawText || '');
-	let contextText = $state(form?.context || '');
-	let emotionsText = $state(form?.emotions || '');
+	let dreamText = $state((form?.rawText as string) || '');
+	let contextText = $state((form?.context as string) || '');
+	let emotionsText = $state((form?.emotions as string) || '');
 	let isSaving = $state(false);
 
 	let isSubmitDisabled = $derived(dreamText.length < 10);
-
-	function handleRichTextInput(value: string) {
-		dreamText = value;
-	}
 
 	$effect(() => {
 		if (form?.error) {
 			isSaving = false;
 			// Sync back values from server if they exist to preserve input
-			if (form.rawText !== undefined) dreamText = form.rawText;
-			if (form.context !== undefined) contextText = form.context;
-			if (form.emotions !== undefined) emotionsText = form.emotions;
+			if (form.rawText) dreamText = form.rawText.toString();
+			if (form.context) contextText = form.context.toString();
+			if (form.emotions) emotionsText = form.emotions.toString();
 		} else if (form?.success) {
 			dreamText = '';
 			contextText = '';
@@ -54,15 +50,15 @@
 				<span class="label-text text-lg font-semibold">{m.what_did_you_dream_label()}</span>
 			</label>
 			<RichTextInput
-				id="dreamText"
 				name="rawText"
 				placeholder={m.describe_dream_placeholder()}
 				rows={8}
 				bind:value={dreamText}
-				onInput={handleRichTextInput}
 			/>
 			<label class="label">
-				<span class="label-text-alt text-base-content/60">{m.minimum_characters_label({ count: 10 })}</span>
+				<span class="label-text-alt text-base-content/60"
+					>{m.minimum_characters_label({ count: 10 })}</span
+				>
 			</label>
 		</div>
 
@@ -72,15 +68,14 @@
 				<span class="label-text text-lg font-semibold">Life Context</span>
 			</label>
 			<div class="mb-2 text-sm text-base-content/70">
-				What's happening in your life right now? Mention any specific events, movies, conversations, or stressors that might have influenced this dream.
+				What's happening in your life right now? Mention any specific events, movies, conversations,
+				or stressors that might have influenced this dream.
 			</div>
-			<textarea
-				id="context"
+			<RichTextInput
 				name="context"
-				class="textarea textarea-bordered h-32 text-base"
 				placeholder="e.g., I watched a scary movie before bed, I'm stressed about a project at work..."
 				bind:value={contextText}
-			></textarea>
+			/>
 		</div>
 
 		<!-- Emotions Section -->
@@ -91,18 +86,20 @@
 			<div class="mb-2 text-sm text-base-content/70">
 				How did you feel during the dream? How did you feel when you woke up?
 			</div>
-			<textarea
-				id="emotions"
+			<RichTextInput
 				name="emotions"
-				class="textarea textarea-bordered h-32 text-base"
 				placeholder="e.g., I felt anxious during the dream but relieved when I woke up. The atmosphere was heavy..."
 				bind:value={emotionsText}
-			></textarea>
+			/>
 		</div>
 
 		<!-- Submit Button -->
-		<div class="flex justify-end mt-8">
-			<button type="submit" class="btn btn-primary btn-lg w-full sm:w-auto" disabled={isSaving || isSubmitDisabled}>
+		<div class="mt-8 flex justify-end">
+			<button
+				type="submit"
+				class="btn w-full btn-lg btn-primary sm:w-auto"
+				disabled={isSaving || isSubmitDisabled}
+			>
 				{#if isSaving}
 					<span class="loading loading-spinner"></span>
 					{m.saving_button()}
