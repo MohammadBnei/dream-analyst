@@ -7,7 +7,7 @@
 	export let onInput: (value: string) => void = () => {}; // Callback prop for input changes
 	export let name = 'rawText';
 
-	let isRecording = false;
+	let isRecording = $state(false);
 	let mediaRecorder: MediaRecorder | null = null;
 	let audioChunks: Blob[] = [];
 	let recordingError: string | null = null;
