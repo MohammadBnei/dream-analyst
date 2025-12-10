@@ -46,6 +46,8 @@ model Dream {
   userId            String              @map("user_id")
   user              User?               @relation(fields: [userId], references: [id])
   rawText           String              @map("raw_text")
+  context           String?             @map("context") // New field
+  emotions          String?             @map("emotions") // New field
   analysisText      String?             @map("analysis_text")
   interpretation    String?
   title             String?             // New field for AI-generated title

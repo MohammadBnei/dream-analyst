@@ -6,7 +6,9 @@ import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus e
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
 
 const CreateDreamSchema = v.object({
-	rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.'))
+	rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.')),
+	context: v.optional(v.string()),
+	emotions: v.optional(v.string())
 });
 
 export const actions: Actions = {
@@ -18,13 +20,15 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const rawText = formData.get('rawText');
+		const context = formData.get('context');
+		const emotions = formData.get('emotions');
 
 		let validatedData;
 		try {
-			validatedData = v.parse(CreateDreamSchema, { rawText });
+			validatedData = v.parse(CreateDreamSchema, { rawText, context, emotions });
 		} catch (e: any) {
 			const issues = e.issues.map((issue: any) => issue.message);
-			return fail(400, { rawText, error: issues.join(', ') });
+			return fail(400, { rawText, context, emotions, error: issues.join(', ') });
 		}
 
 		const prisma = await getPrismaClient();
@@ -35,6 +39,8 @@ export const actions: Actions = {
 				data: {
 					userId: sessionUser.id,
 					rawText: validatedData.rawText,
+					context: validatedData.context,
+					emotions: validatedData.emotions,
 					status: DreamStatus.PENDING_ANALYSIS // Use enum
 				}
 			});
@@ -58,7 +64,7 @@ export const actions: Actions = {
 				// Re-throw redirect
 				throw e;
 			}
-			return fail(500, { rawText, error: 'Failed to save dream. Please try again.' });
+			return fail(500, { rawText, context, emotions, error: 'Failed to save dream. Please try again.' });
 		}
 	}
 };
