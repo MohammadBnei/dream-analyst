@@ -65,15 +65,14 @@
 		<!-- Context Section -->
 		<div class="form-control w-full">
 			<label for="context" class="label">
-				<span class="label-text text-lg font-semibold">Life Context</span>
+				<span class="label-text text-lg font-semibold">{m.life_context_label()}</span>
 			</label>
 			<div class="mb-2 text-sm text-base-content/70">
-				What's happening in your life right now? Mention any specific events, movies, conversations,
-				or stressors that might have influenced this dream.
+				{m.life_context_description()}
 			</div>
 			<RichTextInput
 				name="context"
-				placeholder="e.g., I watched a scary movie before bed, I'm stressed about a project at work..."
+				placeholder={m.life_context_placeholder()}
 				bind:value={contextText}
 			/>
 		</div>
@@ -81,14 +80,14 @@
 		<!-- Emotions Section -->
 		<div class="form-control w-full">
 			<label for="emotions" class="label">
-				<span class="label-text text-lg font-semibold">Emotional Landscape</span>
+				<span class="label-text text-lg font-semibold">{m.emotional_landscape_label()}</span>
 			</label>
 			<div class="mb-2 text-sm text-base-content/70">
-				How did you feel during the dream? How did you feel when you woke up?
+				{m.emotional_landscape_description()}
 			</div>
 			<RichTextInput
 				name="emotions"
-				placeholder="e.g., I felt anxious during the dream but relieved when I woke up. The atmosphere was heavy..."
+				placeholder={m.emotional_landscape_placeholder()}
 				bind:value={emotionsText}
 			/>
 		</div>

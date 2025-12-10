@@ -158,5 +158,11 @@
 	"sort_by_date": "Trier par Date",
 	"sort_by_title": "Trier par Titre",
 	"descending_option": "Décroissant",
-	"ascending_option": "Croissant"
+	"ascending_option": "Croissant",
+	"life_context_label": "Contexte de vie",
+	"life_context_description": "Que se passe-t-il dans votre vie en ce moment ? Mentionnez tout événement spécifique, film, conversation ou facteur de stress qui aurait pu influencer ce rêve.",
+	"life_context_placeholder": "par exemple, j'ai regardé un film effrayant avant de me coucher, je suis stressé par un projet au travail...",
+	"emotional_landscape_label": "Paysage émotionnel",
+	"emotional_landscape_description": "Comment vous êtes-vous senti pendant le rêve ? Comment vous êtes-vous senti au réveil ?",
+	"emotional_landscape_placeholder": "par exemple, je me suis senti anxieux pendant le rêve mais soulagé au réveil. L'atmosphère était lourde..."
 }
