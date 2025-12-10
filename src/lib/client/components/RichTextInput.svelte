@@ -1,19 +1,19 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 
-	export let value: string = '';
+	export let value: string = $state('');
 	export let placeholder: string = 'Start typing or record your thoughts...';
 	export let rows: number = 5;
 	export let onInput: (value: string) => void = () => {}; // Callback prop for input changes
 	export let name = 'rawText';
 
 	let isRecording = $state(false);
-	let mediaRecorder: MediaRecorder | null = null;
-	let audioChunks: Blob[] = [];
-	let recordingError: string | null = null;
-	let isTranscribing = false;
-	let selectedLanguage: 'en' | 'fr' = 'fr'; // Changed default to French
-	let abortController: AbortController | null = null; // To manage transcription cancellation
+	let mediaRecorder: MediaRecorder | null = $state(null);
+	let audioChunks: Blob[] = $state([]);
+	let recordingError: string | null = $state(null);
+	let isTranscribing = $state(false);
+	let selectedLanguage: 'en' | 'fr' = $state('fr'); // Changed default to French
+	let abortController: AbortController | null = $state(null); // To manage transcription cancellation
 
 	async function startRecording() {
 		recordingError = null;
@@ -22,29 +22,31 @@
 			mediaRecorder = new MediaRecorder(stream);
 			audioChunks = [];
 
-			mediaRecorder.ondataavailable = (event) => {
-				audioChunks.push(event.data);
-			};
+			if (mediaRecorder) {
+				mediaRecorder.ondataavailable = (event) => {
+					audioChunks.push(event.data);
+				};
 
-			mediaRecorder.onstop = async () => {
-				isRecording = false;
-				const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-				await transcribeAndAppend(audioBlob);
-				// Stop all tracks to release microphone
-				stream.getTracks().forEach((track) => track.stop());
-			};
+				mediaRecorder.onstop = async () => {
+					isRecording = false;
+					const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+					await transcribeAndAppend(audioBlob);
+					// Stop all tracks to release microphone
+					stream.getTracks().forEach((track) => track.stop());
+				};
 
-			mediaRecorder.onerror = (event) => {
-				console.error('MediaRecorder error:', event);
-				recordingError = m.recording_failed_error({
-					message: event.error?.message || 'Unknown error'
-				});
-				isRecording = false;
-				stream.getTracks().forEach((track) => track.stop());
-			};
+				mediaRecorder.onerror = (event) => {
+					console.error('MediaRecorder error:', event);
+					recordingError = m.recording_failed_error({
+						message: (event as MediaRecorderErrorEvent).error?.message || 'Unknown error'
+					});
+					isRecording = false;
+					stream.getTracks().forEach((track) => track.stop());
+				};
 
-			mediaRecorder.start();
-			isRecording = true;
+				mediaRecorder.start();
+				isRecording = true;
+			}
 		} catch (err) {
 			console.error('Error accessing microphone:', err);
 			recordingError = m.microphone_access_error();
