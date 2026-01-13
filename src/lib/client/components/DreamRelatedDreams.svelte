@@ -51,25 +51,7 @@
 				relatedDreams = [...relatedDreams, dreamToAdd];
 			}
 		}
-		// Do NOT clear searchQuery here, let the user continue typing if they wish
-		searchResults = []; // Clear search results after adding
 	}
-
-	// Debounce search input
-	$effect(() => {
-		clearTimeout(searchTimeout);
-		if (searchQuery.length >= 3) {
-			searchTimeout = setTimeout(() => {
-				// Manually submit the search form
-				const searchForm = document.getElementById('search-dreams-form') as HTMLFormElement;
-				if (searchForm) {
-					searchForm.requestSubmit();
-				}
-			}, 300);
-		} else {
-			searchResults = [];
-		}
-	});
 </script>
 
 <div class="mb-6">
@@ -234,7 +216,8 @@
 						return;
 					}
 
-					return async ({ result }) => { // Removed 'update' as it's not needed here
+					return async ({ result }) => {
+						// Removed 'update' as it's not needed here
 						if (result.type === 'success') {
 							searchResults = result.data?.dreams || [];
 						} else if (result.type === 'error') {
