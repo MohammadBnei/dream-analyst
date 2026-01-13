@@ -1,18 +1,20 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 
-	const {
-		value = $state(''),
+	let {
+		value = $bindable(),
 		placeholder = 'Start typing or record your thoughts...',
 		rows = 5,
 		onInput = (value: string) => {}, // Callback prop for input changes
-		name = 'rawText'
+		name = 'rawText',
+		legend = ''
 	} = $props<{
 		value?: string;
 		placeholder?: string;
 		rows?: number;
 		onInput?: (value: string) => void;
 		name?: string;
+		legend?: string;
 	}>();
 
 	let isRecording = $state(false);
@@ -46,7 +48,7 @@
 				mediaRecorder.onerror = (event) => {
 					console.error('MediaRecorder error:', event);
 					recordingError = m.recording_failed_error({
-						message: (event as MediaRecorderErrorEvent).error?.message || 'Unknown error'
+						message: event.error?.message || 'Unknown error'
 					});
 					isRecording = false;
 					stream.getTracks().forEach((track) => track.stop());
@@ -118,28 +120,22 @@
 			abortController = null; // Clear the controller
 		}
 	}
-
-	function handleInput(event: Event) {
-		value = (event.target as HTMLTextAreaElement).value;
-		onInput(value); // Call the callback prop
-	}
 </script>
 
 <div class="">
 	<div class="mt-2 w-full">
 		<fieldset class="fieldset rounded-box border border-base-300 bg-base-200 p-4">
-			<legend class="fieldset-legend">{m.audio_input_fieldset_legend()}</legend>
+			<legend class="fieldset-legend">{legend}</legend>
 			<textarea
 				{placeholder}
 				{rows}
 				{name}
 				bind:value
-				on:input={handleInput}
 				class="textarea-bordered textarea w-full rounded-md p-2 focus:ring-2 focus:ring-primary focus:outline-none"
 			></textarea>
 			<div class="flex items-center space-x-2">
 				<button
-					on:click={isRecording || isTranscribing ? stopRecording : startRecording}
+					onclick={isRecording || isTranscribing ? stopRecording : startRecording}
 					type="button"
 					class="btn {isRecording || isTranscribing ? 'btn-error' : 'btn-primary'} btn-sm"
 				>

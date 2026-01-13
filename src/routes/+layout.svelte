@@ -9,7 +9,7 @@
 
 	const { isLoggedIn, lang, isAdmin } = data;
 
-	let currentTheme: string;
+	let currentTheme: string = $state('');
 
 	onMount(() => {
 		// Initialize theme from localStorage or default to 'light'

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ActionData } from './$types';
 	import * as m from '$lib/paraglide/messages';
+	import { enhance } from '$app/forms';
 
 	export let form: ActionData;
 </script>
@@ -14,7 +15,7 @@
 			</p>
 		</div>
 		<div class="card w-full max-w-sm shrink-0 bg-base-100 shadow-2xl">
-			<form method="POST" class="card-body">
+			<form method="POST" class="card-body" use:enhance>
 				<div class="form-control">
 					<label class="label" for="identity">
 						<span class="label-text">{m.username_or_email_label()}</span>
