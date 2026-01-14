@@ -72,6 +72,10 @@ bun run e2e    # Run Playwright E2E tests
 
 ## Code Patterns & Conventions
 
+### Iterative Development
+- **Small, Bounded Updates:** Only produce small, incremental changes to the code. Avoid large-scale refactors in a single step.
+- **Controlled Updates:** Focus on one specific feature or fix at a time to ensure stability and easier debugging.
+
 ### Svelte 5 Runes
 Always use Svelte 5 runes style in `.svelte` files:
 - Use `$props()` for component parameters.
