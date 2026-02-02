@@ -1,18 +1,24 @@
 <script lang="ts">
 	import { Streamdown } from 'svelte-streamdown';
 	import * as m from '$lib/paraglide/messages';
+	import { DreamState } from '$lib/types';
 
-	let { interpretation, tags, isLoading, errorMessage, status } = $props<{
+	let { interpretation, tags, isLoading, errorMessage, status, dreamState = DreamState.CREATED } = $props<{
 		interpretation: string;
 		tags: string[];
 		isLoading: boolean;
 		errorMessage: string | null;
 		status: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle';
+		dreamState?: DreamState;
 	}>();
 
 	function getStatusBadgeClass(
-		currentStatus: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle'
+		currentStatus: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle',
+		currentState: DreamState
 	) {
+		if (currentState === DreamState.FAILED) return 'badge-error';
+		if (currentState === DreamState.COMPLETED) return 'badge-success';
+
 		switch (currentStatus) {
 			case 'COMPLETED':
 				return 'badge-success';
@@ -23,6 +29,20 @@
 			case 'idle':
 			default:
 				return 'badge-neutral';
+		}
+	}
+
+	function getLoadingMessage(currentState: DreamState) {
+		switch (currentState) {
+			case DreamState.ENRICHING:
+			case DreamState.ENRICHING_REVISION:
+				return 'Gathering context and evoquing title...';
+			case DreamState.INTERPRETING:
+			case DreamState.INTERPRETING_REVISION:
+				return m.analyzing_dream_message();
+			case DreamState.CREATED:
+			default:
+				return 'Initializing analysis pipeline...';
 		}
 	}
 </script>
@@ -40,7 +60,7 @@
 						d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 					></path>
 				</svg>
-				<span>{m.analyzing_dream_message()}</span>
+				<span>{getLoadingMessage(dreamState)}</span>
 			</div>
 		</div>
 	{/if}
@@ -68,7 +88,7 @@
 			<h3 class="mb-2 text-lg font-medium">{m.tags_heading()}:</h3>
 			<div class="flex flex-wrap gap-2">
 				{#each tags as tag}
-					<span class="badge {getStatusBadgeClass(status)} badge-lg">{tag}</span>
+					<span class="badge {getStatusBadgeClass(status, dreamState)} badge-lg">{tag}</span>
 				{/each}
 			</div>
 		</div>

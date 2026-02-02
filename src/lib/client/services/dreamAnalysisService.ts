@@ -1,9 +1,10 @@
 import { browser } from '$app/environment';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
+import type { DreamState } from '$lib/types';
 
 interface StreamCallbacks {
 	onMessage: (data: App.AnalysisStreamChunk) => void;
-	onEnd: (data: { status?: string; message?: string }) => void; // Changed to include finalStatus
+	onEnd: (data: { status?: string; state?: DreamState; message?: string }) => void; // Changed to include finalStatus
 	onError: (error: string) => void;
 	onClose?: () => void;
 }
@@ -92,8 +93,12 @@ export class DreamAnalysisService {
 									const parsed: App.AnalysisStreamChunk = JSON.parse(line);
 									// Check for finalStatus from the server
 									if (parsed.finalStatus) {
-										// Pass finalStatus and message to onEnd
-										this.callbacks.onEnd({ status: parsed.finalStatus, message: parsed.message });
+										// Pass finalStatus, state, and message to onEnd
+										this.callbacks.onEnd({ 
+											status: parsed.finalStatus, 
+											state: parsed.state,
+											message: parsed.message 
+										});
 										this.closeStream(true); // Close the client stream silently
 										return; // Exit readStream
 									}

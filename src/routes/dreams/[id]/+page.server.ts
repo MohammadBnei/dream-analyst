@@ -102,7 +102,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		// Ensure tags are parsed correctly if stored as JSON string
 		const dreamWithParsedTags = {
 			...dream,
-			tags: dream.tags ? (dream.tags as string[]) : null
+			tags: (dream as any).tags ? ((dream as any).tags as string[]) : []
 		};
 
 		// Fetch next and previous dreams for navigation

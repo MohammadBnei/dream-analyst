@@ -1,7 +1,9 @@
 <script lang="ts">
-	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
-	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
+	import RichTextInput from '$lib/client/components/organisms/RichTextInput.svelte';
+	import FormField from '$lib/client/components/molecules/FormField.svelte';
+	import Button from '$lib/client/components/atoms/Button.svelte';
+	import Alert from '$lib/client/components/atoms/Alert.svelte';
 	import { enhance } from '$app/forms';
 
 	let { form } = $props();
@@ -44,86 +46,58 @@
 		}}
 		class="space-y-8"
 	>
-		<!-- Dream Section -->
-		<div class="form-control w-full">
-			<label for="dreamText" class="label">
-				<span class="label-text text-lg font-semibold">{m.what_did_you_dream_label()}</span>
-			</label>
+		<FormField
+			label={m.what_did_you_dream_label()}
+			name="dreamText"
+			hint={m.minimum_characters_label({ count: 10 })}
+		>
 			<RichTextInput
 				name="rawText"
 				placeholder={m.describe_dream_placeholder()}
 				rows={8}
 				bind:value={dreamText}
 			/>
-			<label class="label">
-				<span class="label-text-alt text-base-content/60"
-					>{m.minimum_characters_label({ count: 10 })}</span
-				>
-			</label>
-		</div>
+		</FormField>
 
-		<!-- Context Section -->
-		<div class="form-control w-full">
-			<label for="context" class="label">
-				<span class="label-text text-lg font-semibold">{m.life_context_label()}</span>
-			</label>
-			<div class="mb-2 text-sm text-base-content/70">
-				{m.life_context_description()}
-			</div>
+		<FormField label={m.life_context_label()} name="context" hint={m.life_context_description()}>
 			<RichTextInput
 				name="context"
 				placeholder={m.life_context_placeholder()}
 				bind:value={contextText}
 			/>
-		</div>
+		</FormField>
 
-		<!-- Emotions Section -->
-		<div class="form-control w-full">
-			<label for="emotions" class="label">
-				<span class="label-text text-lg font-semibold">{m.emotional_landscape_label()}</span>
-			</label>
-			<div class="mb-2 text-sm text-base-content/70">
-				{m.emotional_landscape_description()}
-			</div>
+		<FormField
+			label={m.emotional_landscape_label()}
+			name="emotions"
+			hint={m.emotional_landscape_description()}
+		>
 			<RichTextInput
 				name="emotions"
 				placeholder={m.emotional_landscape_placeholder()}
 				bind:value={emotionsText}
 			/>
-		</div>
+		</FormField>
 
-		<!-- Submit Button -->
 		<div class="mt-8 flex justify-end">
-			<button
+			<Button
 				type="submit"
-				class="btn w-full btn-lg btn-primary sm:w-auto"
+				variant="primary"
+				size="lg"
 				disabled={isSaving || isSubmitDisabled}
+				loading={isSaving}
+				class="w-full sm:w-auto"
 			>
-				{#if isSaving}
-					<span class="loading loading-spinner"></span>
-					{m.saving_button()}
-				{:else}
-					{m.save_dream_button()}
-				{/if}
-			</button>
+				{isSaving ? m.saving_button() : m.save_dream_button()}
+			</Button>
 		</div>
 	</form>
 
 	{#if form?.error}
-		<div role="alert" class="mt-8 alert alert-error" transition:fade>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6 shrink-0 stroke-current"
-				fill="none"
-				viewBox="0 0 24 24"
-				><path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-				></path></svg
-			>
-			<span>{m.error_prefix()}: {form.error}</span>
+		<div class="mt-8">
+			<Alert variant="error">
+				{m.error_prefix()}: {form.error}
+			</Alert>
 		</div>
 	{/if}
 </div>

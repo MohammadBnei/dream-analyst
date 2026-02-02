@@ -39,8 +39,8 @@ function asyncIterableToReadableStream(
 export class StreamProcessor {
 	private streamId: string;
 	private platform: App.Platform | undefined;
-	private streamStateStore: Awaited<ReturnType<typeof getStreamStateStore>>;
-	private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
+	private streamStateStore!: Awaited<ReturnType<typeof getStreamStateStore>>;
+	private prisma!: Awaited<ReturnType<typeof getPrismaClient>>;
 	abortController: AbortController; // Internal AbortController for server-side cancellation
 
 	private accumulatedInterpretation: string = '';
@@ -121,8 +121,8 @@ export class StreamProcessor {
 		);
 
 		// Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
-		if (this.platform?.context?.waitUntil) {
-			this.platform.context.waitUntil(
+		if (this.platform?.context && 'waitUntil' in this.platform.context) {
+			(this.platform.context as any).waitUntil(
 				backgroundProcessingPromise.catch((e) => {
 					// Catch and log errors from the pipeTo promise
 					console.error(

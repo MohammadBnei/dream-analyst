@@ -115,11 +115,11 @@ export const actions = {
 			setAuthTokenCookie(cookies, newToken);
 
 			return { success: true, message: 'Profile updated successfully!', user: updatedUser };
-		} catch (e) {
+		} catch (e: any) {
 			if (e instanceof z.ZodError) {
-				const errors = e.flatten().fieldErrors;
+				const errors = (e as z.ZodError).flatten().fieldErrors;
 				return fail(400, {
-					message: errors.username?.[0] || errors.email?.[0] || 'Validation error.',
+					message: (errors.username?.[0] as string) || (errors.email?.[0] as string) || 'Validation error.',
 					username,
 					email
 				});

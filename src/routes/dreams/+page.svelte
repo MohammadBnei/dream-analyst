@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { invalidateAll, goto } from '$app/navigation';
-	import DreamCard from '$lib/client/components/DreamCard.svelte';
-	import DreamPagination from '$lib/client/components/DreamPagination.svelte';
-	import DreamSearchAndSort from '$lib/client/components/DreamSearchAndSort.svelte';
-	import ErrorMessage from '$lib/client/components/ErrorMessage.svelte';
+	import DreamCard from '$lib/client/components/organisms/DreamCard.svelte';
+	import Pagination from '$lib/client/components/organisms/Pagination.svelte';
+	import SearchAndSort from '$lib/client/components/organisms/SearchAndSort.svelte';
+	import ErrorAlert from '$lib/client/components/molecules/ErrorAlert.svelte';
 	import NoDreamsMessage from '$lib/client/components/NoDreamsMessage.svelte';
+	import Button from '$lib/client/components/atoms/Button.svelte';
 	import * as m from '$lib/paraglide/messages';
+	import type { SelectOption } from '$lib/client/components/atoms/Select.svelte';
 
 	// Data loaded from +page.server.ts
 	let { data, form } = $props();
@@ -20,6 +22,11 @@
 
 	let clientError: string | null = $state(null);
 	let searchQuery: string = $state(data.query || '');
+
+	const sortByOptions: SelectOption[] = [
+		{ value: 'dreamDate', label: m.sort_by_date() },
+		{ value: 'title', label: m.sort_by_title() }
+	];
 
 	// Handle form action responses
 	$effect(() => {
@@ -49,20 +56,20 @@
 
 	async function handleSearch(query: string) {
 		searchQuery = query;
-		await updateUrl(query, 1, sortBy, sortOrder); // Reset to page 1 on new search
+		await updateUrl(query, 1, sortBy as 'dreamDate' | 'title', sortOrder as 'asc' | 'desc');
 	}
 
 	function handleResetSearch() {
 		searchQuery = '';
-		updateUrl('', 1, 'dreamDate', 'desc'); // Reset to page 1, default sort
+		updateUrl('', 1, 'dreamDate', 'desc');
 	}
 
 	async function handlePageChange(page: number) {
-		await updateUrl(searchQuery, page, sortBy, sortOrder);
+		await updateUrl(searchQuery, page, sortBy as 'dreamDate' | 'title', sortOrder as 'asc' | 'desc');
 	}
 
-	async function handleSortChange(newSortBy: 'dreamDate' | 'title', newSortOrder: 'asc' | 'desc') {
-		await updateUrl(searchQuery, 1, newSortBy, newSortOrder); // Reset to page 1 on sort change
+	async function handleSortChange(newSortBy: string, newSortOrder: string) {
+		await updateUrl(searchQuery, 1, newSortBy as 'dreamDate' | 'title', newSortOrder as 'asc' | 'desc');
 	}
 </script>
 
@@ -80,21 +87,24 @@
 <div class="container mx-auto max-w-4xl md:p-4">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-3xl font-bold">{m.your_dreams_title()}</h1>
-		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
+		<Button variant="primary" onclick={() => goto('/dreams/new')}>
+			{m.add_new_dream_button()}
+		</Button>
 	</div>
 
 	<div class="mb-6">
-		<DreamSearchAndSort
-			initialQuery={data.query || ''}
-			currentSortOrder={sortOrder as 'asc' | 'desc'}
-			currentSortBy={sortBy as 'dreamDate' | 'title'}
+		<SearchAndSort
+			bind:searchValue={searchQuery}
+			bind:sortByValue={sortBy}
+			bind:sortOrderValue={sortOrder}
+			{sortByOptions}
 			onSearch={handleSearch}
 			onReset={handleResetSearch}
 			onSortChange={handleSortChange}
 		/>
 	</div>
 
-	<ErrorMessage bind:clientError />
+	<ErrorAlert bind:error={clientError} />
 
 	{#if dreams.length === 0}
 		<NoDreamsMessage />
@@ -106,11 +116,11 @@
 		</ul>
 
 		<div class="mt-8 flex justify-center">
-			<DreamPagination
+			<Pagination
 				{currentPage}
 				{totalPages}
 				onPageChange={handlePageChange}
-				{totalDreams}
+				totalItems={totalDreams}
 				{pageSize}
 			/>
 		</div>

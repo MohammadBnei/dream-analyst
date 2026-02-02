@@ -2,6 +2,10 @@
 	import type { ActionData } from './$types';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
+	import Input from '$lib/client/components/atoms/Input.svelte';
+	import Button from '$lib/client/components/atoms/Button.svelte';
+	import Alert from '$lib/client/components/atoms/Alert.svelte';
+	import FormField from '$lib/client/components/molecules/FormField.svelte';
 
 	export let form: ActionData;
 </script>
@@ -16,82 +20,61 @@
 		</div>
 		<div class="card w-full max-w-sm shrink-0 bg-base-100 shadow-2xl">
 			<form method="POST" class="card-body" use:enhance>
-				<div class="form-control">
-					<label class="label" for="username">
-						<span class="label-text">{m.username_label()}</span>
-					</label>
-					<input
+				<FormField label={m.username_label()} name="username" required>
+					<Input
 						type="text"
-						placeholder={m.username_label().toLowerCase()}
-						class="input-bordered input"
 						name="username"
 						id="username"
+						placeholder={m.username_label().toLowerCase()}
 						value={form?.username ?? ''}
 						required
 					/>
-				</div>
-				<div class="form-control">
-					<label class="label" for="email">
-						<span class="label-text">{m.email_label()}</span>
-					</label>
-					<input
+				</FormField>
+
+				<FormField label={m.email_label()} name="email" required>
+					<Input
 						type="email"
-						placeholder={m.email_label().toLowerCase()}
-						class="input-bordered input"
 						name="email"
 						id="email"
+						placeholder={m.email_label().toLowerCase()}
 						value={form?.email ?? ''}
 						required
 					/>
-				</div>
-				<div class="form-control">
-					<label class="label" for="password">
-						<span class="label-text">{m.password_label()}</span>
-					</label>
-					<input
+				</FormField>
+
+				<FormField label={m.password_label()} name="password" required>
+					<Input
 						type="password"
-						placeholder={m.password_label().toLowerCase()}
-						class="input-bordered input"
 						name="password"
 						id="password"
+						placeholder={m.password_label().toLowerCase()}
 						required
 					/>
-				</div>
-				<div class="form-control">
-					<label class="label" for="passwordConfirm">
-						<span class="label-text">{m.password_confirm_label()}</span>
-					</label>
-					<input
+				</FormField>
+
+				<FormField label={m.password_confirm_label()} name="passwordConfirm" required>
+					<Input
 						type="password"
-						placeholder={m.password_confirm_label().toLowerCase()}
-						class="input-bordered input"
 						name="passwordConfirm"
 						id="passwordConfirm"
+						placeholder={m.password_confirm_label().toLowerCase()}
 						required
 					/>
-					<label class="label">
+					<div class="label">
 						<a href="/login" class="label-text-alt link link-hover">{m.have_account_link()}</a>
-					</label>
-				</div>
-				{#if form?.message}
-					<div role="alert" class="mt-4 alert alert-error">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							class="h-6 w-6 shrink-0 stroke-current"
-							fill="none"
-							viewBox="0 0 24 24"
-							><path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
-							/></svg
-						>
-						<span>{form.message}</span>
 					</div>
+				</FormField>
+
+				{#if form?.message}
+					<Alert variant="error">
+						{form.message}
+					</Alert>
 				{/if}
+
 				<div class="form-control mt-6">
-					<button type="submit" class="btn btn-primary">{m.register_button()}</button>
+					<Button type="submit" variant="primary" fullWidth>
+						{m.register_button()}
+					</Button>
 				</div>
 			</form>
 		</div>

@@ -83,8 +83,7 @@ export const actions = {
 			newUser.id,
 			newUser.username,
 			newUser.email,
-			newUser.role,
-			updatedCredits
+			newUser.role
 		);
 		setAuthTokenCookie(cookies, token);
 

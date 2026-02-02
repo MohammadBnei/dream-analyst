@@ -3,6 +3,7 @@
 import type { Dream, DreamChat } from '@prisma/client';
 import type { ChatMessage } from '$lib/types/chat'; // Import the shared ChatMessage interface
 import type { Dream as IDream } from '@prisma/client';
+import type { DreamState } from '$lib/types';
 
 // for information about these interfaces
 declare global {
@@ -27,6 +28,7 @@ declare global {
 			content?: string;
 			tags?: string[];
 			status?: Dream['status']; // This refers to the DreamStatus enum from Prisma
+			state?: DreamState;
 			message?: string;
 			finalStatus?: 'COMPLETED' | 'ANALYSIS_FAILED';
 		}

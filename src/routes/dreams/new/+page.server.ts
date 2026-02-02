@@ -1,9 +1,8 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { Actions } from './$types';
-import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
-import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
+import { getDreamRepository } from '$lib/server/dreamRepository';
+import { getPipelineCoordinator } from '$lib/server/pipelineCoordinator';
 
 const CreateDreamSchema = v.object({
 	rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.')),
@@ -31,40 +30,31 @@ export const actions: Actions = {
 			return fail(400, { rawText, context, emotions, error: issues.join(', ') });
 		}
 
-		const prisma = await getPrismaClient();
-		const dreamAnalysisService = getDreamAnalysisService();
+		const dreamRepository = getDreamRepository();
 
 		try {
-			let newDream = await prisma.dream.create({
-				data: {
-					userId: sessionUser.id,
-					rawText: validatedData.rawText,
-					context: validatedData.context,
-					emotions: validatedData.emotions,
-					status: DreamStatus.PENDING_ANALYSIS // Use enum
-				}
+			// Create the dream in CREATED state
+			const newDream = await dreamRepository.createDream({
+				userId: sessionUser.id,
+				rawText: validatedData.rawText,
+				context: validatedData.context,
+				emotions: validatedData.emotions,
+				promptType: 'jungian'
 			});
 
-			await Promise.all([
-				dreamAnalysisService.generateDreamTitle(newDream.rawText).then(
-					(title) => prisma.dream.update({
-						where: { id: newDream.id },
-						data: { title }
-					})
-				),
-				dreamAnalysisService.findAndSetRelatedDreams(newDream)
-			])
+			// Start the analysis pipeline (actors will handle title, relationships, interpretation)
+			const coordinator = await getPipelineCoordinator();
+			await coordinator.startAnalysis(newDream.id);
 
-			// --- End New Sequential Logic ---
-
+			// Redirect to the dream page (streaming will continue in background)
 			throw redirect(303, `/dreams/${newDream.id}`);
 		} catch (e: any) {
-			console.error('Error saving dream:', e);
+			console.error('Error creating dream:', e);
 			if (e.status === 303) {
 				// Re-throw redirect
 				throw e;
 			}
-			return fail(500, { rawText, context, emotions, error: 'Failed to save dream. Please try again.' });
+			return fail(500, { rawText, context, emotions, error: 'Failed to create dream. Please try again.' });
 		}
 	}
 };

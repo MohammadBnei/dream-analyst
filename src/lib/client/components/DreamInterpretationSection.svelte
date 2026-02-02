@@ -4,12 +4,14 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+	import { DreamState } from '$lib/types';
 	import { promptService } from '$lib/prompts/promptService';
 
 	let {
 		interpretation,
 		tags,
 		status,
+		state: dreamState = DreamState.CREATED,
 		promptType, // This prop now represents the current promptType from the dream
 		isLoadingStream = $bindable(),
 		streamError,
@@ -234,6 +236,7 @@
 			isLoading={isLoadingStream}
 			errorMessage={streamError}
 			{status}
+			{dreamState}
 		/>
 	{/if}
 </div>

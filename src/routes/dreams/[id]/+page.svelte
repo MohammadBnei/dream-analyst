@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
 	import { ClientChatService } from '$lib/client/services/chatService';
+	import { DreamState } from '$lib/types/index.js';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 
 	// New Components
@@ -21,6 +22,7 @@
 
 	// Initialize with data from the load function
 	let dream = $state(data.dream);
+	let currentState = $state((dream.state as DreamState) || DreamState.CREATED);
 	let nextDreamId = $state(data.nextDreamId);
 	let prevDreamId = $state(data.prevDreamId);
 
@@ -53,6 +55,7 @@
 			// or if it's the initial load.
 			if (!dream || dream.id !== data.dream.id || dream.updatedAt !== data.dream.updatedAt) {
 				dream = data.dream;
+				currentState = (dream.state as DreamState) || DreamState.CREATED;
 				nextDreamId = data.nextDreamId;
 				prevDreamId = data.prevDreamId;
 
@@ -87,14 +90,6 @@
 		}
 	});
 
-	onMount(async () => {
-		if (dream.status === 'PENDING_ANALYSIS') {
-			console.log('Dream is pending analysis on mount, attempting to start stream...');
-			// Use the dream's promptType to start the stream
-			startStream(selectedPromptType);
-		}
-	});
-
 	// Removed onDestroy hook to prevent stream abortion on page navigation
 
 	function startStream(promptType: DreamPromptType) {
@@ -107,8 +102,9 @@
 		streamError = null;
 		streamedInterpretation = ''; // Clear previous interpretation
 		streamedTags = []; // Clear previous tags
-		// Optimistically set status, but the final status will come from the stream or DB
+		// Optimistically set status and state, but the final values will come from the stream or DB
 		dream.status = 'PENDING_ANALYSIS';
+		currentState = DreamState.ENRICHING;
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -121,11 +117,17 @@
 				if (data.status) {
 					dream.status = data.status as DreamStatus;
 				}
+				if (data.state) {
+					currentState = data.state;
+				}
 			},
 			onEnd: async (data) => {
 				isLoadingStream = false;
 				if (data.status) {
 					dream.status = data.status as DreamStatus;
+				}
+				if (data.state) {
+					currentState = data.state;
 				}
 				if (data.message) {
 					streamError = data.message;
@@ -136,6 +138,7 @@
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
 				dream.status = 'ANALYSIS_FAILED'; // Update local status for immediate feedback
+				currentState = DreamState.FAILED;
 				streamError = errorMsg;
 				invalidate('dream'); // Invalidate to persist the failed status
 			},
@@ -270,11 +273,11 @@
 			/>
 		</div>
 
-		<div class="card bg-base-100 p-3 py-6 md:p-6 shadow-xl">
+		<div class="card bg-base-100 p-3 py-6 shadow-xl md:p-6">
 			<div class="card-body p-0">
 				<DreamNavigation dreamDate={dream.dreamDate} {prevDreamId} {nextDreamId}>
 					<svelte:fragment slot="status-badge">
-						<DreamStatusBadge status={dream.status} />
+						<DreamStatusBadge status={dream.status} state={currentState} />
 					</svelte:fragment>
 				</DreamNavigation>
 
@@ -286,6 +289,7 @@
 					interpretation={streamedInterpretation}
 					tags={streamedTags}
 					status={dream.status}
+					state={currentState}
 					promptType={selectedPromptType}
 					bind:isLoadingStream
 					{streamError}

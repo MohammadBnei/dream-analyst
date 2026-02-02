@@ -31,7 +31,7 @@ export async function POST({ params, locals }) {
 			data: {
 				status: DreamStatus.PENDING_ANALYSIS, // Use enum
 				interpretation: null, // Clear previous interpretation
-				tags: null // Clear previous tags
+				tags: [] // Clear previous tags
 			}
 		});
 		return json({ message: 'Dream status reset to PENDING_ANALYSIS.' });

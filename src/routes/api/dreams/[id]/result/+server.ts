@@ -1,5 +1,6 @@
 import { getPrismaClient } from '$lib/server/db';
 import { json } from '@sveltejs/kit';
+import { DreamStatus } from '@prisma/client';
 
 export async function POST({ request, params }) {
 	const dreamId = params.id;
@@ -23,7 +24,7 @@ export async function POST({ request, params }) {
 			data: {
 				tags: tags, // Prisma handles JSONB directly with array of strings
 				interpretation: interpretation,
-				status: 'completed'
+				status: DreamStatus.COMPLETED
 			}
 		});
 
@@ -37,7 +38,7 @@ export async function POST({ request, params }) {
 		try {
 			await prisma.dream.update({
 				where: { id: dreamId },
-				data: { status: 'ANALYSIS_FAILED' }
+				data: { status: DreamStatus.ANALYSIS_FAILED }
 			});
 		} catch (updateError) {
 			console.error(

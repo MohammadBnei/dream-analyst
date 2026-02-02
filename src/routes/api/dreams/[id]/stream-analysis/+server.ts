@@ -1,11 +1,14 @@
+/**
+ * Stream Analysis Endpoint - Streams dream interpretation via EventBus
+ * 
+ * Connects to the EventBus to receive real-time updates from InterpretationActor
+ */
+
 import { error } from '@sveltejs/kit';
-import { getPrismaClient } from '$lib/server/db';
-import { getStreamStateStore } from '$lib/server/streamStateStore';
-import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
+import { getDreamRepository } from '$lib/server/dreamRepository';
+import { getPipelineCoordinator } from '$lib/server/pipelineCoordinator';
 import { DreamStatus } from '@prisma/client';
-import type Redis from 'ioredis';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
+import { DreamState, EventType } from '$lib/types';
 
 const encoder = new TextEncoder();
 
@@ -16,41 +19,28 @@ function getCurrentUser(locals: App.Locals) {
 	return locals.user;
 }
 
-export async function GET({ params, locals, platform, request }) {
+export async function GET({ params, locals }) {
 	const dreamId = params.id;
 	const sessionUser = getCurrentUser(locals);
-
-	if (!sessionUser) {
-		throw error(401, 'Unauthorized');
-	}
 
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');
 	}
 
-	const streamStateStore = await getStreamStateStore();
-	const prisma = await getPrismaClient();
-	const creditService = getCreditService();
-
-	const dream = await prisma.dream.findUnique({
-		where: { id: dreamId }
-	});
+	const dreamRepository = getDreamRepository();
+	const dream = await dreamRepository.getDream(dreamId);
 
 	if (!dream || dream.userId !== sessionUser.id) {
 		throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
 	}
 
-	// Extract promptType from query parameters, default to 'jungian'
-	const url = new URL(request.url);
-	const promptType: DreamPromptType =
-		(url.searchParams.get('promptType') as DreamPromptType) || 'jungian';
-
-	// If analysis is already completed or failed (either in DB or Redis), just return the final result
+	// If analysis is already completed or failed, return final result immediately
 	if (dream.status === DreamStatus.COMPLETED || dream.status === DreamStatus.ANALYSIS_FAILED) {
-		const finalChunk: App.AnalysisStreamChunk = {
+		const finalChunk = {
 			content: dream.interpretation || '',
-			tags: (dream.tags as string[]) || [], // Cast Json? to string[]
+			tags: (dream.tags as string[]) || [],
 			status: dream.status,
+			state: dream.state,
 			finalStatus: dream.status === DreamStatus.COMPLETED ? 'COMPLETED' : 'ANALYSIS_FAILED'
 		};
 		return new Response(JSON.stringify(finalChunk) + '\n', {
@@ -62,111 +52,106 @@ export async function GET({ params, locals, platform, request }) {
 		});
 	}
 
-	// If status is PENDING_ANALYSIS, ensure a background process is running
-	if (dream.status === DreamStatus.PENDING_ANALYSIS) {
-		// Use Redis to check if stream is already ongoing and not stalled
-		const isOngoing = await streamStateStore.isStreamOngoing(dreamId);
+	// Stream real-time updates from the EventBus
+	const coordinator = await getPipelineCoordinator();
+	const eventBus = coordinator.getEventBus();
 
-		if (!isOngoing) {
-			console.debug(
-				`Dream ${dreamId}: Initiating new background stream processing via StreamProcessor.`
+	let streamClosed = false;
+
+	const clientStream = new ReadableStream({
+		async start(controller) {
+			// Send initial state
+			controller.enqueue(
+				encoder.encode(
+					JSON.stringify({
+						content: dream.interpretation || '',
+						tags: (dream.tags as string[]) || [],
+						status: dream.status,
+						state: dream.state || DreamState.CREATED
+					}) + '\n'
+				)
 			);
-			await streamStateStore.markStreamStarted(dreamId, promptType); // Mark as started in Redis with promptType
-			// Get or create the processor. It will start the processing in the background.
-			// IMPORTANT: Removed request.signal here to prevent server-side abortion on client disconnect.
-			getOrCreateStreamProcessor(dream, platform, promptType); // Pass promptType
-		} else {
-			console.debug(
-				`Dream ${dreamId}: Background stream processing already running (tracked by Redis).`
-			);
-		}
 
-		// Now, create a stream that subscribes to Redis Pub/Sub for updates
-		let subscriberClient: Redis | null = null;
-		let streamClosed = false;
+			// Listen for interpretation chunks
+			const chunkHandler = (data: any) => {
+				if (streamClosed || data.dreamId !== dreamId) return;
 
-		const clientStream = new ReadableStream({
-			async start(controller) {
-				// Send initial state from Redis (if available) or DB
-				const initialRedisState = await streamStateStore.getStreamState(dreamId);
-				const initialDream = await prisma.dream.findUnique({
-					where: { id: dreamId },
-					select: { interpretation: true, tags: true, status: true }
-				});
 
-				const initialContent =
-					initialRedisState?.interpretation || initialDream?.interpretation || '';
-				const initialTags =
-					(initialRedisState?.tags as string[]) || (initialDream?.tags as string[]) || [];
-				const initialStatus =
-					initialRedisState?.status || initialDream?.status || DreamStatus.PENDING_ANALYSIS;
+				try {
+					controller.enqueue(
+						encoder.encode(
+							JSON.stringify({
+								content: data.chunk,
+								accumulated: data.accumulated,
+								status: DreamStatus.PENDING_ANALYSIS,
+								state: DreamState.INTERPRETING
+							}) + '\n'
+						)
+					);
+				} catch (err) {
+					console.warn(`Dream ${dreamId}: Error enqueueing chunk:`, err);
+				}
+			};
 
-				controller.enqueue(
-					encoder.encode(
-						JSON.stringify({
-							content: initialContent,
-							tags: initialTags,
-							status: initialStatus
-						}) + '\n'
-					)
-				);
+			// Listen for state changes
+			const stateChangeHandler = async (data: any) => {
+				if (streamClosed || data.dreamId !== dreamId) return;
 
-				// Subscribe to Redis Pub/Sub for real-time updates
-				subscriberClient = streamStateStore.subscribeToUpdates(dreamId, (message) => {
-					if (streamClosed) return; // Do nothing if stream is already closed
+				try {
+					// Fetch updated dream
+					const updatedDream = await dreamRepository.getDream(dreamId);
+					if (!updatedDream) return;
 
-					// Check if controller is still readable before enqueueing
-					if (controller.desiredSize !== null && controller.desiredSize <= 0) {
-						console.debug(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
-						if (subscriberClient) {
-							streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-							subscriberClient = null;
-						}
-						if (!streamClosed) {
-							controller.close();
-							streamClosed = true;
-						}
-						return;
-					}
+					const message: any = {
+						status: updatedDream.status,
+						state: data.newState
+					};
 
-					// If the message contains a finalStatus, signal end of stream
-					if (message.finalStatus) {
+					// If dream is completed or failed, send final message
+					if (
+						data.newState === DreamState.COMPLETED ||
+						data.newState === DreamState.FAILED
+					) {
+						message.content = updatedDream.interpretation || '';
+						message.tags = (updatedDream.tags as string[]) || [];
+						message.finalStatus =
+							data.newState === DreamState.COMPLETED ? 'COMPLETED' : 'ANALYSIS_FAILED';
+
 						controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
-						console.debug(
-							`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`
-						);
-						if (subscriberClient) {
-							streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-							subscriberClient = null;
-						}
+
+						// Clean up and close
+						eventBus.off(EventType.INTERPRETATION_CHUNK, chunkHandler);
+						eventBus.off(EventType.STATE_CHANGED, stateChangeHandler);
 						if (!streamClosed) {
 							controller.close();
 							streamClosed = true;
 						}
 					} else {
-						// Otherwise, enqueue the update
 						controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
 					}
-				});
-			},
-			async cancel() {
-				console.debug(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
-				if (subscriberClient) {
-					await streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-					subscriberClient = null;
+				} catch (err) {
+					console.warn(`Dream ${dreamId}: Error handling state change:`, err);
 				}
-				streamClosed = true;
-			}
-		});
+			};
 
-		return new Response(clientStream, {
-			headers: {
-				'Content-Type': 'application/x-ndjson',
-				'Cache-Control': 'no-cache',
-				Connection: 'keep-alive'
-			}
-		});
-	}
+			// Subscribe to events
+			eventBus.on(EventType.INTERPRETATION_CHUNK, chunkHandler);
+			eventBus.on(EventType.STATE_CHANGED, stateChangeHandler);
 
-	throw error(500, 'Unexpected dream status or logic flow.');
+			// If the dream is in an early state (CREATED, ENRICHING), the pipeline will handle it
+			// No need to manually start the pipeline here - it's started in +page.server.ts
+		},
+		async cancel() {
+			console.debug(`Dream ${dreamId}: Client stream cancelled.`);
+			streamClosed = true;
+		}
+	});
+
+	return new Response(clientStream, {
+		headers: {
+			'Content-Type': 'application/x-ndjson',
+			'Cache-Control': 'no-cache',
+			Connection: 'keep-alive'
+		}
+	});
 }

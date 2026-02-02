@@ -50,8 +50,10 @@ model Dream {
   emotions          String?             @map("emotions") // New field
   analysisText      String?             @map("analysis_text")
   interpretation    String?
-  title             String?             // New field for AI-generated title
+  title             String? // New field for AI-generated title
   status            DreamStatus         @default(PENDING_ANALYSIS)
+  state             String?             @default("CREATED") // Internal state machine state
+  version           Int                 @default(0) // Version counter for edits
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
   promptType        String?             @default("jungian") // Added promptType field
@@ -62,6 +64,8 @@ model Dream {
 
   relatedTo Dream[] @relation("RelatedDreams")
   relatedBy Dream[] @relation("RelatedDreams")
+
+  stateHistory DreamStateChangeEvent[] @relation("DreamStateHistory")
 
   @@map("dreams")
 }
@@ -107,4 +111,28 @@ enum DreamStatus {
   PENDING_ANALYSIS
   COMPLETED
   ANALYSIS_FAILED
+}
+
+// New model for tracking state change events and versioning
+model DreamStateChangeEvent {
+  id        String @id @default(uuid())
+  dreamId   String @map("dream_id")
+  dream     Dream  @relation("DreamStateHistory", fields: [dreamId], references: [id], onDelete: Cascade)
+  version   Int // Version after this event
+  eventType String @map("event_type") // 'CREATED', 'ENRICHED', 'INTERPRETED', 'EDITED', 'FAILED', 'RETRIED'
+  state     String // DreamState string representation
+
+  // Deltas: what changed
+  oldRawText        String? @map("old_raw_text")
+  newRawText        String? @map("new_raw_text")
+  oldInterpretation String? @map("old_interpretation")
+  newInterpretation String? @map("new_interpretation")
+  oldTitle          String? @map("old_title")
+  newTitle          String? @map("new_title")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([dreamId, version])
+  @@index([dreamId, version])
+  @@map("dream_state_change_event")
 }

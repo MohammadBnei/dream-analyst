@@ -100,7 +100,7 @@ class DreamAnalysisService {
 	 * @param signal An AbortSignal for the LLM call.
 	 * @returns An array of relevant Dream objects or an empty array if none.
 	 */
-	private async _getRelevantPastDreams(dream: Dream, signal?: AbortSignal): Promise<Dream[]> {
+	private async _getRelevantPastDreams(dream: Dream, signal?: AbortSignal): Promise<any[]> {
 		const prisma = await this.getPrisma();
 		try {
 			// 1. Generate search terms from the new dream using the weak model
@@ -219,7 +219,9 @@ Title:`;
 		}
 
 		// Collect all unique related dream IDs
-		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
+		allRelatedDreams.forEach((d) => {
+			if (d.id) relatedDreamIds.push(d.id);
+		});
 
 		return prisma.dream.update({
 			where: { id: dream.id },
@@ -242,6 +244,10 @@ Title:`;
 				analysisText: true,
 				promptType: true,
 				tags: true,
+				state: true,
+				version: true,
+				context: true,
+				emotions: true,
 				relatedTo: {
 					select: {
 						id: true,
@@ -251,7 +257,7 @@ Title:`;
 					}
 				}
 			}
-		});
+		}) as unknown as Promise<Dream>;
 	}
 
 	/**

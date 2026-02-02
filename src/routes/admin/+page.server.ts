@@ -14,9 +14,7 @@ const UpdateUserRoleSchema = z.object({
 const UpdateUserCreditsSchema = z.object({
 	userId: z.uuid('Invalid user ID.'),
 	amount: z.number().int('Amount must be an integer.').min(1, 'Amount must be at least 1.'),
-	action: z.enum(['grant', 'deduct'], {
-		errorMap: () => ({ message: 'Invalid credit action.' })
-	})
+	action: z.enum(['grant', 'deduct'])
 });
 
 export const load = async ({ locals }) => {
@@ -77,7 +75,7 @@ export const actions = {
 
 			await prisma.user.update({
 				where: { id: validatedData.userId },
-				data: { role: validatedData.role }
+				data: { role: validatedData.role as UserRole }
 			});
 
 			return {
