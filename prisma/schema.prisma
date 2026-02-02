@@ -38,6 +38,11 @@ model User {
   creditTransactions CreditTransaction[] // Link to credit transactions
   adminGrants        CreditTransaction[] @relation(name: "adminGrants")
 
+  // Phase 1: Metadata configuration
+  activeMetadataConfigId String?         @map("active_metadata_config_id")
+  activeMetadataConfig   MetadataConfig? @relation("ActiveMetadataConfig", fields: [activeMetadataConfigId], references: [id])
+  customMetadataSchema   Json?           @map("custom_metadata_schema")
+
   @@map("user")
 }
 
@@ -48,7 +53,7 @@ model Dream {
   rawText           String              @map("raw_text")
   analysisText      String?             @map("analysis_text")
   interpretation    String?
-  title             String?             // New field for AI-generated title
+  title             String? // New field for AI-generated title
   status            DreamStatus         @default(PENDING_ANALYSIS)
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
@@ -57,6 +62,15 @@ model Dream {
   createdAt         DateTime            @default(now()) @map("created_at")
   updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at")
   CreditTransaction CreditTransaction[]
+
+  // Phase 1: Flexible metadata and symbol relations
+  metadata          Json? // User-provided context
+  metadataSchema    Json?                   @map("metadata_schema") // Schema reference/version
+  symbolOccurrences DreamSymbolOccurrence[]
+
+  // Phase 2: Structured analysis
+  structuredAnalysis Json?                   @map("structured_analysis") // New structured output format
+  analysisVersion    Int                    @default(1) @map("analysis_version") // 1=markdown, 2=structured
 
   relatedTo Dream[] @relation("RelatedDreams")
   relatedBy Dream[] @relation("RelatedDreams")
@@ -105,4 +119,91 @@ enum DreamStatus {
   PENDING_ANALYSIS
   COMPLETED
   ANALYSIS_FAILED
+}
+
+// Phase 1: New enum for symbol sentiment
+enum Sentiment {
+  POSITIVE
+  NEUTRAL
+  NEGATIVE
+  AMBIVALENT
+}
+
+// Phase 1: Metadata configuration templates
+model MetadataConfig {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  schema      Json // Field definitions (type, label, validation, etc.)
+  isDefault   Boolean  @default(false) @map("is_default")
+  isGlobal    Boolean  @default(true) @map("is_global")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  usersWithActive User[] @relation("ActiveMetadataConfig")
+
+  @@map("metadata_configs")
+}
+
+// Phase 1: Canonical symbol registry
+model Symbol {
+  id              String                  @id @default(uuid())
+  name            String                  @unique
+  category        String?
+  occurrenceCount Int                     @default(0) @map("occurrence_count")
+  firstSeenAt     DateTime                @default(now()) @map("first_seen_at")
+  lastSeenAt      DateTime                @updatedAt @map("last_seen_at")
+  occurrences     DreamSymbolOccurrence[]
+
+  @@index([name])
+  @@index([category])
+  @@index([occurrenceCount])
+  @@map("symbols")
+}
+
+// Phase 1: Symbol occurrence in specific dream (with context)
+model DreamSymbolOccurrence {
+  id          String    @id @default(uuid())
+  dreamId     String    @map("dream_id")
+  symbolId    String    @map("symbol_id")
+  sentiment   Sentiment @default(NEUTRAL)
+  contextNote String?   @map("context_note") @db.VarChar(500)
+  prominence  Int       @default(2) // 1=background, 2=secondary, 3=central
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  dream  Dream  @relation(fields: [dreamId], references: [id], onDelete: Cascade)
+  symbol Symbol @relation(fields: [symbolId], references: [id], onDelete: Cascade)
+
+  @@unique([dreamId, symbolId])
+  @@index([dreamId])
+  @@index([symbolId])
+  @@index([sentiment])
+  @@map("dream_symbol_occurrences")
+}
+
+// Phase 2: Meta-Analyst insight reports
+enum ReportType {
+  META_ANALYSIS       // Cross-dream synthesis
+  WEEKLY_SUMMARY      // Weekly roundup
+  MILESTONE           // Achievement notification
+  PATTERN_ALERT       // Recurring theme detected
+}
+
+model InsightReport {
+  id           String     @id @default(uuid())
+  userId       String     @map("user_id")
+  user         User       @relation(fields: [userId], references: [id])
+  reportType   ReportType @default(META_ANALYSIS) @map("report_type")
+  triggerEvent String     @map("trigger_event") // e.g., "dream_count_5", "weekly_review"
+  dreamIds     String[]   @map("dream_ids") // Array of dream IDs analyzed
+  title        String
+  summary      String     // Brief overview
+  insights     Json       // Structured insights data
+  priority     Int        @default(1) @map("priority") // 1-5 scale
+  isRead       Boolean    @default(false) @map("is_read")
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@map("insight_reports")
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
 }

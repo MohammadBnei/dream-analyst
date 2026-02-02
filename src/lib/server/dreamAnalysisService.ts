@@ -225,7 +225,7 @@ Title:`;
 			where: { id: dream.id },
 			data: {
 				relatedTo: {
-					connect: relatedDreamIds.map((id) => ({ id })),
+					connect: relatedDreamIds.map((id) => ({ id }))
 				},
 				updatedAt: new Date()
 			},
@@ -324,6 +324,107 @@ Title:`;
 		);
 
 		return stream;
+	}
+
+	/**
+	 * Extracts symbolic elements from a dream interpretation using LLM.
+	 * Returns structured data for creating DreamSymbolOccurrences.
+	 * @param interpretation The dream interpretation text.
+	 * @param signal An AbortSignal to cancel the LLM request.
+	 * @returns Array of extracted symbols with sentiment and context.
+	 */
+	public async extractSymbolsFromInterpretation(
+		interpretation: string,
+		signal?: AbortSignal
+	): Promise<
+		Array<{
+			name: string;
+			sentiment: 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'AMBIVALENT';
+			contextNote: string;
+			prominence: number;
+		}>
+	> {
+		const extractionPrompt = `Analyze this dream interpretation and extract the key symbolic elements.
+
+Interpretation:
+"""${interpretation.substring(0, 1500)}"""
+
+Extract 3-8 symbolic elements (archetypes, recurring objects, significant places, emotional themes). For each symbol, provide:
+- name: The symbol name (e.g., "Water", "Snake", "Mother Figure")
+- sentiment: POSITIVE, NEUTRAL, NEGATIVE, or AMBIVALENT
+- contextNote: Brief description (max 200 chars) of how it appeared
+- prominence: 1 (background mention), 2 (secondary element), or 3 (central theme)
+
+Return ONLY a JSON array in this exact format:
+[
+  {
+    "name": "Water",
+    "sentiment": "NEGATIVE",
+    "contextNote": "Dark turbulent ocean causing fear",
+    "prominence": 3
+  }
+]
+
+Do not include any other text before or after the JSON.`;
+
+		try {
+			const response = await this.llmService.generateText(extractionPrompt, signal);
+
+			// Try to parse the JSON response
+			const jsonMatch = response.match(/\[[\s\S]*\]/);
+			if (!jsonMatch) {
+				console.warn('No JSON array found in symbol extraction response');
+				return [];
+			}
+
+			const symbols = JSON.parse(jsonMatch[0]);
+
+			// Validate and normalize the extracted symbols
+			return symbols
+				.filter((s: Record<string, unknown>) => s.name && typeof s.name === 'string')
+				.map((s: Record<string, unknown>) => ({
+					name: s.name as string,
+					sentiment: ['POSITIVE', 'NEUTRAL', 'NEGATIVE', 'AMBIVALENT'].includes(
+						s.sentiment as string
+					)
+						? (s.sentiment as 'POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'AMBIVALENT')
+						: 'NEUTRAL',
+					contextNote: (s.contextNote as string)?.substring(0, 200) || `Symbol: ${s.name}`,
+					prominence: [1, 2, 3].includes(s.prominence as number) ? (s.prominence as number) : 2
+				}));
+		} catch (error) {
+			console.error('Error extracting symbols from interpretation:', error);
+			return []; // Return empty array on failure - symbol extraction is non-critical
+		}
+	}
+
+	/**
+	 * Background task to extract and store symbols after dream analysis completes.
+	 * This should be called after the stream finishes and interpretation is saved.
+	 * @param dreamId The dream ID.
+	 * @param interpretation The saved interpretation text.
+	 */
+	public async storeExtractedSymbols(dreamId: string, interpretation: string): Promise<void> {
+		try {
+			// Dynamically import to avoid circular dependencies
+			const { symbolService } = await import('./services');
+
+			// Extract symbols
+			const symbols = await this.extractSymbolsFromInterpretation(interpretation);
+
+			if (symbols.length === 0) {
+				console.log(`No symbols extracted for dream ${dreamId}`);
+				return;
+			}
+
+			// Store symbols
+			await symbolService.bulkCreateOccurrences(dreamId, symbols);
+
+			console.log(`Stored ${symbols.length} symbols for dream ${dreamId}`);
+		} catch (error) {
+			// Log but don't throw - symbol extraction is non-critical
+			console.error(`Failed to store symbols for dream ${dreamId}:`, error);
+		}
 	}
 }
 

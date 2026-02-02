@@ -42,10 +42,12 @@ export async function GET({ locals }) {
 // POST /api/dreams - Create a new dream
 export async function POST({ request, locals }) {
 	const sessionUser = getCurrentUser(locals);
-	const prisma = await getPrismaClient();
 
 	const CreateDreamSchema = v.object({
-		rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.'))
+		rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.')),
+		promptType: v.optional(v.string()),
+		dreamDate: v.optional(v.string()), // ISO date string
+		metadata: v.optional(v.record(v.string(), v.unknown()))
 	});
 
 	let validatedData;
@@ -58,12 +60,15 @@ export async function POST({ request, locals }) {
 	}
 
 	try {
-		const newDream = await prisma.dream.create({
-			data: {
-				userId: sessionUser.id,
-				rawText: validatedData.rawText,
-				status: DreamStatus.PENDING_ANALYSIS // Use enum
-			}
+		// Import DreamService dynamically to avoid circular dependencies
+		const { dreamService } = await import('$lib/server/services');
+
+		const newDream = await dreamService.createDream({
+			userId: sessionUser.id,
+			rawText: validatedData.rawText,
+			dreamDate: validatedData.dreamDate ? new Date(validatedData.dreamDate) : new Date(),
+			promptType: validatedData.promptType,
+			metadata: validatedData.metadata
 		});
 
 		return json(
@@ -72,6 +77,9 @@ export async function POST({ request, locals }) {
 		);
 	} catch (e) {
 		console.error('Error saving dream:', e);
+		if (e instanceof Error && e.message.includes('Invalid metadata')) {
+			throw error(400, e.message);
+		}
 		throw error(500, 'Failed to save dream. Please try again.');
 	}
 }
