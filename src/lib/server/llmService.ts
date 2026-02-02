@@ -81,12 +81,119 @@ class LLMService {
 	public async generateText(prompt: string, signal?: AbortSignal): Promise<string> {
 		try {
 			const response = await this.weakChat.invoke([new HumanMessage(prompt)], {
-				signal: signal,
+				signal: signal
 			});
 			return response.content as string;
 		} catch (error) {
 			console.error('Error generating text with weak LLM:', error);
 			throw error;
+		}
+	}
+
+	/**
+	 * Phase 2: Generate structured dream analysis using function calling.
+	 * Returns JSON conforming to StructuredDreamAnalysis schema.
+	 * @param systemPrompt The system prompt with psychological knowledge
+	 * @param dreamText The raw dream text
+	 * @param pastDreamsContext Context from previous dreams (optional)
+	 * @param metadataContext User-provided metadata context (optional)
+	 * @param signal AbortSignal for cancellation
+	 * @returns StructuredDreamAnalysis object
+	 */
+	public async generateStructuredAnalysis<T = Record<string, unknown>>(
+		systemPrompt: string,
+		dreamText: string,
+		pastDreamsContext: string = '',
+		metadataContext: string = '',
+		functionSchema: { name: string; description: string; parameters: unknown },
+		signal?: AbortSignal
+	): Promise<T> {
+		try {
+			const messages = [
+				new SystemMessage(systemPrompt),
+				new HumanMessage(`${pastDreamsContext}\n${metadataContext}\n\n**Dream:**\n${dreamText}`)
+			];
+
+			// Configure function calling for structured output
+			const response = await this.chat.invoke(messages, {
+				signal,
+				tools: [
+					{
+						type: 'function',
+						function: {
+							name: functionSchema.name,
+							description: functionSchema.description,
+							parameters: functionSchema.parameters
+						}
+					}
+				],
+				tool_choice: {
+					type: 'function',
+					function: { name: functionSchema.name }
+				}
+			});
+
+			// Extract function call result
+			const toolCall = response.additional_kwargs?.tool_calls?.[0];
+			if (!toolCall || toolCall.function?.name !== functionSchema.name) {
+				throw new Error('LLM did not return expected function call');
+			}
+
+			// Parse the function arguments
+			const result = JSON.parse(toolCall.function.arguments) as T;
+			return result;
+		} catch (error) {
+			console.error('Error generating structured analysis:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Phase 2: Stream structured analysis with progressive updates.
+	 * This streams the analysis as blocks are completed.
+	 * @returns AsyncIterable of analysis chunks
+	 */
+	public async *streamStructuredAnalysis<T = Record<string, unknown>>(
+		systemPrompt: string,
+		dreamText: string,
+		pastDreamsContext: string = '',
+		metadataContext: string = '',
+		functionSchema: { name: string; description: string; parameters: unknown },
+		signal?: AbortSignal
+	): AsyncIterable<{
+		type: 'progress' | 'complete' | 'error';
+		data?: T;
+		progress?: number;
+		message?: string;
+	}> {
+		// For now, fall back to non-streaming since function calling
+		// doesn't naturally stream in a useful way
+		// In future: implement with custom streaming JSON parser
+		yield {
+			type: 'progress',
+			progress: 0,
+			message: 'Generating structured analysis...'
+		};
+
+		try {
+			const result = await this.generateStructuredAnalysis<T>(
+				systemPrompt,
+				dreamText,
+				pastDreamsContext,
+				metadataContext,
+				functionSchema,
+				signal
+			);
+
+			yield {
+				type: 'complete',
+				data: result
+			};
+		} catch (error) {
+			yield {
+				type: 'error',
+				message: error instanceof Error ? error.message : 'Unknown error'
+			};
 		}
 	}
 }

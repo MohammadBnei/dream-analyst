@@ -43,6 +43,10 @@ model User {
   activeMetadataConfig   MetadataConfig? @relation("ActiveMetadataConfig", fields: [activeMetadataConfigId], references: [id])
   customMetadataSchema   Json?           @map("custom_metadata_schema")
 
+  // Phase 2: Meta-Analyst and activity tracking
+  dreamCount      Int              @default(0) @map("dream_count") // Track for Meta-Analyst trigger
+  insightReports  InsightReport[]
+
   @@map("user")
 }
 

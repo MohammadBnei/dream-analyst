@@ -4,6 +4,9 @@ import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
 import { getLLMService } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
+import type { StructuredDreamAnalysis } from '$lib/types/structuredAnalysis';
+import { STRUCTURED_ANALYSIS_FUNCTION_SCHEMA } from '$lib/types/structuredAnalysis';
+import { metadataConfigService, dreamService } from './services';
 
 class DreamAnalysisService {
 	private llmService: ReturnType<typeof getLLMService>;
@@ -325,6 +328,182 @@ Title:`;
 
 		return stream;
 	}
+
+	/**
+	 * Phase 2: Analyze dream with structured output (version 2).
+	 * This is the new recommended method for all dream analyses.
+	 * Falls back to legacy analysis if structured output fails.
+	 */
+	public async analyzeDreamV2(
+		dreamId: string,
+		userId: string,
+		platform?: { context?: { waitUntil?: (promise: Promise<unknown>) => void } },
+		signal?: AbortSignal
+	): Promise<ReadableStream<Uint8Array>> {
+		const prisma = await getPrismaClient();
+
+		// Fetch dream and check if it should use structured analysis
+		const dream = await prisma.dream.findUnique({
+			where: { id: dreamId },
+			select: { id: true, createdAt: true, rawText: true, promptType: true }
+		});
+
+		if (!dream) {
+			throw new Error(`Dream not found: ${dreamId}`);
+		}
+
+		// Use structured analysis for all new dreams
+		// (This can be adjusted with a feature flag or date cutoff)
+		const useStructured = this.shouldUseStructuredAnalysis(dream);
+
+		if (useStructured) {
+			// Generate structured analysis (non-streaming for now)
+			try {
+				await this.analyzeWithStructuredOutput(dreamId, userId, signal);
+
+				// Return a simple completion stream
+				const encoder = new TextEncoder();
+				const readable = new ReadableStream<Uint8Array>({
+					start(controller) {
+						controller.enqueue(
+							encoder.encode(
+								JSON.stringify({
+									status: 'COMPLETED',
+									version: 2,
+									message: 'Structured analysis complete'
+								}) + '\n'
+							)
+						);
+						controller.close();
+					}
+				});
+
+				return readable;
+			} catch (error) {
+				console.error('Structured analysis failed, falling back to legacy:', error);
+				// Fall back to legacy analysis
+				return this.analyzeDream(dreamId, userId, platform, signal);
+			}
+		} else {
+			// Use legacy analysis
+			return this.analyzeDream(dreamId, userId, platform, signal);
+		}
+	}
+
+	// ========== Phase 2: Structured Analysis Methods ==========
+
+	/**
+	 * Phase 2: Generate structured dream analysis using function calling.
+	 * For new dreams (analysisVersion = 2).
+	 */
+	public async analyzeWithStructuredOutput(
+		dreamId: string,
+		userId: string,
+		signal?: AbortSignal
+	): Promise<void> {
+		const prisma = await getPrismaClient();
+
+		const dream = await prisma.dream.findUnique({
+			where: { id: dreamId },
+			include: { user: true }
+		});
+
+		if (!dream) throw new Error('Dream not found');
+
+		// Build context (metadata + past dreams)
+		const { metadataContext, pastDreamsContext } = await dreamService.buildAnalysisContext(
+			dreamId,
+			userId
+		);
+
+		const promptConfig = await this.getPromptForType(dream.promptType || 'jungian');
+
+		// Generate structured analysis
+		const structuredAnalysis =
+			await this.llmService.generateStructuredAnalysis<StructuredDreamAnalysis>(
+				promptConfig.systemPrompt,
+				dream.rawText,
+				pastDreamsContext,
+				metadataContext,
+				STRUCTURED_ANALYSIS_FUNCTION_SCHEMA,
+				signal
+			);
+
+		// Save to database
+		await prisma.dream.update({
+			where: { id: dreamId },
+			data: {
+				structuredAnalysis: structuredAnalysis as Record<string, unknown>,
+				analysisVersion: 2,
+				status: 'COMPLETED',
+				// Also save markdown version for backward compatibility
+				interpretation: this.convertStructuredToMarkdown(structuredAnalysis)
+			}
+		});
+
+		// Extract and store symbols (using detectedSymbols from structured output)
+		await this.storeExtractedSymbolsFromStructured(dreamId, structuredAnalysis.detectedSymbols);
+	}
+
+	/**
+	 * Phase 2: Convert structured analysis to markdown for backward compatibility.
+	 * Used for: RSS feeds, exports, legacy views.
+	 */
+	private convertStructuredToMarkdown(analysis: StructuredDreamAnalysis): string {
+		let markdown = `# ${analysis.primaryTheme}\n\n`;
+		markdown += `**Summary:** ${analysis.summary}\n\n`;
+		markdown += `**Emotional Tone:** ${analysis.emotionalTone}\n\n`;
+
+		for (const block of analysis.analysisBlocks) {
+			markdown += `## ${block.title}\n\n${block.content}\n\n`;
+		}
+
+		markdown += `## Integration Suggestions\n\n`;
+		analysis.integrationSuggestions.forEach((suggestion, i) => {
+			markdown += `${i + 1}. ${suggestion}\n`;
+		});
+
+		return markdown;
+	}
+
+	/**
+	 * Phase 2: Determine if dream should use structured analysis (version 2).
+	 * All new dreams (created after Phase 2 launch) use structured analysis.
+	 */
+	private shouldUseStructuredAnalysis(dream: { createdAt: Date }): boolean {
+		// Use structured analysis for all new dreams
+		// This can be adjusted based on a cutoff date or feature flag
+		return true;
+	}
+
+	/**
+	 * Phase 2: Store symbols from structured analysis output.
+	 */
+	private async storeExtractedSymbolsFromStructured(
+		dreamId: string,
+		detectedSymbols: StructuredDreamAnalysis['detectedSymbols']
+	): Promise<void> {
+		try {
+			const { symbolService } = await import('./services');
+
+			await symbolService.bulkCreateOccurrences(
+				dreamId,
+				detectedSymbols.map((s) => ({
+					name: s.name,
+					sentiment: s.sentiment,
+					contextNote: s.contextNote,
+					prominence: s.prominence
+				}))
+			);
+
+			console.log(`Stored ${detectedSymbols.length} symbols for dream ${dreamId}`);
+		} catch (error) {
+			// Log but don't throw - symbol extraction is non-critical
+			console.error(`Failed to store symbols for dream ${dreamId}:`, error);
+		}
+	}
+
+	// ========== Phase 1: Symbol Extraction Methods ==========
 
 	/**
 	 * Extracts symbolic elements from a dream interpretation using LLM.
