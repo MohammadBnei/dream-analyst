@@ -5,6 +5,7 @@ export { MetadataConfigService, metadataConfigService } from './MetadataConfigSe
 export { SymbolService, symbolService } from './SymbolService';
 export { DreamService, dreamService } from './DreamService';
 export { MetaAnalystService, metaAnalystService } from './MetaAnalystService';
+export { AnalyticsService, analyticsService } from './AnalyticsService';
 
 // Export types for convenience
 export type {
@@ -17,6 +18,14 @@ export type {
 export type { SymbolProgression, SymbolWithOccurrence } from './SymbolService';
 
 export type { CreateDreamInput, AnalysisContext } from './DreamService';
+
+export type {
+	MoodTrendData,
+	TopSymbolData,
+	ActivityData,
+	CreditUsageData,
+	UserStats
+} from './AnalyticsService';
 
 // Phase 2: Structured analysis types
 export type {
@@ -41,5 +50,7 @@ export type {
 	AdaptiveThresholds,
 	ReportType
 } from '$lib/types/insights';
+
+export { META_ANALYSIS_FUNCTION_SCHEMA, DEFAULT_ADAPTIVE_THRESHOLDS } from '$lib/types/insights';
 
 export { META_ANALYSIS_FUNCTION_SCHEMA, DEFAULT_ADAPTIVE_THRESHOLDS } from '$lib/types/insights';

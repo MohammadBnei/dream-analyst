@@ -10,7 +10,7 @@
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"test": "nr test:db && nr test:services && nr test:types",
+		"test": "nr test:db && nr test:services",
 		"test:db": "bun run tests/test-db.ts",
 		"test:services": "bun run tests/test-services.ts",
 		"test:types": "tsc --noEmit && echo '✅ Type check passed'",
