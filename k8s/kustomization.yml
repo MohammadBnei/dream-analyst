@@ -9,4 +9,4 @@ resources:
 
 images:
 - name: mohammaddocker/dream-analyst
-  newTag: 0.26.26
+  newTag: 0.26.27
