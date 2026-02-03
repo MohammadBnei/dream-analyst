@@ -9,6 +9,7 @@ on:
       - '**.md'
       - '**.yml'
       - 'package.json'
+      - 'back/**'
     tags-ignore:
       - '*'
 
