@@ -19,7 +19,7 @@ const config = {
 			remoteFunctions: true
 		},
 		csrf: {
-			trustedOrigins: [process.env.PUBLIC_ORIGIN, 'http://localhost:5173']
+			trustedOrigins: ['https://dreamer.bnei.dev', 'http://localhost:5173']
 		}
 	},
 	extensions: ['.svelte'],
