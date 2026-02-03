@@ -44,11 +44,11 @@ export const handleOrigin: Handle = async ({ event, resolve }) => {
 	const publicOrigin = env.PUBLIC_ORIGIN || event.url.origin; // From env var or ingress host
 	event.url = new URL(event.url.pathname + event.url.search, publicOrigin);
 
-	console.log({ publicOrigin, env: env.PUBLIC_ORIGIN })
-
+	
 	const response = await resolve(event);
-
+	
 	if (event.url.pathname.startsWith('/_app/remote')) {
+		console.log({ publicOrigin, method: event.request.method });
 		response.headers.set('Access-Control-Allow-Origin', publicOrigin); // Or '*'
 		response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 		response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
