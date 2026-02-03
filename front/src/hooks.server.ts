@@ -47,8 +47,8 @@ export const handleOrigin: Handle = async ({ event, resolve }) => {
 	
 	const response = await resolve(event);
 	
+	console.log({ publicOrigin, method: event.request.method });
 	if (event.url.pathname.startsWith('/_app/remote')) {
-		console.log({ publicOrigin, method: event.request.method });
 		response.headers.set('Access-Control-Allow-Origin', publicOrigin); // Or '*'
 		response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
 		response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
