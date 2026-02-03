@@ -16,7 +16,7 @@
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from '$lib/client/components/DreamRelatedDreams.svelte'; // Import the new component
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
-	import { getDream } from '$lib/remote/dream.remote.js';
+	import { getDream, updateDream } from '$lib/remote/dream.remote.js';
 
 	let { data, form } = $props();
 
@@ -284,7 +284,10 @@
 				<button
 					class="btn mt-2 btn-ghost btn-sm"
 					onclick={async () => {
-						const data = await getDream(dream.id);
+						const data = await updateDream({
+							dreamId: dream.id,
+							rawText: dream.rawText
+						});
 						console.log({ data });
 					}}
 				>
