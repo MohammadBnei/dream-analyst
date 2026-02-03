@@ -16,6 +16,7 @@
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from '$lib/client/components/DreamRelatedDreams.svelte'; // Import the new component
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
+	import { getDream } from '$lib/remote/dream.remote.js';
 
 	let { data, form } = $props();
 
@@ -270,7 +271,7 @@
 			/>
 		</div>
 
-		<div class="card bg-base-100 p-3 py-6 md:p-6 shadow-xl">
+		<div class="card bg-base-100 p-3 py-6 shadow-xl md:p-6">
 			<div class="card-body p-0">
 				<DreamNavigation dreamDate={dream.dreamDate} {prevDreamId} {nextDreamId}>
 					<svelte:fragment slot="status-badge">
@@ -279,6 +280,16 @@
 				</DreamNavigation>
 
 				<DreamDateSection dreamDate={dream.dreamDate} onUpdate={handleDreamUpdate} />
+
+				<button
+					class="btn mt-2 btn-ghost btn-sm"
+					onclick={async () => {
+						const data = await getDream(dream.id);
+						console.log({ data });
+					}}
+				>
+					CLICK ME
+				</button>
 
 				<DreamRawTextSection rawText={dream.rawText} onUpdate={handleDreamUpdate} />
 
