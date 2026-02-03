@@ -40,22 +40,4 @@ const handleAuth: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handleOrigin: Handle = async ({ event, resolve }) => {
-	const publicOrigin = env.PUBLIC_ORIGIN || event.url.origin; // From env var or ingress host
-	event.url = new URL(event.url.pathname + event.url.search, publicOrigin);
-
-	
-	const response = await resolve(event);
-	
-	console.log({ publicOrigin, method: event.request.method, path: event.url.pathname });
-	if (event.url.pathname.startsWith('/_app/remote')) {
-		response.headers.set('Access-Control-Allow-Origin', publicOrigin); // Or '*'
-		response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-		response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-	}
-	
-	return response;
-};
-
-
-export const handle: Handle = sequence(handleParaglide, handleAuth, handleOrigin);
+export const handle: Handle = sequence(handleParaglide, handleAuth);
