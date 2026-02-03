@@ -18,6 +18,9 @@ const config = {
 		experimental: {
 			remoteFunctions: true
 		},
+		csrf: {
+			trustedOrigins: [process.env.PUBLIC_ORIGIN, 'http://localhost:5173']
+		}
 	},
 	extensions: ['.svelte'],
 	experimental: {
