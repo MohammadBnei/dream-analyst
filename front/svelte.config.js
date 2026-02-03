@@ -19,8 +19,7 @@ const config = {
 			remoteFunctions: true
 		},
 		csrf: {
-			checkOrigin: true,
-			trustedOrigins: ['http://localhost:5173', 'https://dreamer.bnei.dev']
+			trustedOrigins: ['*']
 		}
 	},
 	extensions: ['.svelte'],
