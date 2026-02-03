@@ -19,7 +19,7 @@ const config = {
 			remoteFunctions: true
 		},
 		csrf: {
-			checkOrigin: false,
+			checkOrigin: true,
 			trustedOrigins: ['http://localhost:5173', 'https://dreamer.bnei.dev']
 		}
 	},
