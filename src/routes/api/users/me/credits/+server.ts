@@ -10,8 +10,14 @@ import type { RequestHandler } from './$types';
 export const GET: RequestHandler = async ({ locals }) => {
 	const prisma = await getPrismaClient();
 
+	if (!locals.user?.id) {
+		return json({ error: 'User not authenticated' }, { status: 401 });
+	}
+
+	const { id } = locals.user
+
 	const user = await prisma.user.findUnique({
-		where: { id: locals.user.userId },
+		where: { id },
 		select: { credits: true, role: true }
 	});
 
@@ -20,7 +26,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 	}
 
 	// Get daily usage
-	const dailyUsed = await creditService.getDailyCreditUsage(locals.user.userId);
+	const dailyUsed = await creditService.getDailyCreditUsage(id);
 	const dailyLimit = creditService.getDailyLimit(user.role);
 
 	return json({

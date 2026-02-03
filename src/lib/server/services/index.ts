@@ -6,6 +6,7 @@ export { SymbolService, symbolService } from './SymbolService';
 export { DreamService, dreamService } from './DreamService';
 export { MetaAnalystService, metaAnalystService } from './MetaAnalystService';
 export { AnalyticsService, analyticsService } from './AnalyticsService';
+export { getServerChatService as chatService } from '../chatService';
 
 // Export types for convenience
 export type {
@@ -50,7 +51,5 @@ export type {
 	AdaptiveThresholds,
 	ReportType
 } from '$lib/types/insights';
-
-export { META_ANALYSIS_FUNCTION_SCHEMA, DEFAULT_ADAPTIVE_THRESHOLDS } from '$lib/types/insights';
 
 export { META_ANALYSIS_FUNCTION_SCHEMA, DEFAULT_ADAPTIVE_THRESHOLDS } from '$lib/types/insights';

@@ -18,7 +18,7 @@ services:
     ports:
       - '8081:8081'
     environment:
-      DATABASE_URL: postgres://user:password@postgres:5432/dreamer?sslmode=disable
+      PGWEB_DATABASE_URL: postgres://user:password@postgres:5432/dreamer?sslmode=disable
     links:
       - postgres:postgres
     depends_on:

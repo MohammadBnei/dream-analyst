@@ -286,15 +286,7 @@ class CreditService {
 			}
 		});
 
-		if (!transactions?._sum?.amount) {
-			return 0;
-		}
-
-		if (transactions._sum.amount > 0) {
-			return -transactions._sum.amount || 0;
-		}
-
-		return Math.abs(transactions._sum.amount || 0);
+		return transactions._sum?.amount || 0;
 	}
 
 	/**
@@ -400,3 +392,6 @@ export function getCreditService(): CreditService {
 	}
 	return creditServiceInstance;
 }
+
+// Alias for convenience
+export const creditService = getCreditService();
