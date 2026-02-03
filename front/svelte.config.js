@@ -20,14 +20,6 @@ const config = {
 		},
 		csrf: {
 			trustedOrigins: ['*']
-		},
-		hooks: {
-			getSession({ request }) {
-        const origin = request.headers.get('origin') || 
-                      request.headers.get('x-forwarded-host') || 
-                      request.headers.get('host');
-        return { origin };
-      }
 		}
 	},
 	extensions: ['.svelte'],
