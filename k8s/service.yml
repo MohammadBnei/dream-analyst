@@ -60,6 +60,9 @@ spec:
       - OPTIONS
       - PUT
       - DELETE
+    customRequestHeaders:
+      X-Forwarded-Proto: "https"
+      X-Forwarded-Host: "{{ .Host }}"
     accessControlAllowOriginList:
       - "https://dreamer.bnei.dev"  # Replace with your public domain, not *
     accessControlAllowHeaders:
