@@ -2,7 +2,6 @@
 	import { invalidate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
-	import { ClientChatService } from '$lib/client/services/chatService';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 
 	// New Components
@@ -16,7 +15,6 @@
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from '$lib/client/components/DreamRelatedDreams.svelte'; // Import the new component
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
-	import { getDream, updateDream } from '$lib/remote/dream.remote.js';
 
 	let { data, form } = $props();
 
@@ -280,19 +278,6 @@
 				</DreamNavigation>
 
 				<DreamDateSection dreamDate={dream.dreamDate} onUpdate={handleDreamUpdate} />
-
-				<button
-					class="btn mt-2 btn-ghost btn-sm"
-					onclick={async () => {
-						const data = await updateDream({
-							dreamId: dream.id,
-							rawText: dream.rawText
-						});
-						console.log({ data });
-					}}
-				>
-					CLICK ME
-				</button>
 
 				<DreamRawTextSection rawText={dream.rawText} onUpdate={handleDreamUpdate} />
 

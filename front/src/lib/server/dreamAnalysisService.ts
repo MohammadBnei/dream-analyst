@@ -108,10 +108,10 @@ class DreamAnalysisService {
 Example: "water,fire,mountain,shame"
 Dream: "${dream.rawText}"
 Keywords:`;
-			const rawSearchTerms = await this.llmService.generateText(searchTermsPrompt, signal);
+			const rawSearchTerms: string = await this.llmService.generateText(searchTermsPrompt, signal);
 
 			const searchTerms = rawSearchTerms
-				.split(',')
+				.split(/[,\\s]+/)
 				.map((term) => term.trim())
 				.filter(Boolean);
 
