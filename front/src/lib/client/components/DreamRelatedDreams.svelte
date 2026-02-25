@@ -259,7 +259,7 @@
 					<p class="text-sm text-gray-500">Searching...</p>
 				{:else if searchResults.length > 0}
 					<ul class="menu w-full rounded-box bg-base-200">
-						{#each searchResults.filter((d) => !currentRelatedIds.includes(d.id || '')) as dream}
+						{#each searchResults.filter((d) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')) as dream}
 							<li>
 								<span class="btn" onclick={() => handleAddRelated(dream)}>
 									{dream.title ||
