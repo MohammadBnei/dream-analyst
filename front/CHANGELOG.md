@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.26.32](/compare/0.26.31...0.26.32) (2026-02-25)
+
+
+### Bug Fixes
+
+* persist search results and filter selected dreams in related list 94f7b71
+* prevent linking a dream to itself in search results 7a9a942
+
 ## [0.26.31](/compare/0.26.30...0.26.31) (2026-02-25)
 
 ## [0.26.30](/compare/0.26.29...0.26.30) (2026-02-03)
