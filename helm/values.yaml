@@ -1,0 +1,74 @@
+# dream-analyst — deployed via infra-bootstrap's common-app-chart
+# (gitops/apps/registry.yaml entry: dream-analyst). Second real per-app
+# repo onboarded, after editable-blog validated the pipeline.
+
+image:
+  repository: mohammaddocker/dream-analyst
+  tag: "0.26.32"
+
+annotations:
+  secrets.infisical.com/auto-reload: "true"
+
+service:
+  port: 3000
+
+ingress:
+  hostname: dreamer.bnei.dev
+  middlewares:
+    - name: sveltekit-cors
+
+livenessProbe:
+  enabled: true
+  path: /healthz
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  failureThreshold: 3
+
+readinessProbe:
+  enabled: true
+  path: /healthz
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+
+# Same Infisical project/creds the legacy k8s-cluster/secrets/dream-analyst.yml
+# used — same underlying Infisical Postgres DB as the new cluster's
+# platform-infisical-backend, so no secret migration needed. The shared
+# universal-auth-credentials machine identity (namespace infisical) must be
+# granted access to this project in the Infisical UI first — separate grant
+# from the main infra-bootstrap project, same as pgweb/editable-blog's grants.
+infisical:
+  enabled: true
+  projectSlug: "dream-analyst-8-fxf"
+  envSlug: staging
+  secretsPath: "/"
+  secretName: managed-dream-analyst-secret
+
+# Legacy cluster fronted this with a cert-manager Certificate — forbidden
+# pattern here (ADR-0001), certResolver: le (chart default) replaces it.
+extraManifests:
+  - |
+    apiVersion: traefik.io/v1alpha1
+    kind: Middleware
+    metadata:
+      name: sveltekit-cors
+      namespace: {{ .Release.Namespace }}
+    spec:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+          - PUT
+          - DELETE
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+          X-Forwarded-Host: "{{ "{{ .Host }}" }}"
+        accessControlAllowOriginList:
+          - "https://dreamer.bnei.dev"
+        accessControlAllowHeaders:
+          - Content-Type
+          - Authorization
+          - X-Requested-With
+        accessControlMaxAge: 100
+        addVaryHeader: true
