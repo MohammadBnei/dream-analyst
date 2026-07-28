@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.27.0](/compare/0.26.32...0.27.0) (2026-07-28)
+
+
+### Features
+
+* add Helm values for ukubi-cluster common-app-chart deployment 579651b
+
 ## [0.26.32](/compare/0.26.31...0.26.32) (2026-02-25)
 
 
