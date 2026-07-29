@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.29.14](https://github.com/MohammadBnei/dream-analyst/compare/0.29.13...0.29.14) (2026-07-29)
+
+### Bug Fixes
+
+* downgrade [4xx] request-log lines from error to warn ([b308ac5](https://github.com/MohammadBnei/dream-analyst/commit/b308ac5ef036f57c1c45511e84c0ee2392387e67))
+
 ## [0.29.13](https://github.com/MohammadBnei/dream-analyst/compare/0.29.12...0.29.13) (2026-07-29)
 
 ## [0.29.12](https://github.com/MohammadBnei/dream-analyst/compare/0.29.11...0.29.12) (2026-07-29)
