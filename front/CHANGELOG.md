@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.28.1](/compare/0.28.0...0.28.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* sync Helm image tag with releases, unblocking JSON logging deploy d0ae185, closes #1
+
 # [0.28.0](/compare/0.27.0...0.28.0) (2026-07-29)
 
 
