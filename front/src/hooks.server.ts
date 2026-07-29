@@ -1,3 +1,4 @@
+import '$lib/server/logger';
 import { sequence } from '@sveltejs/kit/hooks';
 import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
