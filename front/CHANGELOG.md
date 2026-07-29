@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.29.6](https://github.com/MohammadBnei/dream-analyst/compare/0.29.5...0.29.6) (2026-07-29)
+
+### Bug Fixes
+
+* copy scripts/ and logger.ts into the runner image ([4aebbe0](https://github.com/MohammadBnei/dream-analyst/commit/4aebbe0fd7d2d460948bfdce625150be2c4d0bd5))
+
 ## [0.29.5](https://github.com/MohammadBnei/dream-analyst/compare/0.29.4...0.29.5) (2026-07-29)
 
 ## [0.29.4](https://github.com/MohammadBnei/dream-analyst/compare/0.29.3...0.29.4) (2026-07-29)
