@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.29.23](https://github.com/MohammadBnei/dream-analyst/compare/0.29.22...0.29.23) (2026-07-29)
+
+### Bug Fixes
+
+* stop logging routine prisma migrate deploy output as error ([87c8bbf](https://github.com/MohammadBnei/dream-analyst/commit/87c8bbfdd065164eedabafdd6690fc9fab1e476f))
+
 ## [0.29.22](https://github.com/MohammadBnei/dream-analyst/compare/0.29.21...0.29.22) (2026-07-29)
 
 ## [0.29.21](https://github.com/MohammadBnei/dream-analyst/compare/0.29.20...0.29.21) (2026-07-29)
