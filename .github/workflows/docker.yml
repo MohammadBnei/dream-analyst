@@ -94,13 +94,19 @@ jobs:
         run: |
           kustomize edit set image ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}
 
+      - name: Update Helm image tag
+        working-directory: ${{ github.workspace }}
+        run: |
+          sed -i "s/^  tag: \".*\"\$/  tag: \"${{ steps.info.outputs.version }}\"/" helm/values.yaml
+
       - name: git config
         run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
       - name: git push
+        working-directory: ${{ github.workspace }}
         run: |
-          git add .
-          git commit -m "Chore: update kustomize image version to ${{ steps.info.outputs.version }}"
+          git add k8s/kustomization.yaml helm/values.yaml
+          git commit -m "Chore: update image version to ${{ steps.info.outputs.version }} (kustomize + helm)"
           git push
