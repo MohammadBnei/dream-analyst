@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.29.0](/compare/0.28.1...0.29.0) (2026-07-29)
+
+
+### Features
+
+* emit JSON logs for prisma migrate deploy output too b430175
+
 ## [0.28.1](/compare/0.28.0...0.28.1) (2026-07-29)
 
 
