@@ -15,7 +15,7 @@
 		"prisma": "prisma",
 		"machine-translate": "inlang machine translate --project project.inlang",
 		"release": "release-it",
-		"start": "bun run prisma migrate deploy && bun ./build/index.js",
+		"start": "bun run scripts/migrate-deploy.ts && bun ./build/index.js",
 		"e2e": "playwright test"
 	},
 	"devDependencies": {
