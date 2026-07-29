@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.29.11](https://github.com/MohammadBnei/dream-analyst/compare/0.29.10...0.29.11) (2026-07-29)
+
 ## [0.29.10](https://github.com/MohammadBnei/dream-analyst/compare/0.29.9...0.29.10) (2026-07-29)
 
 ## [0.29.9](https://github.com/MohammadBnei/dream-analyst/compare/0.29.8...0.29.9) (2026-07-29)
