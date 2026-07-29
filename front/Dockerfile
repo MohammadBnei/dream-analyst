@@ -24,6 +24,8 @@ COPY --from=builder /app/build /app/build
 COPY --from=builder /app/package.json /app
 COPY --from=builder /app/prisma.config.ts /app
 COPY --from=builder /app/prisma /app/prisma
+COPY --from=builder /app/scripts /app/scripts
+COPY --from=builder /app/src/lib/server/logger.ts /app/src/lib/server/logger.ts
 
 WORKDIR /app
 ENV NODE_ENV=production
