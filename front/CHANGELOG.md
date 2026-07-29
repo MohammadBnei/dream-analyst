@@ -1,5 +1,12 @@
 # Changelog
 
+# [0.28.0](/compare/0.27.0...0.28.0) (2026-07-29)
+
+
+### Features
+
+* emit JSON-formatted logs on deployed instances 5e6d699
+
 # [0.27.0](/compare/0.26.32...0.27.0) (2026-07-28)
 
 
