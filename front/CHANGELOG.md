@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.29.26](https://github.com/MohammadBnei/dream-analyst/compare/0.29.25...0.29.26) (2026-07-30)
+
+### Bug Fixes
+
+* exclude helm/ from release-it trigger paths to break CI loop ([a7fefd9](https://github.com/MohammadBnei/dream-analyst/commit/a7fefd9001aba9a868888e46a992609f49a6bcfb))
+* remove invalid `mode:'insensitive'` from Prisma full-text search filters ([7e89f44](https://github.com/MohammadBnei/dream-analyst/commit/7e89f44af72d764f68a6fd3179c41d3201639566))
+
 ## [0.29.25](https://github.com/MohammadBnei/dream-analyst/compare/0.29.24...0.29.25) (2026-07-29)
 
 ## [0.29.24](https://github.com/MohammadBnei/dream-analyst/compare/0.29.23...0.29.24) (2026-07-29)
