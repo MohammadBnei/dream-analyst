@@ -6,6 +6,7 @@ import { error, json } from '@sveltejs/kit'; // Import json
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
+import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
 
 // Schemas for validation
 const UpdateDreamSchema = v.object({
@@ -39,7 +40,10 @@ const UpdateTitleSchema = v.object({
 });
 
 const UpdateRelatedDreamsSchema = v.object({
-	relatedDreamIds: v.pipe(v.string(), v.transform((s) => JSON.parse(s) as string[]))
+	relatedDreamIds: v.pipe(
+		v.string(),
+		v.transform((s) => JSON.parse(s) as string[])
+	)
 });
 
 const RemoveRelatedDreamSchema = v.object({
@@ -373,7 +377,9 @@ export const actions: Actions = {
 
 		let validatedData;
 		try {
-			validatedData = v.parse(UpdateRelatedDreamsSchema, { relatedDreamIds: relatedDreamIdsString });
+			validatedData = v.parse(UpdateRelatedDreamsSchema, {
+				relatedDreamIds: relatedDreamIdsString
+			});
 		} catch (e: any) {
 			const issues = e.issues.map((issue: any) => issue.message);
 			return fail(400, { relatedDreamIds: relatedDreamIdsString, error: issues.join(', ') });
@@ -558,16 +564,20 @@ export const actions: Actions = {
 		const prisma = await getPrismaClient();
 
 		try {
-			const safeSearchQuery = validatedData.query.trim().replaceAll(' ', '|');
+			const safeSearchQuery = buildTsQueryFromRaw(validatedData.query);
+
+			if (!safeSearchQuery) {
+				return { success: true, dreams: [] };
+			}
 
 			const dreams = await prisma.dream.findMany({
 				where: {
 					userId: sessionUser.id,
 					id: { not: dreamId }, // Exclude the current dream
 					OR: [
-						{ title: { search: safeSearchQuery, mode: 'insensitive' } }, // Use 'search' for full-text search
-						{ rawText: { search: safeSearchQuery, mode: 'insensitive' } }, // Use 'search' for full-text search
-						{ interpretation: { search: safeSearchQuery, mode: 'insensitive' } } // Use 'search' for full-text search
+						{ title: { search: safeSearchQuery } }, // Use 'search' for full-text search
+						{ rawText: { search: safeSearchQuery } }, // Use 'search' for full-text search
+						{ interpretation: { search: safeSearchQuery } } // Use 'search' for full-text search
 					]
 				},
 				select: {

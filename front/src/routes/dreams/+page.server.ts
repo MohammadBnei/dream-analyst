@@ -2,6 +2,7 @@ import { getPrismaClient } from '$lib/server/db/index.js';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
 
 const DEFAULT_PAGE_SIZE = 10; // Define a default page size
 
@@ -26,27 +27,24 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		userId: sessionUser.id
 	};
 
-	if (searchQuery) {
-		const safeSearchQuery = searchQuery.trim().replaceAll(' ', '|');
+	const safeSearchQuery = buildTsQueryFromRaw(searchQuery);
+	if (safeSearchQuery) {
 		whereClause = {
 			...whereClause,
 			OR: [
 				{
 					title: {
-						search: safeSearchQuery,
-						mode: 'insensitive'
+						search: safeSearchQuery
 					}
 				},
 				{
 					rawText: {
-						search: safeSearchQuery,
-						mode: 'insensitive'
+						search: safeSearchQuery
 					}
 				},
 				{
 					interpretation: {
-						search: safeSearchQuery,
-						mode: 'insensitive'
+						search: safeSearchQuery
 					}
 				}
 				// {

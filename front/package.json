@@ -16,6 +16,7 @@
 		"machine-translate": "inlang machine translate --project project.inlang",
 		"release": "release-it",
 		"start": "bun run scripts/migrate-deploy.ts && bun ./build/index.js",
+		"test:unit": "bun test src/",
 		"e2e": "playwright test"
 	},
 	"devDependencies": {
