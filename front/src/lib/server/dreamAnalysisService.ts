@@ -4,6 +4,7 @@ import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
 import { getLLMService } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
+import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
 
 class DreamAnalysisService {
 	private llmService: ReturnType<typeof getLLMService>;
@@ -110,13 +111,14 @@ Dream: "${dream.rawText}"
 Keywords:`;
 			const rawSearchTerms: string = await this.llmService.generateText(searchTermsPrompt, signal);
 
-			const searchTerms = rawSearchTerms
-				.split(/[,\\s]+/)
-				.map((term) => term.trim())
-				.filter(Boolean);
+			// Build a valid Postgres tsquery from the LLM keywords. Each (possibly
+			// multi-word) term becomes an AND of its words, and the distinct terms are
+			// OR-ed together. This avoids feeding raw spaces to to_tsquery (which throws
+			// a syntax error) and never uses the invalid `mode: 'insensitive'` option.
+			const searchQuery = buildTsQueryFromRaw(rawSearchTerms);
 
 			// 2. Perform a full-text search on past dreams using the generated search terms
-			if (searchTerms.length > 0) {
+			if (searchQuery.length > 0) {
 				const relevantPastDreams = await prisma.dream.findMany({
 					where: {
 						userId: dream.userId,
@@ -124,20 +126,17 @@ Keywords:`;
 						OR: [
 							{
 								rawText: {
-									search: searchTerms.join('|'), // Use OR for full-text search
-									mode: 'insensitive'
+									search: searchQuery // Use OR for full-text search
 								}
 							},
 							{
 								interpretation: {
-									search: searchTerms.join('|'),
-									mode: 'insensitive'
+									search: searchQuery
 								}
 							},
 							{
 								title: {
-									search: searchTerms.join('|'),
-									mode: 'insensitive'
+									search: searchQuery
 								}
 							}
 						]
@@ -225,7 +224,7 @@ Title:`;
 			where: { id: dream.id },
 			data: {
 				relatedTo: {
-					connect: relatedDreamIds.map((id) => ({ id })),
+					connect: relatedDreamIds.map((id) => ({ id }))
 				},
 				updatedAt: new Date()
 			},
