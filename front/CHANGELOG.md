@@ -1,5 +1,11 @@
 # Changelog
 
+# [0.30.0](https://github.com/MohammadBnei/dream-analyst/compare/0.29.26...0.30.0) (2026-07-31)
+
+### Features
+
+* add optional dream date to add-dream page (default today) ([a93e117](https://github.com/MohammadBnei/dream-analyst/commit/a93e117405ecc77649a3faa3da0da2d9f9b86671))
+
 ## [0.29.26](https://github.com/MohammadBnei/dream-analyst/compare/0.29.25...0.29.26) (2026-07-30)
 
 ### Bug Fixes
