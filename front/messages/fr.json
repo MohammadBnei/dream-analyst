@@ -118,6 +118,7 @@
 	"previous_dream_button": "Précédent",
 	"next_dream_button": "Suivant",
 	"dream_date_label": "Date du Rêve :",
+	"dream_date_input_label": "Quand avez-vous fait ce rêve ?",
 	"chat_with_ai_heading": "Discuter avec l'IA",
 	"type_your_message_placeholder": "Tapez votre message...",
 	"send_button": "Envoyer",

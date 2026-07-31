@@ -4,23 +4,20 @@
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import { enhance } from '$app/forms';
 
-	export let form; // Data from form action
+	let { form } = $props(); // Data from form action
 
-	let dreamText: string = form?.rawText || '';
-	let isSaving: boolean = false;
+	// Default the dream date to today (YYYY-MM-DD for <input type="date">).
+	const today = new Date().toISOString().split('T')[0];
 
-	$: isSaveDisabled = dreamText.length < 10 || isSaving;
+	// Seed from a failed submission's returned values (if any), else defaults.
+	let dreamText = $state<string>(typeof form?.rawText === 'string' ? form.rawText : '');
+	let dreamDate = $state<string>(typeof form?.dreamDate === 'string' ? form.dreamDate : today);
+	let isSaving = $state(false);
+
+	let isSaveDisabled = $derived(dreamText.length < 10 || isSaving);
 
 	function handleRichTextInput(value: string) {
 		dreamText = value;
-	}
-
-	// Reset form after successful submission (handled by redirect) or on error
-	$: if (form?.error) {
-		isSaving = false;
-	} else if (form?.success) {
-		dreamText = ''; // Clear text on success
-		isSaving = false;
 	}
 </script>
 
@@ -54,6 +51,19 @@
 			<label class="label">
 				<span class="label-text-alt">{m.minimum_characters_label({ count: 10 })}</span>
 			</label>
+		</div>
+
+		<div class="form-control">
+			<label for="dreamDate" class="label">
+				<span class="label-text">{m.dream_date_input_label()}</span>
+			</label>
+			<input
+				id="dreamDate"
+				name="dreamDate"
+				type="date"
+				class="input-bordered input w-fit"
+				bind:value={dreamDate}
+			/>
 		</div>
 
 		<div class="flex justify-center">
