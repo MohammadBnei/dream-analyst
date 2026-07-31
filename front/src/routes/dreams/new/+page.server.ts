@@ -4,9 +4,18 @@ import * as v from 'valibot';
 import type { Actions } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
+import { parseDreamDate } from '$lib/server/dreamDate';
 
 const CreateDreamSchema = v.object({
-	rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.'))
+	rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.')),
+	// Optional date the dream was made. Comes from <input type="date"> as YYYY-MM-DD.
+	// Empty/omitted is allowed and falls back to the DB default (now()).
+	dreamDate: v.optional(
+		v.pipe(
+			v.string(),
+			v.check((s) => s === '' || !isNaN(new Date(s).getTime()), 'Invalid date format')
+		)
+	)
 });
 
 export const actions: Actions = {
@@ -18,13 +27,14 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const rawText = formData.get('rawText');
+		const dreamDate = formData.get('dreamDate');
 
 		let validatedData;
 		try {
-			validatedData = v.parse(CreateDreamSchema, { rawText });
+			validatedData = v.parse(CreateDreamSchema, { rawText, dreamDate });
 		} catch (e: any) {
 			const issues = e.issues.map((issue: any) => issue.message);
-			return fail(400, { rawText, error: issues.join(', ') });
+			return fail(400, { rawText, dreamDate, error: issues.join(', ') });
 		}
 
 		const prisma = await getPrismaClient();
@@ -35,19 +45,21 @@ export const actions: Actions = {
 				data: {
 					userId: sessionUser.id,
 					rawText: validatedData.rawText,
+					// undefined => Prisma falls back to the schema default (now())
+					dreamDate: parseDreamDate(validatedData.dreamDate),
 					status: DreamStatus.PENDING_ANALYSIS // Use enum
 				}
 			});
 
 			await Promise.all([
-				dreamAnalysisService.generateDreamTitle(newDream.rawText).then(
-					(title) => prisma.dream.update({
+				dreamAnalysisService.generateDreamTitle(newDream.rawText).then((title) =>
+					prisma.dream.update({
 						where: { id: newDream.id },
 						data: { title }
 					})
 				),
 				dreamAnalysisService.findAndSetRelatedDreams(newDream)
-			])
+			]);
 
 			// --- End New Sequential Logic ---
 
@@ -58,7 +70,7 @@ export const actions: Actions = {
 				// Re-throw redirect
 				throw e;
 			}
-			return fail(500, { rawText, error: 'Failed to save dream. Please try again.' });
+			return fail(500, { rawText, dreamDate, error: 'Failed to save dream. Please try again.' });
 		}
 	}
 };
