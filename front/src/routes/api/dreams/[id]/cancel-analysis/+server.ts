@@ -1,19 +1,14 @@
 import { error, json } from '@sveltejs/kit';
+import { requireUser } from '$lib/server/utils/auth';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import { DreamStatus } from '@prisma/client';
 import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor'; // Import getOrCreateStreamProcessor
 
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
 
 export async function POST({ params, locals, platform }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');

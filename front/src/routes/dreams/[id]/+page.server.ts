@@ -7,6 +7,7 @@ import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus e
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
 import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
+import { parseDreamTags } from '$lib/server/utils/dream';
 
 // Schemas for validation
 const UpdateDreamSchema = v.object({
@@ -104,10 +105,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 		}
 
 		// Ensure tags are parsed correctly if stored as JSON string
-		const dreamWithParsedTags = {
-			...dream,
-			tags: dream.tags ? (dream.tags as string[]) : null
-		};
+		const dreamWithParsedTags = parseDreamTags(dream);
 
 		// Fetch next and previous dreams for navigation
 		const nextDream = await prisma.dream.findFirst({

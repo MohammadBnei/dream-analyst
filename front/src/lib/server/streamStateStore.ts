@@ -1,11 +1,12 @@
 import Redis from 'ioredis';
 import { env } from '$env/dynamic/private';
 import { DreamStatus } from '@prisma/client';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
+import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst'; // Import DreamPromptType
+import { config } from '$lib/server/config/env';
 
 const REDIS_PREFIX = 'stream_state:';
-const REDIS_EXPIRATION_SECONDS = 60 * 3;
-const REDIS_STALL_THRESHOLD_SECONDS = 15;
+const REDIS_EXPIRATION_SECONDS = config.redis.streamExpiration;
+const REDIS_STALL_THRESHOLD_SECONDS = config.redis.stallThreshold;
 
 export enum StreamStatus {
 	PENDING = 'PENDING',

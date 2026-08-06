@@ -1,4 +1,5 @@
 import { error } from '@sveltejs/kit';
+import { requireUser } from '$lib/server/utils/auth';
 import { getPrismaClient } from '$lib/server/db';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
@@ -9,16 +10,10 @@ import { getCreditService } from '$lib/server/creditService'; // Import credit s
 
 const encoder = new TextEncoder();
 
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
 
 export async function GET({ params, locals, platform, request }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 
 	if (!sessionUser) {
 		throw error(401, 'Unauthorized');

@@ -3,13 +3,10 @@ import bcrypt from 'bcrypt';
 import { env } from '$env/dynamic/private';
 import type { Cookies } from '@sveltejs/kit';
 import type { UserRole } from '@prisma/client'; // Import UserRole enum
-
-const JWT_SECRET = env.JWT_SECRET || 'your_jwt_secret_here'; // Use a strong secret from environment variables
-const JWT_EXPIRES_IN = '30d'; // Token expiration time
+import { config } from '$lib/server/config/env';
 
 export const hashPassword = async (password: string): Promise<string> => {
-	const saltRounds = 10;
-	return bcrypt.hash(password, saltRounds);
+	return bcrypt.hash(password, config.auth.saltRounds);
 };
 
 export const comparePassword = async (password: string, hash: string): Promise<boolean> => {
@@ -30,12 +27,12 @@ export const generateToken = (
 	role: UserRole
 ): string => {
 	const payload: TokenPayload = { userId, username, email, role };
-	return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+	return jwt.sign(payload, config.auth.jwtSecret, { expiresIn: config.auth.jwtExpiry });
 };
 
 export const verifyToken = (token: string): TokenPayload | null => {
 	try {
-		const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+		const decoded = jwt.verify(token, config.auth.jwtSecret) as TokenPayload;
 		return decoded;
 	} catch (error) {
 		console.error('JWT verification failed:', error);

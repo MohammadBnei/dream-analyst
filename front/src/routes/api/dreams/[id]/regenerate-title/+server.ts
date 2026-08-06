@@ -1,18 +1,13 @@
 import { json, error } from '@sveltejs/kit';
+import { requireUser } from '$lib/server/utils/auth';
 import { getPrismaClient } from '$lib/server/db';
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService';
 import type { RequestHandler } from './$types';
 
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
 
 export const POST: RequestHandler = async ({ params, locals }) => {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 
 	if (!dreamId) {
 		throw error(400, 'Dream ID is required.');
