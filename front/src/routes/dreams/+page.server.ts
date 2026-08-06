@@ -3,6 +3,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
+import { parseDreamTagsArray } from '$lib/server/utils/dream';
 
 const DEFAULT_PAGE_SIZE = 10; // Define a default page size
 
@@ -71,10 +72,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	]);
 
 	// Ensure tags are parsed correctly if stored as JSON string
-	const dreamsWithParsedTags = dreams.map((dream) => ({
-		...dream,
-		tags: dream.tags ? (dream.tags as string[]) : null // Assuming tags are stored as JSON array of strings
-	}));
+	const dreamsWithParsedTags = parseDreamTagsArray(dreams);
 
 	const totalPages = Math.ceil(totalDreams / pageSize);
 

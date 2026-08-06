@@ -1,20 +1,14 @@
 import { json, error } from '@sveltejs/kit';
+import { requireUser } from '$lib/server/utils/auth';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 
-// Helper to get the current user from the request event
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
 
 // PUT /api/dreams/[id]/interpretation - Update an existing dream's interpretation
 export async function PUT({ request, params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const prisma = await getPrismaClient();
 
 	if (!dreamId) {

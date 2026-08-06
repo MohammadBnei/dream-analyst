@@ -1,7 +1,7 @@
 import { DreamStatus, type Dream } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
 import { getDreamAnalysisService } from './dreamAnalysisService'; // Import the new DreamAnalysisService
 
 // Utility function to convert AsyncIterable<string> to ReadableStream<Uint8Array>

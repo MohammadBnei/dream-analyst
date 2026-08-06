@@ -5,6 +5,10 @@ import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
 import { getPrismaClient } from '$lib/server/db';
 import { env } from '$env/dynamic/public';
+import { validateEnvironment } from '$lib/server/config/env';
+
+// Validate environment variables at startup
+validateEnvironment();
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {

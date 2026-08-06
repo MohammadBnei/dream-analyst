@@ -2,11 +2,12 @@ import { getPrismaClient } from '$lib/server/db';
 import type { UserRole } from '@prisma/client'; // Import new enums
 import { env } from '$env/dynamic/private'; // Import env
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
+import { config } from '$lib/server/config/env';
 
-// Define credit costs and daily limits per role
+// Define credit costs from centralized config
 const CREDIT_COSTS = {
-	DREAM_ANALYSIS: parseInt(env.CREDIT_COST_DREAM_ANALYSIS || '2', 10), // Cost for one dream analysis
-	CHAT_MESSAGE: parseInt(env.CREDIT_COST_CHAT_MESSAGE || '1', 10) // Cost for one AI chat message
+	DREAM_ANALYSIS: config.credits.dreamAnalysis,
+	CHAT_MESSAGE: config.credits.chatMessage
 };
 
 const DAILY_CREDIT_LIMITS: Record<UserRole, number> = {

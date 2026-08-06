@@ -1,20 +1,15 @@
 import { json, error } from '@sveltejs/kit';
+import { requireUser } from '$lib/server/utils/auth';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+import { parseDreamTags } from '$lib/server/utils/dream';
 
-// Helper to get the current user from the request event
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
 
 // GET /api/dreams/[id] - Get a single dream by ID for the current user
 export async function GET({ params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const prisma = await getPrismaClient();
 
 	if (!dreamId) {
@@ -34,10 +29,7 @@ export async function GET({ params, locals }) {
 		}
 
 		// Ensure tags are parsed correctly if stored as JSON string
-		const dreamWithParsedTags = {
-			...dream,
-			tags: dream.tags ? (dream.tags as string[]) : null
-		};
+		const dreamWithParsedTags = parseDreamTags(dream);
 
 		return json(dreamWithParsedTags);
 	} catch (e) {
@@ -49,7 +41,7 @@ export async function GET({ params, locals }) {
 // PUT /api/dreams/[id] - Update an existing dream's rawText
 export async function PUT({ request, params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const prisma = await getPrismaClient();
 
 	if (!dreamId) {
@@ -95,7 +87,7 @@ export async function PUT({ request, params, locals }) {
 // DELETE /api/dreams/[id] - Delete a dream
 export async function DELETE({ params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const prisma = await getPrismaClient();
 
 	if (!dreamId) {

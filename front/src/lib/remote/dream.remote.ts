@@ -3,14 +3,16 @@ import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
 import type { Dream } from '@prisma/client';
+import { requireUser } from '$lib/server/utils/auth';
+import { parseDreamTags, parseDreamTagsArray } from '$lib/server/utils/dream';
 
 // Helper to get the current user from the request event
 async function getCurrentUser() {
 	const event = getRequestEvent();
-	if (!event?.locals.user) {
+	if (!event?.locals) {
 		error(401, 'Unauthorized');
 	}
-	return event.locals.user;
+	return requireUser(event.locals);
 }
 
 // --- Queries ---
@@ -31,10 +33,7 @@ export const getDreams = query(async () => {
 	});
 
 	// Ensure tags are parsed correctly if stored as JSON string
-	const dreamsWithParsedTags = dreams.map((dream) => ({
-		...dream,
-		tags: dream.tags ? (dream.tags as string[]) : null
-	}));
+	const dreamsWithParsedTags = parseDreamTagsArray(dreams);
 
 	return dreamsWithParsedTags;
 });
@@ -57,10 +56,7 @@ export const getDream = query(v.string(), async (dreamId) => {
 	}
 
 	// Ensure tags are parsed correctly if stored as JSON string
-	const dreamWithParsedTags = {
-		...dream,
-		tags: dream.tags ? (dream.tags as string[]) : null
-	};
+	const dreamWithParsedTags = parseDreamTags(dream);
 
 	return dreamWithParsedTags;
 });
