@@ -1,34 +1,28 @@
 import { env } from '$env/dynamic/private';
 import { ChatOpenAI } from '@langchain/openai';
 import { BaseMessage, HumanMessage, SystemMessage } from '@langchain/core/messages'; // Import HumanMessage and SystemMessage
+import { config } from '$lib/server/config/env';
 
-const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
 const OPENROUTER_WEAK_MODEL_NAME = env.OPENROUTER_WEAK_MODEL || 'meta-llama/llama-3.1-70b-instruct'; // Add weak model env var
-const YOUR_SITE_URL = env.ORIGIN;
 
 class LLMService {
 	private chat: ChatOpenAI;
 	private weakChat: ChatOpenAI; // Add a separate instance for the weak model
 
 	constructor() {
-		if (!OPENROUTER_API_KEY) {
-			throw new Error('OPENROUTER_API_KEY is not defined');
-		}
-
 		const commonConfig = {
 			temperature: 0.7, // A reasonable default for creative tasks
-			apiKey: OPENROUTER_API_KEY,
+			apiKey: config.llm.apiKey,
 			configuration: {
 				baseURL: 'https://openrouter.ai/api/v1',
 				defaultHeaders: {
-					...(YOUR_SITE_URL && { 'HTTP-Referer': YOUR_SITE_URL })
+					...(config.app.siteUrl && { 'HTTP-Referer': config.app.siteUrl })
 				}
 			}
 		};
 
 		this.chat = new ChatOpenAI({
-			model: OPENROUTER_MODEL_NAME,
+			model: config.llm.modelName,
 			streaming: true, // Main chat is streaming
 			...commonConfig
 		});

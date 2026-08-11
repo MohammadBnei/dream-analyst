@@ -2,8 +2,8 @@ import { env } from '$env/dynamic/private';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { promptService } from '$lib/prompts/promptService';
+import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
+import { promptService } from '$lib/server/prompts/promptService';
 import { getLLMService } from './llmService';
 
 class ServerChatService {

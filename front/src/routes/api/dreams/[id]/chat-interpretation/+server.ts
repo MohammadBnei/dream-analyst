@@ -1,18 +1,13 @@
 import { error } from '@sveltejs/kit';
+import { requireUser } from '$lib/server/utils/auth';
 import { getPrismaClient } from '$lib/server/db';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { getServerChatService } from '$lib/server/chatService';
 
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
 
 export async function POST({ params, locals, request }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const prisma = await getPrismaClient(); // Still need prisma to fetch the dream
 	const chatService = getServerChatService(); // Get the new chat service instance
 
@@ -72,7 +67,7 @@ export async function POST({ params, locals, request }) {
 // GET endpoint to retrieve chat history
 export async function GET({ params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const chatService = getServerChatService(); // Get the new chat service instance
 
 	if (!dreamId) {
@@ -95,7 +90,7 @@ export async function GET({ params, locals }) {
 // DELETE endpoint to clear chat history
 export async function DELETE({ params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const chatService = getServerChatService(); // Get the new chat service instance
 
 	if (!dreamId) {

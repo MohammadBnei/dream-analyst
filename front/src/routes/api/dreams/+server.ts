@@ -2,18 +2,12 @@ import { json, error } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
-
-// Helper to get the current user from the request event
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
+import { requireUser } from '$lib/server/utils/auth';
+import { parseDreamTagsArray } from '$lib/server/utils/dream';
 
 // GET /api/dreams - Get all dreams for the current user
 export async function GET({ locals }) {
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const prisma = await getPrismaClient();
 
 	try {
@@ -27,10 +21,7 @@ export async function GET({ locals }) {
 		});
 
 		// Ensure tags are parsed correctly if stored as JSON string
-		const dreamsWithParsedTags = dreams.map((dream) => ({
-			...dream,
-			tags: dream.tags ? (dream.tags as string[]) : null
-		}));
+		const dreamsWithParsedTags = parseDreamTagsArray(dreams);
 
 		return json(dreamsWithParsedTags);
 	} catch (e) {
@@ -41,7 +32,7 @@ export async function GET({ locals }) {
 
 // POST /api/dreams - Create a new dream
 export async function POST({ request, locals }) {
-	const sessionUser = getCurrentUser(locals);
+	const sessionUser = requireUser(locals);
 	const prisma = await getPrismaClient();
 
 	const CreateDreamSchema = v.object({

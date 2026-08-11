@@ -1,17 +1,12 @@
 import Redis from 'ioredis';
-import { env } from '$env/dynamic/private';
+import { config } from '$lib/server/config/env';
 
 let redis: Redis | null = null; // Initialize as null
 
 export function getRedisClient(): Redis {
 	// Removed async
 	if (!redis) {
-		if (!env.REDIS_URL) {
-			// This error will now be thrown synchronously if REDIS_URL is missing
-			// during any import/instantiation of this module.
-			throw new Error('REDIS_URL is not defined');
-		}
-		redis = new Redis(env.REDIS_URL);
+		redis = new Redis(config.redis.url);
 
 		redis.on('connect', () => {
 			console.log('Connected to Redis');

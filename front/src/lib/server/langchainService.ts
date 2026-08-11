@@ -1,8 +1,8 @@
 import { env } from '$env/dynamic/private';
 import { ChatOpenAI } from '@langchain/openai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import type { DreamPromptType } from '../prompts/dreamAnalyst';
-import { promptService } from '$lib/prompts/promptService';
+import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
+import { promptService } from '$lib/server/prompts/promptService';
 import type { Dream } from '@prisma/client'; // Import Dream type
 import { getDreamAnalysisService } from './dreamAnalysisService'; // Import the new DreamAnalysisService
 

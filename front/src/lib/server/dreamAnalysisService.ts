@@ -1,7 +1,7 @@
 import type { Dream } from '@prisma/client';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { promptService } from '$lib/prompts/promptService';
+import type { DreamPromptType } from '$lib/server/prompts/dreamAnalyst';
+import { promptService } from '$lib/server/prompts/promptService';
 import { getLLMService } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
 import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
