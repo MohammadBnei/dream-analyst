@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.30.1](https://github.com/MohammadBnei/dream-analyst/compare/0.30.0...0.30.1) (2026-08-11)
+
+### Bug Fixes
+
+* add Prisma client generation and e2e Vite config ([e4866f4](https://github.com/MohammadBnei/dream-analyst/commit/e4866f44dcc55b967245bf3d13542885e38e65f3))
+
 # [0.30.0](https://github.com/MohammadBnei/dream-analyst/compare/0.29.26...0.30.0) (2026-07-31)
 
 ### Features
