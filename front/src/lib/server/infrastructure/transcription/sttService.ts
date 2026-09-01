@@ -108,22 +108,6 @@ function decodeResponse(buf: Buffer): { text: string; audioSeconds: number; deco
 	return out;
 }
 
-/**
- * Derive the STT session id from the authenticated user.
- *
- * HMAC, not a plain hash: the client supplies half the input and can often guess
- * the other half, and ukubi-stt keys its recognizer state on whatever id it is
- * given. A derivable id would let one user interleave audio into another user's
- * stream. Keyed on JWT_SECRET, which is already server-only and already the
- * thing whose compromise ends this app's security anyway — so it adds no new
- * secret to manage.
- */
-export function sessionIdFor(userId: string, clientStreamId: string): string {
-	const key = env.JWT_SECRET;
-	if (!key) throw new Error('JWT_SECRET is not set; cannot derive a session id');
-	return createHmac('sha256', key).update(`${userId}:${clientStreamId}`).digest('hex').slice(0, 32);
-}
-
 export class SttError extends Error {
 	constructor(
 		message: string,
@@ -132,6 +116,33 @@ export class SttError extends Error {
 	) {
 		super(message);
 	}
+}
+
+/**
+ * Derive the STT session id from the authenticated user.
+ *
+ * HMAC, not a plain hash: the client supplies half the input and can often guess
+ * the other half, and ukubi-stt keys its recognizer state on whatever id it is
+ * given, so a derivable id would let one user interleave audio into another
+ * user's stream.
+ *
+ * Keyed on the STT token itself, NOT on JWT_SECRET. The first version used
+ * JWT_SECRET on the assumption it was configured; it is not set in this
+ * deployment, so every transcription failed with a 500. Keying on the token
+ * makes the feature self-contained — the same secret that authorises the call
+ * derives the id, so there is no way to be half-configured.
+ *
+ * Reusing the bearer token as an HMAC key is safe here: HMAC does not leak its
+ * key through its output, and the only party that sees these ids is ukubi-stt,
+ * which already holds the token. Rotating the token rotates every session id,
+ * which is harmless — sessions are ephemeral and swept after 120s idle.
+ */
+export function sessionIdFor(userId: string, clientStreamId: string): string {
+	if (!TOKEN) throw new SttError('STT_TOKEN_DREAMER is not set', null, false);
+	return createHmac('sha256', TOKEN)
+		.update(`${userId}:${clientStreamId}`)
+		.digest('hex')
+		.slice(0, 32);
 }
 
 /** One chunk of a streaming dictation. Returns only the NEW text for it. */
