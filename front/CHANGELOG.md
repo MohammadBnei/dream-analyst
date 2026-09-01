@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.31.2](https://github.com/MohammadBnei/dream-analyst/compare/0.31.1...0.31.2) (2026-09-01)
+
+### Bug Fixes
+
+* **security:** require JWT_SECRET instead of defaulting to a placeholder ([#15](https://github.com/MohammadBnei/dream-analyst/issues/15)) ([f68bb29](https://github.com/MohammadBnei/dream-analyst/commit/f68bb294c2f9f3d7a85b23df40c48329b7ddbe87))
+
 ## [0.31.1](https://github.com/MohammadBnei/dream-analyst/compare/0.31.0...0.31.1) (2026-09-01)
 
 ### Bug Fixes
