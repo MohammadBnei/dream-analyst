@@ -44,9 +44,53 @@ infisical:
   secretsPath: "/"
   secretName: managed-dream-analyst-secret
 
+# STT_TOKEN_DREAMER lives in ukubi-stt's Infisical project, not this app's, and
+# is read from there rather than copied here. One secret, one place to rotate —
+# two copies is how a rotation half-lands and the failure looks like a registry
+# problem three days later.
+#
+# This works because every app authenticates to Infisical with the same
+# universal-auth machine identity (the chart's credentialsRef default), so the
+# only thing scoping access is the projectSlug below.
+envFrom:
+  - secretRef:
+      name: managed-stt-token-secret
+
 # Legacy cluster fronted this with a cert-manager Certificate — forbidden
 # pattern here (ADR-0001), certResolver: le (chart default) replaces it.
 extraManifests:
+  - |
+    # A SECOND InfisicalSecret, pointing at a different project. The chart's
+    # own `infisical:` block handles one project; this app needs a credential
+    # that is owned by another service and must stay owned there.
+    #
+    # PreSync with the same early wave as the chart's own CR, for the same
+    # reason its comment gives: the managed secret has to exist before anything
+    # envFroms it.
+    apiVersion: secrets.infisical.com/v1alpha1
+    kind: InfisicalSecret
+    metadata:
+      name: {{ .Release.Name }}-stt-token
+      namespace: {{ .Release.Namespace }}
+      annotations:
+        argocd.argoproj.io/hook: PreSync
+        argocd.argoproj.io/sync-wave: "-10"
+    spec:
+      hostAPI: {{ .Values.infisical.hostAPI }}
+      resyncInterval: {{ .Values.infisical.resyncInterval }}
+      authentication:
+        universalAuth:
+          secretsScope:
+            projectSlug: ukubi-stt-bhr-m
+            envSlug: dev
+            secretsPath: "/"
+          credentialsRef:
+            secretName: {{ .Values.infisical.credentialsRef.secretName }}
+            secretNamespace: {{ .Values.infisical.credentialsRef.secretNamespace }}
+      managedSecretReference:
+        secretName: managed-stt-token-secret
+        secretNamespace: {{ .Release.Namespace }}
+        creationPolicy: Orphan
   - |
     apiVersion: traefik.io/v1alpha1
     kind: Middleware

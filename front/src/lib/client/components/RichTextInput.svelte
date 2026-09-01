@@ -8,104 +8,92 @@
 	export let name = 'rawText';
 
 	let isRecording = false;
-	let mediaRecorder: MediaRecorder | null = null;
-	let audioChunks: Blob[] = [];
 	let recordingError: string | null = null;
 	let isTranscribing = false;
 	let selectedLanguage: 'en' | 'fr' = 'fr'; // Changed default to French
-	let abortController: AbortController | null = null; // To manage transcription cancellation
+
+	// Streaming dictation. Text arrives roughly 560ms behind speech instead of
+	// after you stop, because the server keeps encoder state between chunks —
+	// so this sends ~560ms slices IN ORDER rather than one file at the end.
+	//
+	// Deliberately NOT Svelte 5 runes: this component is still Svelte 4 syntax
+	// in an otherwise-runes codebase, and migrating it is a separate change
+	// from changing what it does.
+	let dictation: { start: () => Promise<void>; stop: () => Promise<void> } | null = null;
+	let streamId = '';
+	/** Where transcribed text began, so appended chunks land in one place even
+	 *  if the user keeps typing above it. */
+	let appendedAny = false;
+
+	async function sendChunk(pcm: Uint8Array, last: boolean) {
+		const qs = new URLSearchParams({
+			lang: selectedLanguage,
+			stream: streamId,
+			last: last ? '1' : '0'
+		});
+		const response = await fetch(`/api/transcribe?${qs}`, {
+			method: 'POST',
+			headers: { 'content-type': 'application/octet-stream' },
+			body: pcm
+		});
+		if (!response.ok) {
+			let message = `HTTP ${response.status}`;
+			try {
+				message = (await response.json()).message || message;
+			} catch {
+				/* the error body is not always JSON */
+			}
+			throw new Error(message);
+		}
+		const { transcription } = await response.json();
+		if (transcription) {
+			value = (value && !appendedAny ? value + '\n' : value) + transcription;
+			appendedAny = true;
+			onInput(value);
+		}
+	}
 
 	async function startRecording() {
 		recordingError = null;
+		appendedAny = false;
+		streamId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now());
 		try {
-			const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-			mediaRecorder = new MediaRecorder(stream);
-			audioChunks = [];
-
-			mediaRecorder.ondataavailable = (event) => {
-				audioChunks.push(event.data);
-			};
-
-			mediaRecorder.onstop = async () => {
-				isRecording = false;
-				const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-				await transcribeAndAppend(audioBlob);
-				// Stop all tracks to release microphone
-				stream.getTracks().forEach((track) => track.stop());
-			};
-
-			mediaRecorder.onerror = (event) => {
-				console.error('MediaRecorder error:', event);
-				recordingError = m.recording_failed_error({
-					message: event.error?.message || 'Unknown error'
-				});
-				isRecording = false;
-				stream.getTracks().forEach((track) => track.stop());
-			};
-
-			mediaRecorder.start();
+			const { createDictation } = await import('$lib/client/audio/stt-capture.js');
+			dictation = createDictation({
+				send: sendChunk,
+				// A failed chunk abandons the stream rather than retrying it:
+				// ordering is load-bearing, so a re-sent chunk arriving after a
+				// later one would corrupt everything following it.
+				onError: (e: Error) => {
+					recordingError = m.transcription_failed_message({ message: e.message });
+					stopRecording();
+				}
+			});
+			await dictation.start();
 			isRecording = true;
-		} catch (err) {
+		} catch (err: any) {
 			console.error('Error accessing microphone:', err);
 			recordingError = m.microphone_access_error();
 			isRecording = false;
+			dictation = null;
 		}
 	}
 
-	function stopRecording() {
-		if (isRecording && mediaRecorder) {
-			mediaRecorder.stop();
-		} else if (isTranscribing && abortController) {
-			// If not recording but transcribing, cancel the transcription
-			abortController.abort();
-			console.log('Transcription cancelled by user.');
-			recordingError = m.transcription_cancelled_message();
-			isTranscribing = false;
-			abortController = null;
-		}
-	}
-
-	async function transcribeAndAppend(audioBlob: Blob) {
+	async function stopRecording() {
+		// `isTranscribing` guards re-entry: the button stays mounted while stop()
+		// awaits the final chunk, and a second click would run the teardown twice.
+		if (!dictation || isTranscribing) return;
+		isRecording = false;
+		// stop() flushes the final partial chunk and waits for it to land, so
+		// the UI is only re-enabled once the last words have actually arrived.
 		isTranscribing = true;
-		recordingError = null; // Clear previous errors
-		abortController = new AbortController(); // Create a new AbortController for this transcription
-		const { signal } = abortController;
-
 		try {
-			const formData = new FormData();
-			formData.append('audio', audioBlob, `audio-${Date.now()}.webm`);
-
-			const response = await fetch(`/api/transcribe?lang=${selectedLanguage}`, {
-				method: 'POST',
-				body: formData,
-				signal // Pass the abort signal to the fetch request
-			});
-
-			if (!response.ok) {
-				const errorData = await response.json();
-				throw new Error(errorData.message || 'Failed to transcribe audio');
-			}
-
-			const result = await response.json();
-			const transcription = result.transcription;
-
-			if (transcription) {
-				value = (value ? value + '\n' : '') + transcription;
-				onInput(value); // Call the callback prop
-			}
-		} catch (error: any) {
-			if (error.name === 'AbortError') {
-				console.log('Fetch aborted by user.');
-				recordingError = m.transcription_cancelled_message();
-			} else {
-				console.error('Transcription error:', error);
-				recordingError = m.transcription_failed_message({
-					message: error.message || 'Unknown error'
-				});
-			}
+			await dictation.stop();
+		} catch (err: any) {
+			recordingError = m.transcription_failed_message({ message: err.message || 'Unknown error' });
 		} finally {
+			dictation = null;
 			isTranscribing = false;
-			abortController = null; // Clear the controller
 		}
 	}
 
@@ -129,8 +117,9 @@
 			></textarea>
 			<div class="flex items-center space-x-2">
 				<button
-					on:click={isRecording || isTranscribing ? stopRecording : startRecording}
+					on:click={isRecording ? stopRecording : startRecording}
 					type="button"
+					disabled={isTranscribing}
 					class="btn {isRecording || isTranscribing ? 'btn-error' : 'btn-primary'} btn-sm"
 				>
 					{#if isRecording}
