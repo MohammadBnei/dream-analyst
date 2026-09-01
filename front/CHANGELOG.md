@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.31.1](https://github.com/MohammadBnei/dream-analyst/compare/0.31.0...0.31.1) (2026-09-01)
+
+### Bug Fixes
+
+* **stt:** key the session HMAC on the STT token, not JWT_SECRET ([#14](https://github.com/MohammadBnei/dream-analyst/issues/14)) ([78386dc](https://github.com/MohammadBnei/dream-analyst/commit/78386dc91edfe832319659983022d21dc3286a1b))
+
 # [0.31.0](https://github.com/MohammadBnei/dream-analyst/compare/0.30.2...0.31.0) (2026-09-01)
 
 ### Features
