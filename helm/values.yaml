@@ -37,6 +37,14 @@ readinessProbe:
 # universal-auth-credentials machine identity (namespace infisical) must be
 # granted access to this project in the Infisical UI first — separate grant
 # from the main infra-bootstrap project, same as pgweb/editable-blog's grants.
+# STT_TOKEN_DREAMER lives here AND in ukubi-stt's own project — deliberately two
+# copies, chosen over a cross-project read for simpler wiring.
+#
+# THE COST, so it is not discovered during an incident: rotating that credential
+# means editing BOTH projects. ukubi-stt validates against its copy; this app
+# presents ours. Change one and dictation fails with UNAUTHENTICATED, which
+# surfaces as a 503 from /api/transcribe and reads like the GPU node being down
+# rather than a secret mismatch.
 infisical:
   enabled: true
   projectSlug: "dream-analyst-8-fxf"
