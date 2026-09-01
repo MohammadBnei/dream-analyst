@@ -10,6 +10,10 @@
 	let isRecording = false;
 	let recordingError: string | null = null;
 	let isTranscribing = false;
+	/** True between the click and audio actually being captured. Even fully
+	 *  warmed, getUserMedia takes 100-300ms, and a button that looks ready while
+	 *  the graph is still being built invites the words that then go missing. */
+	let isArming = false;
 	let selectedLanguage: 'en' | 'fr' = 'fr'; // Changed default to French
 
 	// Streaming dictation. Text arrives roughly 560ms behind speech instead of
@@ -53,8 +57,25 @@
 		}
 	}
 
+	/** Build the AudioContext and compile the worklet BEFORE the click.
+	 *
+	 *  Neither touches the microphone, so this asks for no permission and lights
+	 *  no recording indicator — which is exactly why it can run on hover, before
+	 *  the user has committed to anything. Without it the click path is: fetch
+	 *  this module, construct a context, compile a worklet, THEN open the
+	 *  device — and the first words of the sentence land in that gap and are
+	 *  never captured. Memoised upstream, so repeated hovers are free. */
+	function warm() {
+		void import('$lib/client/audio/stt-capture.js')
+			.then((mod) => mod.prewarm())
+			.catch(() => {
+				/* warming is an optimisation; startRecording surfaces real failures */
+			});
+	}
+
 	async function startRecording() {
 		recordingError = null;
+		isArming = true;
 		appendedAny = false;
 		streamId = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now());
 		try {
@@ -76,6 +97,8 @@
 			recordingError = m.microphone_access_error();
 			isRecording = false;
 			dictation = null;
+		} finally {
+			isArming = false;
 		}
 	}
 
@@ -118,8 +141,11 @@
 			<div class="flex items-center space-x-2">
 				<button
 					on:click={isRecording ? stopRecording : startRecording}
+					on:pointerenter={warm}
+					on:pointerdown={warm}
+					on:focus={warm}
 					type="button"
-					disabled={isTranscribing}
+					disabled={isTranscribing || isArming}
 					class="btn {isRecording || isTranscribing ? 'btn-error' : 'btn-primary'} btn-sm"
 				>
 					{#if isRecording}
@@ -148,6 +174,9 @@
 							></path></svg
 						>
 						{m.cancel_transcription_button()}
+					{:else if isArming}
+						<span class="loading loading-spinner loading-xs"></span>
+						{m.starting_recording_button()}
 					{:else}
 						<svg
 							class="inline-block h-5 w-5"
