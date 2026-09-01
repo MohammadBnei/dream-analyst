@@ -3,11 +3,15 @@ import { initiateAudioTranscription } from '$lib/server/n8nService';
 import * as v from 'valibot';
 import { error } from '@sveltejs/kit';
 
-// Same helper as dream.remote.ts. A SvelteKit `command` compiles to an
-// addressable POST endpoint, so it is reachable whether or not any component
-// imports it — this one had no caller and no auth check, which made audio
-// transcription (and the n8n spend behind it) available to anyone who found
-// the route.
+// A SvelteKit `command` compiles to an addressable POST endpoint, so it is
+// reachable whether or not any component imports it. This one had no caller and
+// no auth check at all, which left audio transcription — and the n8n spend
+// behind it — open to anyone who found the route on a public host.
+//
+// Duplicated from dream.remote.ts rather than extracted: there is no shared
+// helper today (`lib/server/auth.ts` is JWT/cookie primitives, and this one is
+// private), and hoisting it would touch dream.remote.ts, which the open refactor
+// PR #10 also modifies. Extract once that lands.
 async function getCurrentUser() {
 	const event = getRequestEvent();
 	if (!event?.locals.user) {
@@ -37,9 +41,12 @@ export const transcribeAudio = command(
 
 			const result = await initiateAudioTranscription(audioFile, lang);
 			return result.transcription;
-		} catch (error) {
-			console.error('Error in remote transcribeAudio function:', error);
-			throw new Error(`Transcription failed: ${(error as Error).message}`);
+		} catch (e) {
+			// `e`, not `error` — this file now imports `error` from
+			// @sveltejs/kit, and shadowing it here would hide the helper that
+			// throws the 401. dream.remote.ts uses `e` for the same reason.
+			console.error('Error in remote transcribeAudio function:', e);
+			throw new Error(`Transcription failed: ${(e as Error).message}`);
 		}
 	}
 );
