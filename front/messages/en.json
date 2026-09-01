@@ -104,6 +104,7 @@
 	"stop_recording_button": "Stop Recording",
 	"cancel_transcription_button": "Cancel Transcription",
 	"record_audio_button": "Record Audio",
+	"starting_recording_button": "Starting…",
 	"language_english_option": "English",
 	"language_french_option": "Français",
 	"transcribing_audio_message": "Transcribing audio...",
