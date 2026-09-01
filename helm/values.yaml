@@ -37,6 +37,14 @@ readinessProbe:
 # universal-auth-credentials machine identity (namespace infisical) must be
 # granted access to this project in the Infisical UI first — separate grant
 # from the main infra-bootstrap project, same as pgweb/editable-blog's grants.
+# STT_TOKEN_DREAMER lives here AND in ukubi-stt's own project — deliberately two
+# copies, chosen over a cross-project read for simpler wiring.
+#
+# THE COST, so it is not discovered during an incident: rotating that credential
+# means editing BOTH projects. ukubi-stt validates against its copy; this app
+# presents ours. Change one and dictation fails with UNAUTHENTICATED, which
+# surfaces as a 503 from /api/transcribe and reads like the GPU node being down
+# rather than a secret mismatch.
 infisical:
   enabled: true
   projectSlug: "dream-analyst-8-fxf"
@@ -44,70 +52,9 @@ infisical:
   secretsPath: "/"
   secretName: managed-dream-analyst-secret
 
-# STT_TOKEN_DREAMER lives in ukubi-stt's Infisical project, not this app's, and
-# is read from there rather than copied here. One secret, one place to rotate —
-# two copies is how a rotation half-lands and the failure looks like a registry
-# problem three days later.
-#
-# Scoped to that ONE secret (see secretName below), so this namespace never
-# holds the rest of that project.
-#
-# This works because every app authenticates to Infisical with the same
-# universal-auth machine identity (the chart's credentialsRef default), so the
-# only thing scoping access is the projectSlug below.
-envFrom:
-  - secretRef:
-      name: managed-stt-token-secret
-      # optional, deliberately. A non-optional envFrom against a missing secret
-      # is a HARD pod failure — so a problem fetching one feature's credential
-      # would take the whole dream journal down. With this, the app starts and
-      # dictation reports 'STT_TOKEN_DREAMER is not set' instead. ADR-0044
-      # already says STT is allowed to be unavailable; this keeps that promise
-      # from being quietly broken by the wiring around it.
-      optional: true
-
 # Legacy cluster fronted this with a cert-manager Certificate — forbidden
 # pattern here (ADR-0001), certResolver: le (chart default) replaces it.
 extraManifests:
-  - |
-    # A SECOND InfisicalSecret, pointing at a different project. The chart's
-    # own `infisical:` block handles one project; this app needs a credential
-    # that is owned by another service and must stay owned there.
-    #
-    # PreSync with the same early wave as the chart's own CR, for the same
-    # reason its comment gives: the managed secret has to exist before anything
-    # envFroms it.
-    apiVersion: secrets.infisical.com/v1alpha1
-    kind: InfisicalSecret
-    metadata:
-      name: {{ .Release.Name }}-stt-token
-      namespace: {{ .Release.Namespace }}
-      annotations:
-        argocd.argoproj.io/hook: PreSync
-        argocd.argoproj.io/sync-wave: "-10"
-    spec:
-      hostAPI: {{ .Values.infisical.hostAPI }}
-      resyncInterval: {{ .Values.infisical.resyncInterval }}
-      authentication:
-        universalAuth:
-          secretsScope:
-            projectSlug: ukubi-stt-bhr-m
-            envSlug: dev
-            secretsPath: "/"
-            # ONE secret, not the project. Without this the operator syncs the
-            # whole of ukubi-stt-bhr-m into this namespace — which includes
-            # REGISTRY_PASSWORD (push rights on the registry every node pulls
-            # from) and agent-fleet's token. Verified by applying it: the
-            # managed secret came back with five keys, four of which this app
-            # has no business holding.
-            secretName: STT_TOKEN_DREAMER
-          credentialsRef:
-            secretName: {{ .Values.infisical.credentialsRef.secretName }}
-            secretNamespace: {{ .Values.infisical.credentialsRef.secretNamespace }}
-      managedSecretReference:
-        secretName: managed-stt-token-secret
-        secretNamespace: {{ .Release.Namespace }}
-        creationPolicy: Orphan
   - |
     apiVersion: traefik.io/v1alpha1
     kind: Middleware
