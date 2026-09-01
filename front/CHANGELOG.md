@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.31.3](https://github.com/MohammadBnei/dream-analyst/compare/0.31.2...0.31.3) (2026-09-01)
+
+### Bug Fixes
+
+* **stt:** warm the audio graph before the click, and show arming ([#16](https://github.com/MohammadBnei/dream-analyst/issues/16)) ([131f32b](https://github.com/MohammadBnei/dream-analyst/commit/131f32bd76e97fe0c3444344ff176e5842757ac8))
+
 ## [0.31.2](https://github.com/MohammadBnei/dream-analyst/compare/0.31.1...0.31.2) (2026-09-01)
 
 ### Bug Fixes
