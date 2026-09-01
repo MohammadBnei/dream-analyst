@@ -1,5 +1,11 @@
 # Changelog
 
+# [0.31.0](https://github.com/MohammadBnei/dream-analyst/compare/0.30.2...0.31.0) (2026-09-01)
+
+### Features
+
+* **stt:** stream dictation to ukubi-stt, replacing the n8n webhook ([#13](https://github.com/MohammadBnei/dream-analyst/issues/13)) ([a88cdef](https://github.com/MohammadBnei/dream-analyst/commit/a88cdeff93f4661189fc8f4f5e40194bfb4153ce))
+
 ## [0.30.2](https://github.com/MohammadBnei/dream-analyst/compare/0.30.1...0.30.2) (2026-09-01)
 
 ### Bug Fixes
