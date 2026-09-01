@@ -49,6 +49,9 @@ infisical:
 # two copies is how a rotation half-lands and the failure looks like a registry
 # problem three days later.
 #
+# Scoped to that ONE secret (see secretName below), so this namespace never
+# holds the rest of that project.
+#
 # This works because every app authenticates to Infisical with the same
 # universal-auth machine identity (the chart's credentialsRef default), so the
 # only thing scoping access is the projectSlug below.
@@ -91,6 +94,13 @@ extraManifests:
             projectSlug: ukubi-stt-bhr-m
             envSlug: dev
             secretsPath: "/"
+            # ONE secret, not the project. Without this the operator syncs the
+            # whole of ukubi-stt-bhr-m into this namespace — which includes
+            # REGISTRY_PASSWORD (push rights on the registry every node pulls
+            # from) and agent-fleet's token. Verified by applying it: the
+            # managed secret came back with five keys, four of which this app
+            # has no business holding.
+            secretName: STT_TOKEN_DREAMER
           credentialsRef:
             secretName: {{ .Values.infisical.credentialsRef.secretName }}
             secretNamespace: {{ .Values.infisical.credentialsRef.secretNamespace }}
