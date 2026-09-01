@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.30.2](https://github.com/MohammadBnei/dream-analyst/compare/0.30.1...0.30.2) (2026-09-01)
+
+### Bug Fixes
+
+* **security:** authenticate the transcribeAudio remote command ([#12](https://github.com/MohammadBnei/dream-analyst/issues/12)) ([a6bbdde](https://github.com/MohammadBnei/dream-analyst/commit/a6bbdde992f0b8dd27fc9b742835db838cc58fcf)), closes [#10](https://github.com/MohammadBnei/dream-analyst/issues/10)
+
 ## [0.30.1](https://github.com/MohammadBnei/dream-analyst/compare/0.30.0...0.30.1) (2026-08-11)
 
 ### Bug Fixes
