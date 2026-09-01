@@ -55,6 +55,13 @@ infisical:
 envFrom:
   - secretRef:
       name: managed-stt-token-secret
+      # optional, deliberately. A non-optional envFrom against a missing secret
+      # is a HARD pod failure — so a problem fetching one feature's credential
+      # would take the whole dream journal down. With this, the app starts and
+      # dictation reports 'STT_TOKEN_DREAMER is not set' instead. ADR-0044
+      # already says STT is allowed to be unavailable; this keeps that promise
+      # from being quietly broken by the wiring around it.
+      optional: true
 
 # Legacy cluster fronted this with a cert-manager Certificate — forbidden
 # pattern here (ADR-0001), certResolver: le (chart default) replaces it.
