@@ -206,7 +206,7 @@ export class StreamProcessor {
 		activeStreamProcessors.delete(this.streamId); // Remove from map on completion/close
 	}
 
-	private async handleStreamAbort(reason: any): Promise<void> {
+	private async handleStreamAbort(reason: unknown): Promise<void> {
 		const errorMessage =
 			reason instanceof Error ? reason.message : String(reason || 'Unknown error');
 		console.error(`Stream ${this.streamId}: Processor aborted:`, errorMessage);

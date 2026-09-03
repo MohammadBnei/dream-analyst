@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { invalidateAll, goto } from '$app/navigation';
 	import DreamCard from '$lib/client/components/DreamCard.svelte';
 	import DreamPagination from '$lib/client/components/DreamPagination.svelte';
@@ -39,12 +40,19 @@
 		newSortBy: 'dreamDate' | 'title' = sortBy,
 		newSortOrder: 'asc' | 'desc' = sortOrder
 	) {
+		// Local throwaway used to build a URL, not reactive state.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const params = new URLSearchParams();
 		if (newQuery) params.set('query', newQuery);
 		if (newPage !== 1) params.set('page', String(newPage));
 		if (newSortBy !== 'dreamDate') params.set('sortBy', newSortBy); // Only set if not default 'dreamDate'
 		if (newSortOrder !== 'desc') params.set('sortOrder', newSortOrder); // Only set if not default 'desc'
-		await goto(`?${params.toString()}`);
+		const query = params.toString();
+		// Search-only navigation on the current route: there is no pathname to
+		// rewrite, so resolve() would add nothing. The rule only accepts a literal
+		// resolve() call as the argument, hence the scoped exception.
+		// eslint-disable-next-line svelte/no-navigation-without-resolve
+		await goto(query ? `?${query}` : '?');
 	}
 
 	async function handleSearch(query: string) {
@@ -80,7 +88,7 @@
 <div class="container mx-auto max-w-4xl md:p-4">
 	<div class="mb-6 flex items-center justify-between">
 		<h1 class="text-3xl font-bold">{m.your_dreams_title()}</h1>
-		<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
+		<a href={resolve('/dreams/new')} class="btn btn-primary">{m.add_new_dream_button()}</a>
 	</div>
 
 	<div class="mb-6">

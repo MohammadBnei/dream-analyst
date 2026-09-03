@@ -1,7 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { invalidate } from '$app/navigation';
-	import { onMount, tick } from 'svelte';
+	import { onMount } from 'svelte';
 	import { ClientChatService } from '../services/chatService';
 	import { Streamdown } from 'svelte-streamdown';
 

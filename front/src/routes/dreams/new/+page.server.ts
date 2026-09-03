@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { Actions } from './$types';
-import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
+import { DreamStatus, type Dream } from '@prisma/client';
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
 import { parseDreamDate } from '$lib/server/dreamDate';
 
@@ -32,22 +32,27 @@ export const actions: Actions = {
 		let validatedData;
 		try {
 			validatedData = v.parse(CreateDreamSchema, { rawText, dreamDate });
-		} catch (e: any) {
-			const issues = e.issues.map((issue: any) => issue.message);
-			return fail(400, { rawText, dreamDate, error: issues.join(', ') });
+		} catch (e) {
+			if (!v.isValiError(e)) throw e;
+			return fail(400, {
+				rawText,
+				dreamDate,
+				error: e.issues.map((issue) => issue.message).join(', ')
+			});
 		}
 
 		const prisma = await getPrismaClient();
 		const dreamAnalysisService = getDreamAnalysisService();
 
+		let newDream: Dream;
 		try {
-			let newDream = await prisma.dream.create({
+			newDream = await prisma.dream.create({
 				data: {
 					userId: sessionUser.id,
 					rawText: validatedData.rawText,
 					// undefined => Prisma falls back to the schema default (now())
 					dreamDate: parseDreamDate(validatedData.dreamDate),
-					status: DreamStatus.PENDING_ANALYSIS // Use enum
+					status: DreamStatus.PENDING_ANALYSIS
 				}
 			});
 
@@ -60,17 +65,13 @@ export const actions: Actions = {
 				),
 				dreamAnalysisService.findAndSetRelatedDreams(newDream)
 			]);
-
-			// --- End New Sequential Logic ---
-
-			throw redirect(303, `/dreams/${newDream.id}`);
-		} catch (e: any) {
+		} catch (e) {
 			console.error('Error saving dream:', e);
-			if (e.status === 303) {
-				// Re-throw redirect
-				throw e;
-			}
 			return fail(500, { rawText, dreamDate, error: 'Failed to save dream. Please try again.' });
 		}
+
+		// Outside the try: redirect() signals by throwing, so inside it the catch
+		// swallowed the redirect and it had to be re-thrown by inspecting e.status.
+		redirect(303, `/dreams/${newDream.id}`);
 	}
 };

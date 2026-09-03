@@ -67,7 +67,7 @@
 		<div class="mb-4">
 			<h3 class="mb-2 text-lg font-medium">{m.tags_heading()}:</h3>
 			<div class="flex flex-wrap gap-2">
-				{#each tags as tag}
+				{#each tags as tag (tag)}
 					<span class="badge {getStatusBadgeClass(status)} badge-lg">{tag}</span>
 				{/each}
 			</div>

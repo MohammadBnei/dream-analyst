@@ -3,6 +3,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
+import type { Prisma } from '@prisma/client';
 
 const DEFAULT_PAGE_SIZE = 10;
 const MAX_PAGE_SIZE = 100;
@@ -42,7 +43,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const skip = (page - 1) * pageSize;
 	const take = pageSize;
 
-	let whereClause: any = {
+	let whereClause: Prisma.DreamWhereInput = {
 		userId: sessionUser.id
 	};
 

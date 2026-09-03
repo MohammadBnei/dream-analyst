@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 
 	let { dreamDate, prevDreamId, nextDreamId } = $props();
@@ -7,7 +8,7 @@
 <div class="mb-4 flex-col items-center justify-between">
 	<div class="my-2 flex items-center gap-2">
 		{#if prevDreamId}
-			<a href="/dreams/{prevDreamId}" class="btn btn-outline btn-sm">
+			<a href={resolve('/dreams/[id]', { id: prevDreamId })} class="btn btn-outline btn-sm">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-4 w-4"
@@ -27,7 +28,7 @@
 		{/if}
 
 		{#if nextDreamId}
-			<a href="/dreams/{nextDreamId}" class="btn btn-outline btn-sm">
+			<a href={resolve('/dreams/[id]', { id: nextDreamId })} class="btn btn-outline btn-sm">
 				{m.next_dream_button()}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

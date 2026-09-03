@@ -51,7 +51,7 @@
 				{/if}
 			{/if}
 
-			{#each pageNumbers as pageNum}
+			{#each pageNumbers as pageNum (pageNum)}
 				<button
 					class="btn join-item {currentPage === pageNum ? 'btn-active' : ''}"
 					onclick={() => onPageChange(pageNum)}

@@ -7,13 +7,9 @@
 	let { rawText, onUpdate } = $props();
 
 	let isEditing = $state(false);
-	let editedRawText = $state(rawText);
+	let editedRawText = $derived(rawText);
 	let isSavingEdit = $state(false);
 	let editError = $state<string | null>(null);
-
-	$effect(() => {
-		editedRawText = rawText;
-	});
 
 	function toggleEditMode() {
 		isEditing = !isEditing;

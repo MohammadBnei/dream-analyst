@@ -20,8 +20,8 @@ declare global {
 		// interface Error {}
 		// interface PageData {}
 
-		interface Dream extends IDream {}
-		interface ChatMessage extends DreamChat {}
+		type Dream = IDream;
+		type ChatMessage = DreamChat;
 		interface AnalysisStreamChunk {
 			content?: string;
 			tags?: string[];

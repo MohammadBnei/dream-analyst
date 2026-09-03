@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.ico';
 	import * as m from '$lib/paraglide/messages';
@@ -79,16 +80,16 @@
 				</label>
 			</div>
 			<div class="mx-2 flex-1 px-2 text-xl font-bold">
-				<a href="/" class="btn btn-ghost text-xl">{m.app_name()}</a>
+				<a href={resolve('/')} class="btn btn-ghost text-xl">{m.app_name()}</a>
 			</div>
 			<div class="hidden flex-none lg:block">
 				<ul class="menu menu-horizontal">
 					<!-- Navbar menu content here -->
 					{#if isLoggedIn}
-						<li><a href="/dreams">{m.dreams_link()}</a></li>
-						<li><a href="/profile">{m.profile_link()}</a></li>
+						<li><a href={resolve('/dreams')}>{m.dreams_link()}</a></li>
+						<li><a href={resolve('/profile')}>{m.profile_link()}</a></li>
 						{#if isAdmin}
-							<li><a href="/admin">{m.admin_link()}</a></li>
+							<li><a href={resolve('/admin')}>{m.admin_link()}</a></li>
 						{/if}
 						<li>
 							<form action="/logout" method="POST">
@@ -96,7 +97,7 @@
 							</form>
 						</li>
 					{:else}
-						<li><a href="/login">{m.login_link()}</a></li>
+						<li><a href={resolve('/login')}>{m.login_link()}</a></li>
 					{/if}
 					<li>
 						<!-- Theme switch toggle -->
@@ -137,12 +138,12 @@
 		<label for="my-drawer-3" aria-label="close sidebar" class="drawer-overlay"></label>
 		<ul class="menu min-h-full w-80 bg-base-200 p-4">
 			<!-- Sidebar content here -->
-			<li><a href="/">{m.home_link()}</a></li>
+			<li><a href={resolve('/')}>{m.home_link()}</a></li>
 			{#if isLoggedIn}
-				<li><a href="/dreams">{m.dreams_link()}</a></li>
-				<li><a href="/profile">{m.profile_link()}</a></li>
+				<li><a href={resolve('/dreams')}>{m.dreams_link()}</a></li>
+				<li><a href={resolve('/profile')}>{m.profile_link()}</a></li>
 				{#if isAdmin}
-					<li><a href="/admin">{m.admin_link()}</a></li>
+					<li><a href={resolve('/admin')}>{m.admin_link()}</a></li>
 				{/if}
 				<li>
 					<form action="/logout" method="POST">
@@ -150,7 +151,7 @@
 					</form>
 				</li>
 			{:else}
-				<li><a href="/login">{m.login_link()}</a></li>
+				<li><a href={resolve('/login')}>{m.login_link()}</a></li>
 			{/if}
 			<li>
 				<!-- Theme switch toggle for sidebar -->

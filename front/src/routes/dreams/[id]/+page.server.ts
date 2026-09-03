@@ -2,7 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types';
-import { error, json } from '@sveltejs/kit'; // Import json
+import { error } from '@sveltejs/kit';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
@@ -58,7 +58,7 @@ const SearchDreamsSchema = v.object({
 	query: v.pipe(v.string(), v.minLength(3, 'Search query must be at least 3 characters long.'))
 });
 
-export const load: PageServerLoad = async ({ params, locals, url }) => {
+export const load: PageServerLoad = async ({ params, locals }) => {
 	const dreamId = params.id;
 	const sessionUser = locals.user;
 

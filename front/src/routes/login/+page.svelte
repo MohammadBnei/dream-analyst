@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ActionData } from './$types';
 	import * as m from '$lib/paraglide/messages';
 
@@ -42,7 +43,9 @@
 						required
 					/>
 					<label class="label">
-						<a href="/register" class="label-text-alt link link-hover">{m.no_account_link()}</a>
+						<a href={resolve('/register')} class="label-text-alt link link-hover"
+							>{m.no_account_link()}</a
+						>
 					</label>
 				</div>
 				{#if form?.message}

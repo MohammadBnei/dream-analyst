@@ -84,7 +84,7 @@
 					onchange={handlePromptTypeChange}
 					disabled={isLoadingStream}
 				>
-					{#each availablePromptTypes as type}
+					{#each availablePromptTypes as type (type)}
 						<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
 					{/each}
 				</select>

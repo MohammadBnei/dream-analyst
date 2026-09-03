@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
@@ -17,7 +18,7 @@
 	let { dreamId, relatedDreams }: Props = $props();
 
 	let isEditing = $state(false);
-	let currentRelatedIds = $state<string[]>(relatedDreams.map((d) => d.id || ''));
+	let currentRelatedIds = $derived(relatedDreams.map((d) => d.id || ''));
 	let searchQuery = $state('');
 	let searchResults = $state<Partial<App.Dream>[]>([]);
 	let isSearching = $state(false);
@@ -28,13 +29,8 @@
 	let isRegeneratingRelatedDreams = $state(false);
 	let isDeletingRelated = $state<{ [key: string]: boolean }>({}); // Track deletion state for each related dream
 
-	// Effect to update currentRelatedIds when relatedDreams prop changes
-	$effect(() => {
-		currentRelatedIds = relatedDreams.map((d) => d.id || '');
-	});
-
 	function navigateToDream(id: string) {
-		goto(`/dreams/${id}`);
+		goto(resolve('/dreams/[id]', { id }));
 	}
 
 	function handleEditClick() {
@@ -265,7 +261,7 @@
 					<p class="text-sm text-gray-500">Searching...</p>
 				{:else if searchResults.length > 0}
 					<ul class="menu w-full rounded-box bg-base-200">
-						{#each searchResults.filter((d) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')) as dream}
+						{#each searchResults.filter((d) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')) as dream (dream.id)}
 							<li>
 								<span class="btn" onclick={() => handleAddRelated(dream)}>
 									{dream.title ||

@@ -1,13 +1,14 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
+	import type { EnhanceResult } from '$lib/client/enhance';
 
 	let { onDeleteSuccess } = $props();
 
 	let isDeleting = $state(false);
 	let deleteError = $state<string | null>(null);
 
-	async function handleDelete({ update }: any) {
+	const handleDelete: EnhanceResult = async ({ update }) => {
 		isDeleting = true;
 		deleteError = null;
 		await update();
@@ -16,7 +17,7 @@
 		const checkbox = document.getElementById('delete_dream_modal') as HTMLInputElement;
 		if (checkbox) checkbox.checked = false;
 		onDeleteSuccess(); // Notify parent that deletion was attempted
-	}
+	};
 </script>
 
 <!-- Delete Confirmation Checkbox Modal -->

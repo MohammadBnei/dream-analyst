@@ -5,7 +5,6 @@ import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
 import { DreamStatus } from '@prisma/client';
 import type Redis from 'ioredis';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
 
 const encoder = new TextEncoder();
 
@@ -30,7 +29,8 @@ export async function GET({ params, locals, platform, request }) {
 
 	const streamStateStore = await getStreamStateStore();
 	const prisma = await getPrismaClient();
-	const creditService = getCreditService();
+	// NOTE: no credit check happens here. Analysis triggered directly through this
+	// endpoint is currently uncharged; charging is added with the credit work.
 
 	const dream = await prisma.dream.findUnique({
 		where: { id: dreamId }

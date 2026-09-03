@@ -1,14 +1,8 @@
 import { chromium, expect, type FullConfig } from '@playwright/test';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 // Load environment variables from .env file
 dotenv.config();
-
-// Get __dirname equivalent in ES module
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 async function globalSetup(config: FullConfig) {
 	const { baseURL, storageState } = config.projects[0].use;

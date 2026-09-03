@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import type { SubmitFunction } from '@sveltejs/kit'; // Import enhance
@@ -168,7 +169,7 @@
 		{/if}
 	</div>
 	<div class="mt-2 flex w-full justify-between">
-		<a href="/dreams" class="btn btn-ghost">
+		<a href={resolve('/dreams')} class="btn btn-ghost">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				class="h-5 w-5"

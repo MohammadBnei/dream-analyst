@@ -104,7 +104,9 @@ class CreditService {
 			if (error instanceof PrismaClientKnownRequestError && error.code === 'P2002') {
 				// Handle unique constraint violation for relatedChatMessageId if it occurs
 				console.error('Unique constraint violation for relatedChatMessageId:', error);
-				throw new Error('A credit transaction for this chat message already exists.');
+				throw new Error('A credit transaction for this chat message already exists.', {
+					cause: error
+				});
 			}
 			console.error(`Failed to deduct credits for user ${userId}:`, error);
 			throw error;

@@ -132,7 +132,7 @@
 								value={user.role}
 								onchange={(e) => handleRoleChange(user.id, e)}
 							>
-								{#each userRoles as role}
+								{#each userRoles as role (role)}
 									<option value={role}>{role}</option>
 								{/each}
 							</select>

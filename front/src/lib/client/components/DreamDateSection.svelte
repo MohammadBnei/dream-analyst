@@ -6,13 +6,9 @@
 	let { dreamDate, onUpdate } = $props();
 
 	let isEditingDreamDate = $state(false);
-	let editedDreamDate = $state(dreamDate ? new Date(dreamDate).toISOString().split('T')[0] : '');
+	let editedDreamDate = $derived(dreamDate ? new Date(dreamDate).toISOString().split('T')[0] : '');
 	let isSavingDreamDate = $state(false);
 	let dreamDateEditError = $state<string | null>(null);
-
-	$effect(() => {
-		editedDreamDate = dreamDate ? new Date(dreamDate).toISOString().split('T')[0] : '';
-	});
 
 	function toggleDreamDateEditMode() {
 		isEditingDreamDate = !isEditingDreamDate;

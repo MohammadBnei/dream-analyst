@@ -93,7 +93,7 @@
 			});
 			await dictation.start();
 			isRecording = true;
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Error accessing microphone:', err);
 			recordingError = m.microphone_access_error();
 			isRecording = false;
@@ -113,8 +113,10 @@
 		isTranscribing = true;
 		try {
 			await dictation.stop();
-		} catch (err: any) {
-			recordingError = m.transcription_failed_message({ message: err.message || 'Unknown error' });
+		} catch (err) {
+			recordingError = m.transcription_failed_message({
+				message: err instanceof Error ? err.message : 'Unknown error'
+			});
 		} finally {
 			dictation = null;
 			isTranscribing = false;

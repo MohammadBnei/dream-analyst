@@ -1,4 +1,3 @@
-import { env } from '$env/dynamic/private';
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService } from '$lib/server/creditService'; // Import credit service

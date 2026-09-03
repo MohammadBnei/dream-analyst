@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { ChatOpenAI } from '@langchain/openai';
-import { BaseMessage, HumanMessage, SystemMessage } from '@langchain/core/messages'; // Import HumanMessage and SystemMessage
+import { BaseMessage, HumanMessage } from '@langchain/core/messages';
 
 const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
 const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
@@ -42,7 +42,7 @@ class LLMService {
 
 	/**
 	 * Streams a chat completion from the LLM.
-	 * @param messages An array of BaseMessage (SystemMessage, HumanMessage, AIMessage).
+	 * @param messages An array of BaseMessage (HumanMessage, AIMessage).
 	 * @param signal An AbortSignal to cancel the LLM request.
 	 * @returns An AsyncIterable<string> of raw LLM content (string chunks).
 	 */

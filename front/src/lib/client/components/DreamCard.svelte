@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { fade } from 'svelte/transition';
 	import * as m from '$lib/paraglide/messages';
 
@@ -61,6 +62,9 @@
 <li class="list-row" transition:fade>
 	<!-- Status Icon -->
 	<div class="flex items-center justify-center {getStatusColorClass(dream.status)}">
+		<!-- getStatusIcon returns one of four hardcoded SVG strings chosen by a
+		     DreamStatus enum value; no user input reaches it. -->
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 		{@html getStatusIcon(dream.status)}
 	</div>
 
@@ -134,7 +138,7 @@
 
 	<!-- View Details Button -->
 	<a
-		href={`/dreams/${dream.id}`}
+		href={resolve('/dreams/[id]', { id: dream.id })}
 		class="tooltip btn tooltip-left btn-square btn-primary"
 		data-tip={m.view_details_button()}
 		aria-label="go to details"
