@@ -131,6 +131,11 @@ export class StreamProcessor {
 		// only this path ever ran. Kept as the single behaviour.
 		backgroundProcessingPromise.catch((e) => {
 			console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
+			// The map entry was only removed by the WritableStream's close/abort
+			// callbacks. Any other rejection left a dead processor in the map forever,
+			// so every later request for this dream got the corpse back and the
+			// analysis could never restart.
+			activeStreamProcessors.delete(this.streamId);
 		});
 	}
 
@@ -249,8 +254,26 @@ export class StreamProcessor {
 const activeStreamProcessors = new Map<string, StreamProcessor>();
 
 /**
- * Initiates or retrieves an existing StreamProcessor for a given stream.
- * This factory function is responsible for creating the source stream (e.g., from n8n).
+ * Look up a running processor WITHOUT creating one.
+ *
+ * Split out from the factory because the cancel endpoint used to call the
+ * create-or-get form: cancelling an analysis that this process was not running
+ * would CREATE a processor, kick off a whole new LLM request, and then abort it -
+ * a spurious billed request per cancel, while the real analysis carried on. It
+ * also made the endpoint's `else` branch unreachable, since the factory never
+ * returns a falsy value.
+ *
+ * ponytail: process-local map, so this only sees analyses started by this pod.
+ * Recovery from a pod restart is Redis key expiry. Upgrade path if a second
+ * replica is ever added: publish cancellation on a Redis channel the owning pod
+ * subscribes to.
+ */
+export function getStreamProcessor(dreamId: string): StreamProcessor | undefined {
+	return activeStreamProcessors.get(dreamId);
+}
+
+/**
+ * Start analysis for a dream, or return the processor already running it.
  * @param dream The dream object.
  * @param platform The SvelteKit platform object.
  * @param promptType The type of prompt to use for analysis.

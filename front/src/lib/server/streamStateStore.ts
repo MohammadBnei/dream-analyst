@@ -1,5 +1,5 @@
 import Redis from 'ioredis';
-import { env } from '$env/dynamic/private';
+import { serverEnv } from '$lib/server/env';
 import { DreamStatus } from '@prisma/client';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
 
@@ -28,10 +28,7 @@ let publisherClient: Redis | null = null;
 
 export function getRedisPublisher(): Redis {
 	if (!publisherClient) {
-		if (!env.REDIS_URL) {
-			throw new Error('REDIS_URL is not defined');
-		}
-		publisherClient = new Redis(env.REDIS_URL);
+		publisherClient = new Redis(serverEnv().REDIS_URL);
 
 		publisherClient.on('connect', () => {
 			console.log('Redis publisher client connected.');
@@ -53,10 +50,7 @@ export async function closeRedisPublisher(): Promise<void> {
 }
 
 export function getRedisSubscriber(): Redis {
-	if (!env.REDIS_URL) {
-		throw new Error('REDIS_URL is not defined');
-	}
-	const subscriber = new Redis(env.REDIS_URL);
+	const subscriber = new Redis(serverEnv().REDIS_URL);
 	subscriber.on('error', (err) => {
 		console.error('Redis subscriber client error:', err);
 	});
@@ -239,18 +233,26 @@ class StreamStateStore {
 
 	async unsubscribeFromUpdates(subscriber: AisRedis, streamId: string): Promise<void> {
 		const channel = this.getChannel(streamId);
+		// This used to run only when status was 'connect' or 'connecting'. ioredis
+		// reports a fully established connection as 'ready', so the condition was
+		// false in the normal case, quit() never ran, and the "already disconnected"
+		// branch logged instead - leaking one connection per analysis stream, since
+		// getRedisSubscriber() opens a fresh client each time. Measured: three
+		// analyses took Redis from 3 to 6 clients.
+		//
+		// There is no state in which attempting to close is wrong, so just close and
+		// let the catch handle an already-dead client.
 		try {
-			if (subscriber.status === 'connect' || subscriber.status === 'connecting') {
-				await subscriber.unsubscribe(channel);
-				await subscriber.quit();
-				console.log(`Unsubscribed from Redis channel: ${channel} and quit client.`);
-			} else {
-				console.log(
-					`Redis subscriber for ${streamId} already disconnected or not connected. Status: ${subscriber.status}`
-				);
-			}
+			await subscriber.unsubscribe(channel);
 		} catch (e) {
-			console.error(`Error unsubscribing/quitting Redis client for ${streamId}:`, e);
+			console.warn(`Unsubscribe from ${channel} failed (continuing to quit):`, e);
+		}
+		try {
+			// disconnect() rather than quit() so a client that is mid-reconnect or
+			// already gone cannot hang this path.
+			subscriber.disconnect();
+		} catch (e) {
+			console.error(`Error disconnecting Redis subscriber for ${streamId}:`, e);
 		}
 	}
 

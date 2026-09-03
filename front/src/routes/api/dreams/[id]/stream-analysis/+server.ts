@@ -71,75 +71,74 @@ export async function GET({ params, locals, platform, request }) {
 
 		const clientStream = new ReadableStream({
 			async start(controller) {
-				// Send initial state from Redis (if available) or DB
-				const initialRedisState = await streamStateStore.getStreamState(dreamId);
-				const initialDream = await prisma.dream.findUnique({
-					where: { id: dreamId },
-					select: { interpretation: true, tags: true, status: true }
-				});
-
-				const initialContent =
-					initialRedisState?.interpretation || initialDream?.interpretation || '';
-				const initialTags =
-					(initialRedisState?.tags as string[]) || (initialDream?.tags as string[]) || [];
-				const initialStatus =
-					initialRedisState?.status || initialDream?.status || DreamStatus.PENDING_ANALYSIS;
-
-				controller.enqueue(
-					encoder.encode(
-						JSON.stringify({
-							content: initialContent,
-							tags: initialTags,
-							status: initialStatus
-						}) + '\n'
-					)
-				);
-
-				// Subscribe to Redis Pub/Sub for real-time updates
-				subscriberClient = streamStateStore.subscribeToUpdates(dreamId, (message) => {
-					if (streamClosed) return; // Do nothing if stream is already closed
-
-					// Check if controller is still readable before enqueueing
-					if (controller.desiredSize !== null && controller.desiredSize <= 0) {
-						console.debug(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
-						if (subscriberClient) {
-							streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-							subscriberClient = null;
-						}
-						if (!streamClosed) {
-							controller.close();
-							streamClosed = true;
-						}
-						return;
+				// One cleanup path. Previously the unsubscribe was written out three
+				// times (slow-client branch, finalStatus branch, cancel) and skipped
+				// entirely if start() threw after subscribing, leaking the connection.
+				const cleanup = async () => {
+					if (subscriberClient) {
+						const client = subscriberClient;
+						subscriberClient = null;
+						await streamStateStore.unsubscribeFromUpdates(client, dreamId);
 					}
+				};
+				const closeStream = async () => {
+					if (streamClosed) return;
+					streamClosed = true;
+					await cleanup();
+					controller.close();
+				};
 
-					// If the message contains a finalStatus, signal end of stream
-					if (message.finalStatus) {
+				try {
+					const initialRedisState = await streamStateStore.getStreamState(dreamId);
+					const initialDream = await prisma.dream.findUnique({
+						where: { id: dreamId },
+						select: { interpretation: true, tags: true, status: true }
+					});
+
+					controller.enqueue(
+						encoder.encode(
+							JSON.stringify({
+								content: initialRedisState?.interpretation || initialDream?.interpretation || '',
+								tags:
+									(initialRedisState?.tags as string[]) || (initialDream?.tags as string[]) || [],
+								status:
+									initialRedisState?.status || initialDream?.status || DreamStatus.PENDING_ANALYSIS
+							}) + '\n'
+						)
+					);
+
+					subscriberClient = streamStateStore.subscribeToUpdates(dreamId, (message) => {
+						if (streamClosed) return;
+
+						// Every message is enqueued. This used to close the stream when
+						// controller.desiredSize <= 0, treating a slow consumer as a reason
+						// to stop - which silently truncated the analysis mid-sentence for
+						// anyone on a poor connection. Published content is a DELTA, not the
+						// accumulated text, so a dropped frame loses words permanently.
+						//
+						// Buffering is bounded in practice: the LLM call caps at
+						// max_tokens (4096), so a whole analysis is on the order of tens of
+						// kilobytes even if the client reads none of it.
 						controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
-						console.debug(
-							`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`
-						);
-						if (subscriberClient) {
-							streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-							subscriberClient = null;
+
+						if (message.finalStatus) {
+							void closeStream();
 						}
-						if (!streamClosed) {
-							controller.close();
-							streamClosed = true;
-						}
-					} else {
-						// Otherwise, enqueue the update
-						controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
-					}
-				});
+					});
+				} catch (e) {
+					// Without this the subscriber above stayed open forever.
+					await cleanup();
+					controller.error(e);
+				}
 			},
 			async cancel() {
-				console.debug(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
-				if (subscriberClient) {
-					await streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-					subscriberClient = null;
-				}
+				// Fires when the client disconnects.
 				streamClosed = true;
+				if (subscriberClient) {
+					const client = subscriberClient;
+					subscriberClient = null;
+					await streamStateStore.unsubscribeFromUpdates(client, dreamId);
+				}
 			}
 		});
 

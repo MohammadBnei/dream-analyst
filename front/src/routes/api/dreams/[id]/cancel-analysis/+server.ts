@@ -2,10 +2,10 @@ import { error, json } from '@sveltejs/kit';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import { DreamStatus } from '@prisma/client';
-import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
+import { getStreamProcessor } from '$lib/server/streamProcessor';
 import { requireOwnedDream } from '$lib/server/guards';
 
-export async function POST({ params, locals, platform }) {
+export async function POST({ params, locals }) {
 	const dreamId = params.id;
 	if (!dreamId) error(400, 'Dream ID is required.');
 
@@ -17,12 +17,9 @@ export async function POST({ params, locals, platform }) {
 	const streamStateStore = await getStreamStateStore();
 
 	try {
-		// ponytail: getOrCreateStreamProcessor CREATES a processor when none is
-		// found, so cancelling on a pod that is not running the analysis starts a
-		// fresh one only to abort it. The lookup/start split that fixes this lands
-		// with the streaming-lifecycle work; leaving the existing behaviour here
-		// rather than half-changing it.
-		const processor = getOrCreateStreamProcessor(dream, platform);
+		// Lookup only - never create. Creating here would start a new LLM request
+		// purely in order to abort it.
+		const processor = getStreamProcessor(dreamId);
 
 		if (processor) {
 			processor.cancelStream();
