@@ -7,6 +7,7 @@ import { env } from '$env/dynamic/public';
 import { error, redirect } from '@sveltejs/kit';
 import { UserRole } from '@prisma/client';
 import { getPrismaClient } from '$lib/server/db';
+import { consumeRateLimit } from '$lib/server/rateLimit';
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -63,6 +64,77 @@ const handleAuth: Handle = async ({ event, resolve }) => {
  * /dreams/new previously had no load function at all, so an anonymous visitor
  * got the full form and only discovered the problem on submit.
  */
+/**
+ * Rate limits. Registration was completely unthrottled while granting credits on
+ * every signup, so the cheapest abuse path was: register, create a dream (which
+ * runs LLM calls), repeat.
+ *
+ * Keyed by user id where we have one, IP otherwise. Expensive endpoints are
+ * limited per user so one noisy network cannot lock out a shared office.
+ */
+const RATE_LIMITS: Array<{
+	bucket: string;
+	match: (pathname: string, method: string) => boolean;
+	limit: number;
+	windowSeconds: number;
+}> = [
+	{
+		bucket: 'login',
+		match: (p, m) => p === '/login' && m === 'POST',
+		limit: 10,
+		windowSeconds: 900
+	},
+	{
+		bucket: 'register',
+		match: (p, m) => p === '/register' && m === 'POST',
+		limit: 5,
+		windowSeconds: 3600
+	},
+	{
+		bucket: 'transcribe',
+		match: (p) => p.startsWith('/api/transcribe'),
+		limit: 120,
+		windowSeconds: 60
+	},
+	{
+		bucket: 'analysis',
+		match: (p) => p.startsWith('/api/dreams/') && p.endsWith('/stream-analysis'),
+		limit: 30,
+		windowSeconds: 3600
+	},
+	{
+		bucket: 'chat',
+		match: (p, m) => p.endsWith('/chat-interpretation') && m === 'POST',
+		limit: 60,
+		windowSeconds: 3600
+	}
+];
+
+const handleRateLimit: Handle = async ({ event, resolve }) => {
+	const rule = RATE_LIMITS.find((r) => r.match(event.url.pathname, event.request.method));
+	if (!rule) return resolve(event);
+
+	const identifier = event.locals.user?.id ?? event.getClientAddress();
+
+	let result;
+	try {
+		result = await consumeRateLimit(rule.bucket, identifier, rule);
+	} catch (e) {
+		// Fail OPEN. Redis being unreachable should not make the app unusable;
+		// readiness already reports the dependency as down.
+		console.error(`Rate limit check failed for ${rule.bucket}, allowing request:`, e);
+		return resolve(event);
+	}
+
+	if (!result.allowed) {
+		return new Response('Too Many Requests', {
+			status: 429,
+			headers: { 'Retry-After': String(result.retryAfterSeconds) }
+		});
+	}
+	return resolve(event);
+};
+
 const PROTECTED_PAGES = ['/dreams', '/profile', '/admin'];
 const PROTECTED_APIS = ['/api/dreams', '/api/transcribe'];
 
@@ -94,4 +166,10 @@ export const handleOrigin: Handle = async ({ event, resolve }) => {
 	return resolve(event);
 };
 
-export const handle: Handle = sequence(handleParaglide, handleAuth, handleRouteGuard, handleOrigin);
+export const handle: Handle = sequence(
+	handleParaglide,
+	handleAuth,
+	handleRateLimit,
+	handleRouteGuard,
+	handleOrigin
+);
