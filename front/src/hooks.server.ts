@@ -3,7 +3,6 @@ import { sequence } from '@sveltejs/kit/hooks';
 import * as auth from '$lib/server/auth';
 import type { Handle } from '@sveltejs/kit';
 import { paraglideMiddleware } from '$lib/paraglide/server';
-import { getPrismaClient } from '$lib/server/db';
 import { env } from '$env/dynamic/public';
 
 const handleParaglide: Handle = ({ event, resolve }) =>
@@ -46,15 +45,7 @@ export const handleOrigin: Handle = async ({ event, resolve }) => {
 	event.url = new URL(event.url.pathname + event.url.search, publicOrigin);
 
 	
-	const response = await resolve(event);
-	
-	if (event.url.pathname.startsWith('/_app/remote')) {
-		response.headers.set('Access-Control-Allow-Origin', publicOrigin); // Or '*'
-		response.headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-		response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-	}
-	
-	return response;
+	return resolve(event);
 };
 
 

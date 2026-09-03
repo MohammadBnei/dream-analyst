@@ -31,10 +31,7 @@
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
-	// isRegeneratingTitle is now managed locally within DreamHeader.svelte
 	// isUpdatingTitle is now managed locally within DreamHeader.svelte
-	let isUpdatingRelatedDreams = $state(false); // New state for updating related dreams
-	let isRegeneratingRelatedDreams = $state(false); // New state for regenerating related dreams
 
 	let analysisService: DreamAnalysisService | null = $state(null);
 	// ClientChatService is instantiated within DreamChatSection, so no need for a top-level state here.
@@ -166,97 +163,6 @@
 		invalidate('dream');
 	}
 
-	// handleRegenerateTitle function is removed as DreamHeader now handles its own form submission.
-	// async function handleRegenerateTitle() {
-	// 	if (!dream.id) {
-	// 		console.warn('Cannot regenerate title: dream ID is not available.');
-	// 		return;
-	// 	}
-	// 	isRegeneratingTitle = true;
-	// 	try {
-	// 		const response = await fetch(`/api/dreams/${dream.id}/regenerate-title`, {
-	// 			method: 'POST',
-	// 			headers: {
-	// 				'Content-Type': 'application/json'
-	// 			}
-	// 		});
-
-	// 		if (response.ok) {
-	// 			// On success, invalidate to re-fetch the dream with the new title
-	// 			await invalidate('dream');
-	// 		} else {
-	// 			const errorData = await response.json();
-	// 			console.error('Error regenerating title:', errorData.error);
-	// 			streamError = errorData.error;
-	// 		}
-	// 	} catch (error) {
-	// 		console.error('Network error regenerating title:', error);
-	// 		streamError = 'Network error regenerating title.';
-	// 	} finally {
-	// 		isRegeneratingTitle = false;
-	// 	}
-	// }
-
-	async function handleUpdateRelatedDreams(updatedRelatedIds: string[]) {
-		if (!dream.id) {
-			console.warn('Cannot update related dreams: dream ID is not available.');
-			return;
-		}
-		isUpdatingRelatedDreams = true;
-		const formData = new FormData();
-		formData.append('relatedDreamIds', JSON.stringify(updatedRelatedIds));
-
-		try {
-			const response = await fetch(`/dreams/${dream.id}?/updateRelatedDreams`, {
-				method: 'POST',
-				body: formData
-			});
-
-			if (response.ok) {
-				// On success, invalidate to re-fetch the dream with the new related dreams
-				await invalidate('dream');
-			} else {
-				const errorData = await response.json();
-				console.error('Error updating related dreams:', errorData.error);
-				streamError = errorData.error;
-			}
-		} catch (error) {
-			console.error('Network error updating related dreams:', error);
-			streamError = 'Network error updating related dreams.';
-		} finally {
-			isUpdatingRelatedDreams = false;
-		}
-	}
-
-	async function handleRegenerateRelatedDreams() {
-		if (!dream.id) {
-			console.warn('Cannot regenerate related dreams: dream ID is not available.');
-			return;
-		}
-		isRegeneratingRelatedDreams = true;
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}/regenerate-related-dreams`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (response.ok) {
-				// On success, invalidate to re-fetch the dream with the new related dreams
-				await invalidate('dream');
-			} else {
-				const errorData = await response.json();
-				console.error('Error regenerating related dreams:', errorData.error);
-				streamError = errorData.error;
-			}
-		} catch (error) {
-			console.error('Network error regenerating related dreams:', error);
-			streamError = 'Network error regenerating related dreams.';
-		} finally {
-			isRegeneratingRelatedDreams = false;
-		}
-	}
 </script>
 
 <div class="container mx-auto max-w-4xl md:p-4">
@@ -299,10 +205,6 @@
 				<DreamRelatedDreams
 					dreamId={dream.id}
 					relatedDreams={dream.relatedTo || []}
-					onUpdateRelatedDreams={handleUpdateRelatedDreams}
-					{isUpdatingRelatedDreams}
-					onRegenerateRelatedDreams={handleRegenerateRelatedDreams}
-					{isRegeneratingRelatedDreams}
 				/>
 
 				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />
