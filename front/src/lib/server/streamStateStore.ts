@@ -1,7 +1,7 @@
 import Redis from 'ioredis';
 import { serverEnv } from '$lib/server/env';
 import { DreamStatus } from '@prisma/client';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
+import type { DreamPromptType } from '$lib/promptTypes'; // Import DreamPromptType
 
 const REDIS_PREFIX = 'stream_state:';
 const REDIS_EXPIRATION_SECONDS = 60 * 3;

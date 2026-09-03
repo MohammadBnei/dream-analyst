@@ -2,7 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
-	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+	import type { DreamPromptType } from '$lib/promptTypes';
 
 	// New Components
 	import DreamHeader from '$lib/client/components/DreamHeader.svelte';

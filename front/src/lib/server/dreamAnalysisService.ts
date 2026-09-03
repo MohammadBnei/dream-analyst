@@ -1,6 +1,6 @@
 import type { Dream } from '@prisma/client';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { promptService } from '$lib/prompts/promptService';
+import type { DreamPromptType } from '$lib/promptTypes';
+import { promptService } from '$lib/server/prompts/promptService';
 import { getLLMService, type ChatMessage } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
 import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';

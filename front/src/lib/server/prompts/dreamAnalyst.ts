@@ -158,7 +158,6 @@ TONE AND ETHICS:
 - Do not state factual future events based on dreams. Dreams are indications, not guarantees.
 `;
 
-/** Single source of truth: the type is derived from this, so they cannot drift. */
-export const DREAM_PROMPT_TYPES = ['jungian', 'freudian', 'simple', 'islamic'] as const;
-
-export type DreamPromptType = (typeof DREAM_PROMPT_TYPES)[number];
+// DREAM_PROMPT_TYPES and DreamPromptType now live in $lib/promptTypes, which is
+// safe to import from the browser. This file holds the prompt text itself.
+export type { DreamPromptType } from '$lib/promptTypes';

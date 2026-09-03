@@ -1,7 +1,7 @@
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService, InsufficientCreditsError } from '$lib/server/creditService'; // Import credit service
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { promptService } from '$lib/prompts/promptService';
+import type { DreamPromptType } from '$lib/promptTypes';
+import { promptService } from '$lib/server/prompts/promptService';
 import { getLLMService, type ChatMessage } from './llmService';
 
 class ServerChatService {

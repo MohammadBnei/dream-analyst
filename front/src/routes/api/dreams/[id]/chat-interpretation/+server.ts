@@ -1,5 +1,5 @@
 import { error } from '@sveltejs/kit';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import type { DreamPromptType } from '$lib/promptTypes';
 import { getServerChatService } from '$lib/server/chatService';
 import { InsufficientCreditsError } from '$lib/server/creditService';
 import { requireUser, requireOwnedDream } from '$lib/server/guards';

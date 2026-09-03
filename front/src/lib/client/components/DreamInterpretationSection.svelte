@@ -4,8 +4,7 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import type { EnhanceResult } from '$lib/client/enhance';
-	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-	import { promptService } from '$lib/prompts/promptService';
+	import { DREAM_PROMPT_TYPES, type DreamPromptType } from '$lib/promptTypes';
 
 	let {
 		interpretation,
@@ -25,7 +24,10 @@
 
 	// Local state for the selected prompt type in the dropdown
 	let selectedPromptType: DreamPromptType = $state(promptType || 'jungian');
-	const availablePromptTypes: DreamPromptType[] = promptService.getAvailablePromptTypes();
+	// Was promptService.getAvailablePromptTypes(), which imported the prompt module
+	// as a VALUE purely to read four names - dragging every system prompt and both
+	// knowledge bases into the browser bundle.
+	const availablePromptTypes: readonly DreamPromptType[] = DREAM_PROMPT_TYPES;
 
 	// Effect to update local selectedPromptType when the prop changes (e.g., after a successful regeneration)
 	$effect(() => {

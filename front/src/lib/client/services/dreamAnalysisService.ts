@@ -1,5 +1,5 @@
 import { browser } from '$app/environment';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst'; // Import DreamPromptType
+import type { DreamPromptType } from '$lib/promptTypes'; // Import DreamPromptType
 
 interface StreamCallbacks {
 	onMessage: (data: App.AnalysisStreamChunk) => void;
