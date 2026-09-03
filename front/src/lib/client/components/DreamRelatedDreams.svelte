@@ -111,7 +111,7 @@
 				<button
 					class="btn btn-outline btn-sm"
 					onclick={handleEditClick}
-					aria-label="edit related dreams"
+					aria-label={m.aria_edit_related_dreams()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -167,7 +167,9 @@
 				<div class="badge gap-2 p-3 badge-info">
 					<button class="link" onclick={() => navigateToDream(relatedDream.id || '')}>
 						{relatedDream.title ||
-							(relatedDream.rawText ? relatedDream.rawText.substring(0, 30) + '...' : 'Untitled')}
+							(relatedDream.rawText
+								? relatedDream.rawText.substring(0, 30) + '...'
+								: m.untitled_dream())}
 					</button>
 					{#if isEditing}
 						<form
@@ -206,7 +208,7 @@
 			{/each}
 		</div>
 	{:else}
-		<p class="text-gray-500">{m.no_related_dreams()}</p>
+		<p class="text-base-content/60">{m.no_related_dreams()}</p>
 	{/if}
 
 	{#if isEditing}
@@ -252,22 +254,24 @@
 			</form>
 			<div class="mt-2">
 				{#if isSearching}
-					<p class="text-sm text-gray-500">Searching...</p>
+					<p class="text-sm text-base-content/60">{m.searching()}</p>
 				{:else if searchResults.length > 0}
 					<ul class="menu w-full rounded-box bg-base-200">
 						{#each searchResults.filter((d) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')) as dream (dream.id)}
 							<li>
-								<span class="btn" onclick={() => handleAddRelated(dream)}>
+								<!-- Was a <span> with a click handler: no role, no tabindex, no keyboard
+								     handler - and this is the primary action for linking a dream. -->
+								<button type="button" class="btn" onclick={() => handleAddRelated(dream)}>
 									{dream.title ||
-										(dream.rawText ? dream.rawText.substring(0, 50) + '...' : 'Untitled')}
-								</span>
+										(dream.rawText ? dream.rawText.substring(0, 50) + '...' : m.untitled_dream())}
+								</button>
 							</li>
 						{/each}
 					</ul>
 				{:else if searchQuery.length >= 3}
-					<p class="text-sm text-gray-500">{m.no_dreams_found()}</p>
+					<p class="text-sm text-base-content/60">{m.no_dreams_found()}</p>
 				{:else}
-					<p class="text-sm text-gray-500">{m.search_dreams_hint()}</p>
+					<p class="text-sm text-base-content/60">{m.search_dreams_hint()}</p>
 				{/if}
 			</div>
 		</div>

@@ -42,11 +42,11 @@
 						id="password"
 						required
 					/>
-					<label class="label">
+					<p class="label">
 						<a href={resolve('/register')} class="label-text-alt link link-hover"
 							>{m.no_account_link()}</a
 						>
-					</label>
+					</p>
 				</div>
 				{#if form?.message}
 					<div role="alert" class="mt-4 alert alert-error">

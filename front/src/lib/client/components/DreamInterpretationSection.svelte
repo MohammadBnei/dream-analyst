@@ -81,6 +81,7 @@
 			<div class="join join-vertical lg:join-horizontal">
 				<!-- Prompt Type Selector -->
 				<select
+					aria-label={m.aria_select_prompt_type()}
 					class="select-bordered select join-item select-sm"
 					bind:value={selectedPromptType}
 					onchange={handlePromptTypeChange}
@@ -136,7 +137,7 @@
 				<button
 					onclick={toggleInterpretationEditMode}
 					class="btn btn-ghost btn-sm"
-					aria-label="edit interpretation"
+					aria-label={m.aria_edit_interpretation()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"

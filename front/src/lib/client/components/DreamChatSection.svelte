@@ -149,7 +149,7 @@
 		<h3 class="mb-4 text-lg font-semibold">{m.chat_with_ai_heading()}</h3>
 		<label class="swap">
 			<input type="checkbox" bind:checked={isFullScreen} />
-			<div class="swap-on" aria-label="full screen">
+			<div class="swap-on" aria-label={m.aria_full_screen()}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -165,7 +165,7 @@
 					/>
 				</svg>
 			</div>
-			<div class="swap-off" aria-label="exit full screen">
+			<div class="swap-off" aria-label={m.aria_exit_full_screen()}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"

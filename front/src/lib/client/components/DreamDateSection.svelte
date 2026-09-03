@@ -43,7 +43,11 @@
 	<div class="mb-2 flex items-center justify-between">
 		<h3 class="font-semibold">{m.dream_date_label()} {new Date(dreamDate).toLocaleDateString()}</h3>
 		{#if !isEditingDreamDate}
-			<button onclick={toggleDreamDateEditMode} class="btn btn-ghost btn-sm" aria-label="edit date">
+			<button
+				onclick={toggleDreamDateEditMode}
+				class="btn btn-ghost btn-sm"
+				aria-label={m.aria_edit_date()}
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-5 w-5"

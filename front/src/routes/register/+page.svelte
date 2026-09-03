@@ -69,11 +69,11 @@
 						id="passwordConfirm"
 						required
 					/>
-					<label class="label">
+					<p class="label">
 						<a href={resolve('/login')} class="label-text-alt link link-hover"
 							>{m.have_account_link()}</a
 						>
-					</label>
+					</p>
 				</div>
 				{#if form?.message}
 					<div role="alert" class="mt-4 alert alert-error">

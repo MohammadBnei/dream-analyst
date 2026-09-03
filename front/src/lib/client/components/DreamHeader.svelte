@@ -96,7 +96,7 @@
 					class="btn btn-ghost btn-sm"
 					onclick={handleCancelClick}
 					disabled={isUpdatingTitle}
-					aria-label="cancel title edit"
+					aria-label={m.aria_cancel_title_edit()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -118,7 +118,11 @@
 					{m.dream_details_title()}
 				{/if}
 			</h1>
-			<button class="btn ml-2 btn-ghost btn-sm" onclick={handleEditClick} aria-label="edit title">
+			<button
+				class="btn ml-2 btn-ghost btn-sm"
+				onclick={handleEditClick}
+				aria-label={m.aria_edit_title()}
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"

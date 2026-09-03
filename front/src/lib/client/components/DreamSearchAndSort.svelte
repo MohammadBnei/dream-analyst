@@ -43,6 +43,7 @@
 	<div class="join w-full lg:w-fit">
 		<!-- Sort By Field -->
 		<select
+			aria-label={m.aria_sort_by()}
 			class="select-bordered select join-item w-full lg:w-fit"
 			onchange={handleSortByChange}
 			value={sortBy}
@@ -53,6 +54,7 @@
 
 		<!-- Sort Order -->
 		<select
+			aria-label={m.aria_sort_order()}
 			class="select-bordered select join-item w-full lg:w-fit"
 			onchange={handleSortOrderChange}
 			value={sortOrder}
@@ -72,7 +74,7 @@
 				bind:value={searchQuery}
 				name="query"
 			/>
-			<button type="submit" class="btn join-item btn-primary" aria-label="submit">
+			<button type="submit" class="btn join-item btn-primary" aria-label={m.aria_submit_search()}>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 16 16"

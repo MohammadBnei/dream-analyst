@@ -120,7 +120,7 @@
 						<button
 							onclick={toggleEditUsername}
 							class="btn btn-ghost btn-sm"
-							aria-label="edit username"
+							aria-label={m.aria_edit_username()}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -179,7 +179,11 @@
 				<div class="mb-2 flex items-center justify-between">
 					<p class="font-semibold">{m.email_label()}:</p>
 					{#if !isEditingEmail}
-						<button onclick={toggleEditEmail} class="btn btn-ghost btn-sm" aria-label="edit email">
+						<button
+							onclick={toggleEditEmail}
+							class="btn btn-ghost btn-sm"
+							aria-label={m.aria_edit_email()}
+						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								class="h-5 w-5"

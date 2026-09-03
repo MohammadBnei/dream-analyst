@@ -67,12 +67,21 @@
 </svelte:head>
 
 <div class="drawer">
-	<input id="my-drawer-3" type="checkbox" class="drawer-toggle" />
+	<input
+		id="my-drawer-3"
+		type="checkbox"
+		class="drawer-toggle"
+		aria-label={m.aria_open_sidebar()}
+	/>
 	<div class="drawer-content flex min-h-screen flex-col">
 		<!-- Navbar -->
 		<div class="navbar w-full bg-base-300">
 			<div class="flex-none lg:hidden">
-				<label for="my-drawer-3" aria-label="open sidebar" class="btn btn-square btn-ghost">
+				<label
+					for="my-drawer-3"
+					aria-label={m.aria_open_sidebar()}
+					class="btn btn-square btn-ghost"
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
@@ -111,7 +120,12 @@
 						<!-- Theme switch toggle -->
 						<label class="swap swap-rotate">
 							<!-- this hidden checkbox controls the state -->
-							<input type="checkbox" onchange={toggleTheme} checked={currentTheme === 'dark'} />
+							<input
+								type="checkbox"
+								aria-label={m.aria_toggle_theme()}
+								onchange={toggleTheme}
+								checked={currentTheme === 'dark'}
+							/>
 
 							<!-- sun icon -->
 							<svg
@@ -143,7 +157,7 @@
 		</main>
 	</div>
 	<div class="drawer-side">
-		<label for="my-drawer-3" aria-label="close sidebar" class="drawer-overlay"></label>
+		<label for="my-drawer-3" aria-label={m.aria_close_sidebar()} class="drawer-overlay"></label>
 		<ul class="menu min-h-full w-80 bg-base-200 p-4">
 			<!-- Sidebar content here -->
 			<li><a href={resolve('/')}>{m.home_link()}</a></li>
@@ -165,7 +179,12 @@
 				<!-- Theme switch toggle for sidebar -->
 				<label class="swap swap-rotate">
 					<!-- this hidden checkbox controls the state -->
-					<input type="checkbox" onchange={toggleTheme} checked={currentTheme === 'dark'} />
+					<input
+						type="checkbox"
+						aria-label={m.aria_toggle_theme()}
+						onchange={toggleTheme}
+						checked={currentTheme === 'dark'}
+					/>
 
 					<!-- sun icon -->
 					<svg

@@ -43,7 +43,11 @@
 	<div class="mb-2 flex items-center justify-between">
 		<h3 class="text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
 		{#if !isEditing}
-			<button onclick={toggleEditMode} class="btn btn-ghost btn-sm" aria-label="edit raw text">
+			<button
+				onclick={toggleEditMode}
+				class="btn btn-ghost btn-sm"
+				aria-label={m.aria_edit_raw_text()}
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-5 w-5"
