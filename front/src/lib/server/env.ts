@@ -48,6 +48,13 @@ const ServerEnvSchema = v.object({
 	STT_ADDR: v.optional(v.string(), 'http://ukubi-stt.ukubi-stt.svc.cluster.local:9090'),
 	STT_TOKEN_DREAMER: v.optional(v.string(), ''),
 
+	// Rate limits, configurable because the right value depends on deployment
+	// shape. The originals (5 registrations/hour per IP) were tight enough to
+	// block a household or office behind one NAT - and tight enough that the e2e
+	// suite throttled itself.
+	RATE_LIMIT_REGISTER_PER_HOUR: count(20),
+	RATE_LIMIT_LOGIN_PER_15MIN: count(20),
+
 	CREDIT_COST_DREAM_ANALYSIS: count(2),
 	CREDIT_COST_CHAT_MESSAGE: count(1),
 	DAILY_LIMIT_BASIC: count(10),

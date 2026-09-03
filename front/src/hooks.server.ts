@@ -8,6 +8,7 @@ import { error, redirect } from '@sveltejs/kit';
 import { UserRole } from '@prisma/client';
 import { getPrismaClient } from '$lib/server/db';
 import { consumeRateLimit } from '$lib/server/rateLimit';
+import { serverEnv } from '$lib/server/env';
 
 const handleParaglide: Handle = ({ event, resolve }) =>
 	paraglideMiddleware(event.request, ({ request, locale }) => {
@@ -72,22 +73,22 @@ const handleAuth: Handle = async ({ event, resolve }) => {
  * Keyed by user id where we have one, IP otherwise. Expensive endpoints are
  * limited per user so one noisy network cannot lock out a shared office.
  */
-const RATE_LIMITS: Array<{
+const rateLimits = (): Array<{
 	bucket: string;
 	match: (pathname: string, method: string) => boolean;
 	limit: number;
 	windowSeconds: number;
-}> = [
+}> => [
 	{
 		bucket: 'login',
 		match: (p, m) => p === '/login' && m === 'POST',
-		limit: 10,
+		limit: serverEnv().RATE_LIMIT_LOGIN_PER_15MIN,
 		windowSeconds: 900
 	},
 	{
 		bucket: 'register',
 		match: (p, m) => p === '/register' && m === 'POST',
-		limit: 5,
+		limit: serverEnv().RATE_LIMIT_REGISTER_PER_HOUR,
 		windowSeconds: 3600
 	},
 	{
@@ -111,7 +112,7 @@ const RATE_LIMITS: Array<{
 ];
 
 const handleRateLimit: Handle = async ({ event, resolve }) => {
-	const rule = RATE_LIMITS.find((r) => r.match(event.url.pathname, event.request.method));
+	const rule = rateLimits().find((r) => r.match(event.url.pathname, event.request.method));
 	if (!rule) return resolve(event);
 
 	const identifier = event.locals.user?.id ?? event.getClientAddress();
