@@ -9,7 +9,6 @@ on:
       - '**.md'
       - '**.yml'
       - 'front/package.json'
-      - 'back/**'
       - 'helm/**'
     tags-ignore:
       - '*'
