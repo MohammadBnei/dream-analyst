@@ -178,9 +178,9 @@
 		<div class="card bg-base-100 p-3 py-6 shadow-xl md:p-6">
 			<div class="card-body p-0">
 				<DreamNavigation dreamDate={dream.dreamDate} {prevDreamId} {nextDreamId}>
-					<svelte:fragment slot="status-badge">
+					{#snippet statusBadge()}
 						<DreamStatusBadge status={dream.status} />
-					</svelte:fragment>
+					{/snippet}
 				</DreamNavigation>
 
 				<DreamDateSection dreamDate={dream.dreamDate} onUpdate={handleDreamUpdate} />

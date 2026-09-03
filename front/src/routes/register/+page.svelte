@@ -3,7 +3,7 @@
 	import type { ActionData } from './$types';
 	import * as m from '$lib/paraglide/messages';
 
-	export let form: ActionData;
+	let { form }: { form: ActionData } = $props();
 </script>
 
 <div class="hero min-h-screen bg-base-200">

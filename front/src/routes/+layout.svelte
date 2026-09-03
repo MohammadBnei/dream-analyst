@@ -8,9 +8,17 @@
 
 	let { children, data }: LayoutProps = $props();
 
-	const { isLoggedIn, lang, isAdmin } = data;
+	// Derived, not destructured once. `const { isLoggedIn } = data` captures the
+	// value from first render, so the nav kept showing the logged-out links after
+	// login until a full page reload.
+	const isLoggedIn = $derived(data.isLoggedIn);
+	const isAdmin = $derived(data.isAdmin);
+	const lang = $derived(data.lang);
 
-	let currentTheme: string;
+	// Was a plain variable, written in onMount and toggleTheme but read by both
+	// theme checkboxes in the template - so neither ever reflected the real theme
+	// and the two toggles could not agree with each other.
+	let currentTheme = $state('light');
 
 	onMount(() => {
 		// Initialize theme from localStorage or default to 'light'

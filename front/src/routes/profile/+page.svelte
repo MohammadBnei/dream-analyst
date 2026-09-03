@@ -5,12 +5,14 @@
 
 	const { data, form } = $props();
 
-	let user = $state(data.user);
-	let dailyLimit = $state(data.dailyLimit);
-	let dailyUsage = $state(data.dailyUsage);
+	// $derived, not $state: these mirror load data, and a $state copy keeps the
+	// value from the first render even after invalidateAll() refreshes it.
+	let user = $derived(data.user);
+	let dailyLimit = $derived(data.dailyLimit);
+	let dailyUsage = $derived(data.dailyUsage);
 
-	let editedUsername = $state(user.username);
-	let editedEmail = $state(user.email);
+	let editedUsername = $derived(user.username);
+	let editedEmail = $derived(user.email);
 
 	let isEditingUsername = $state(false);
 	let isEditingEmail = $state(false);
@@ -18,18 +20,21 @@
 	let usernameEditError = $state<string | null>(null);
 	let emailEditError = $state<string | null>(null);
 	let formMessage = $state<string | null>(null);
-	let formMessageType: 'success' | 'error' | null = null;
+	// Was a plain variable. It is written in an effect and read in the template to
+	// choose alert-success vs alert-error, so without $state the alert never
+	// changed colour.
+	let formMessageType: 'success' | 'error' | null = $state(null);
 
 	// Effect to handle form submission responses
 	$effect(() => {
 		if (form) {
 			if (form.success) {
-				formMessage = form.message || 'Update successful!';
+				formMessage = form.message || m.profile_update_success();
 				formMessageType = 'success';
 				// Invalidate all data to ensure header and other parts reflect new user info
 				invalidateAll();
 			} else {
-				formMessage = form.message || 'Update failed.';
+				formMessage = form.message || m.profile_update_failed();
 				formMessageType = 'error';
 			}
 

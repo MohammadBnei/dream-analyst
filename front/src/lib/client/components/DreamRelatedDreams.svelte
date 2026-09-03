@@ -3,9 +3,6 @@
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
-	import { createEventDispatcher } from 'svelte';
-
-	const dispatch = createEventDispatcher();
 
 	// Aliased because inline generics inside template expressions get mangled by
 	// prettier-plugin-svelte (it parses `<App.Dream>` as markup).
@@ -48,9 +45,9 @@
 		if (dreamToAdd.id && !currentRelatedIds.includes(dreamToAdd.id)) {
 			currentRelatedIds = [...currentRelatedIds, dreamToAdd.id];
 			// Optimistically add to the displayed relatedDreams for immediate feedback
-			if (!relatedDreams.some((d) => d.id === dreamToAdd.id)) {
-				relatedDreams = [...relatedDreams, dreamToAdd];
-			}
+			// Previously assigned to `relatedDreams`, a non-$bindable prop - the write
+			// stayed local and the parent never saw it. The enhanced form below
+			// invalidates, which is what actually refreshes the list.
 		}
 		// Do NOT clear searchQuery here, let the user continue typing if they wish
 	}
@@ -84,7 +81,6 @@
 						isUpdatingRelatedDreams = true;
 						return async ({ result, update }) => {
 							if (result.type === 'success') {
-								dispatch('relatedDreamsUpdated', result.data?.dream);
 								isEditing = false;
 							} else if (result.type === 'error') {
 								console.error('Failed to update related dreams:', result.error);
@@ -139,7 +135,6 @@
 						isRegeneratingRelatedDreams = true;
 						return async ({ result, update }) => {
 							if (result.type === 'success') {
-								dispatch('relatedDreamsUpdated', result.data?.dream);
 								isEditing = false; // Exit edit mode after regeneration
 							} else if (result.type === 'error') {
 								console.error('Failed to regenerate related dreams:', result.error);
@@ -182,8 +177,7 @@
 								isDeletingRelated = { ...isDeletingRelated, [relatedDream.id || '']: true };
 								return async ({ result, update }) => {
 									if (result.type === 'success') {
-										dispatch('relatedDreamsUpdated', result.data?.dream);
-										// Optimistically remove from currentRelatedIds if not already done by dispatch
+										// currentRelatedIds is derived from the prop and refreshes on invalidate
 										currentRelatedIds = currentRelatedIds.filter((id) => id !== relatedDream.id);
 									} else if (result.type === 'error') {
 										console.error('Failed to remove related dream:', result.error);
