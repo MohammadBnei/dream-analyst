@@ -81,7 +81,7 @@ class LLMService {
 	public async generateText(prompt: string, signal?: AbortSignal): Promise<string> {
 		try {
 			const response = await this.weakChat.invoke([new HumanMessage(prompt)], {
-				signal: signal,
+				signal: signal
 			});
 			return response.content as string;
 		} catch (error) {

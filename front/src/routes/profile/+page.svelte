@@ -104,7 +104,7 @@
 		</div>
 	{/if}
 
-	<div class="card bg-base-100 p-3 py-6 md:p-6 shadow-xl">
+	<div class="card bg-base-100 p-3 py-6 shadow-xl md:p-6">
 		<div class="card-body p-0">
 			<h2 class="mb-4 card-title text-2xl">{m.account_details_heading()}</h2>
 
@@ -162,7 +162,7 @@
 							<button onclick={handleCancelUsernameEdit} type="button" class="btn btn-ghost btn-sm"
 								>{m.cancel_button()}</button
 							>
-							<button type="submit" class="btn btn-sm btn-primary">{m.save_button()}</button>
+							<button type="submit" class="btn btn-primary btn-sm">{m.save_button()}</button>
 						</div>
 					</form>
 				{:else}
@@ -220,7 +220,7 @@
 							<button onclick={handleCancelEmailEdit} type="button" class="btn btn-ghost btn-sm"
 								>{m.cancel_button()}</button
 							>
-							<button type="submit" class="btn btn-sm btn-primary">{m.save_button()}</button>
+							<button type="submit" class="btn btn-primary btn-sm">{m.save_button()}</button>
 						</div>
 					</form>
 				{:else}

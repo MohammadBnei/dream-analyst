@@ -3,6 +3,7 @@
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
+	import type { EnhanceResult } from '$lib/client/enhance';
 	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 	import { promptService } from '$lib/prompts/promptService';
 
@@ -54,28 +55,28 @@
 		selectedPromptType = (event.target as HTMLSelectElement).value as DreamPromptType;
 	}
 
-	async function handleInterpretationSubmit({ update }) {
+	const handleInterpretationSubmit: EnhanceResult = async ({ update }) => {
 		isSavingInterpretationEdit = true;
 		interpretationEditError = null;
 		await update();
 		isSavingInterpretationEdit = false;
 		isEditingInterpretation = false; // Exit edit mode on success or failure
-	}
+	};
 
-	async function handleRegenerateSubmit({ update, result }) {
+	const handleRegenerateSubmit: EnhanceResult = async ({ update, result }) => {
 		await update(); // Update page data from server response
 		if (result.type === 'success') {
 			// Call the parent's onRegenerateAnalysis with the currently selected prompt type
 			onRegenerateAnalysis(selectedPromptType);
 		}
-	}
+	};
 </script>
 
 <div class="mb-6">
 	<div class="mb-2 flex items-center justify-between">
 		<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
 		<div class="flex items-center gap-2">
-			<div class="join-vertical join lg:join-horizontal">
+			<div class="join join-vertical lg:join-horizontal">
 				<!-- Prompt Type Selector -->
 				<select
 					class="select-bordered select join-item select-sm"
@@ -102,7 +103,7 @@
 						<input type="hidden" name="promptType" value={selectedPromptType} />
 						<button
 							type="submit"
-							class="btn join-item btn-sm btn-primary"
+							class="btn join-item btn-primary btn-sm"
 							disabled={isLoadingStream}
 						>
 							<svg
@@ -130,7 +131,11 @@
 				{/if}
 			</div>
 			{#if !isEditingInterpretation}
-				<button onclick={toggleInterpretationEditMode} class="btn btn-ghost btn-sm" aria-label="edit interpretation">
+				<button
+					onclick={toggleInterpretationEditMode}
+					class="btn btn-ghost btn-sm"
+					aria-label="edit interpretation"
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						class="h-5 w-5"
@@ -172,7 +177,7 @@
 				>
 				<button
 					type="submit"
-					class="btn btn-sm btn-primary"
+					class="btn btn-primary btn-sm"
 					disabled={isSavingInterpretationEdit || editedInterpretationText.length < 10}
 				>
 					{#if isSavingInterpretationEdit}

@@ -156,7 +156,7 @@
 									type="number"
 									name="amount"
 									min="1"
-									class="input-bordered input input-sm w-20"
+									class="input-bordered input w-20 input-sm"
 									bind:value={creditAmount[user.id]}
 									disabled={isSubmittingCredits[user.id]}
 								/>
@@ -171,7 +171,7 @@
 								</select>
 								<button
 									type="submit"
-									class="btn btn-sm btn-primary"
+									class="btn btn-primary btn-sm"
 									disabled={isSubmittingCredits[user.id]}
 								>
 									{#if isSubmittingCredits[user.id]}

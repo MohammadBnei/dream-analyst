@@ -39,8 +39,13 @@ function asyncIterableToReadableStream(
 export class StreamProcessor {
 	private streamId: string;
 	private platform: App.Platform | undefined;
-	private streamStateStore: Awaited<ReturnType<typeof getStreamStateStore>>;
-	private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
+	// Assigned in init(), not the constructor, and every method that uses them runs
+	// after init(). Asserted rather than made optional to avoid a null check at each
+	// use site.
+	// ponytail: the real fix is passing prisma in instead of holding it as state;
+	// that lands with the service-class removal.
+	private streamStateStore!: Awaited<ReturnType<typeof getStreamStateStore>>;
+	private prisma!: Awaited<ReturnType<typeof getPrismaClient>>;
 	abortController: AbortController; // Internal AbortController for server-side cancellation
 
 	private accumulatedInterpretation: string = '';
@@ -120,26 +125,13 @@ export class StreamProcessor {
 			{ signal: this.abortController.signal } // Pass the internal abort signal to pipeTo
 		);
 
-		// Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
-		if (this.platform?.context?.waitUntil) {
-			this.platform.context.waitUntil(
-				backgroundProcessingPromise.catch((e) => {
-					// Catch and log errors from the pipeTo promise
-					console.error(
-						`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`,
-						e
-					);
-				})
-			);
-		} else {
-			// For Node.js environments, ensure the promise rejection is caught.
-			backgroundProcessingPromise.catch((e) => {
-				console.error(
-					`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`,
-					e
-				);
-			});
-		}
+		// This used to branch on platform.context.waitUntil for Cloudflare Workers.
+		// Both branches did the same thing apart from the waitUntil wrapper, and this
+		// app ships on svelte-adapter-bun, which never populates platform.context - so
+		// only this path ever ran. Kept as the single behaviour.
+		backgroundProcessingPromise.catch((e) => {
+			console.error(`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`, e);
+		});
 	}
 
 	/**

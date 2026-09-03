@@ -2,16 +2,17 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import { getCreditService } from '$lib/server/creditService';
 import { generateToken, setAuthTokenCookie } from '$lib/server/auth';
-import { z } from 'zod'; // For validation
+import * as v from 'valibot';
 
-// Define schemas for validation
-const UpdateProfileSchema = z.object({
-	username: z
-		.string()
-		.min(3, 'Username must be at least 3 characters long')
-		.max(50, 'Username cannot exceed 50 characters')
-		.optional(),
-	email: z.email('Invalid email address').optional()
+const UpdateProfileSchema = v.object({
+	username: v.optional(
+		v.pipe(
+			v.string(),
+			v.minLength(3, 'Username must be at least 3 characters long'),
+			v.maxLength(50, 'Username cannot exceed 50 characters')
+		)
+	),
+	email: v.optional(v.pipe(v.string(), v.email('Invalid email address')))
 });
 
 export const load = async ({ locals }) => {
@@ -66,7 +67,7 @@ export const actions = {
 
 		try {
 			// Validate input
-			const validatedData = UpdateProfileSchema.parse({
+			const validatedData = v.parse(UpdateProfileSchema, {
 				username: username || undefined, // Make optional if empty string
 				email: email || undefined
 			});
@@ -116,10 +117,9 @@ export const actions = {
 
 			return { success: true, message: 'Profile updated successfully!', user: updatedUser };
 		} catch (e) {
-			if (e instanceof z.ZodError) {
-				const errors = e.flatten().fieldErrors;
+			if (v.isValiError(e)) {
 				return fail(400, {
-					message: errors.username?.[0] || errors.email?.[0] || 'Validation error.',
+					message: e.issues[0]?.message ?? 'Validation error.',
 					username,
 					email
 				});

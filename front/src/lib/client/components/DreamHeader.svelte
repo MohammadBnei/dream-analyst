@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
-	import { enhance } from '$app/forms'; // Import enhance
+	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit'; // Import enhance
 
 	let { dreamStatus, onDeleteClick, dreamTitle } = $props(); // Removed onRegenerateTitle, isRegeneratingTitle
 
@@ -37,23 +38,23 @@
 	}
 
 	// Function to be used with use:enhance for title update
-	async function handleUpdateSubmit() {
+	const handleUpdateSubmit: SubmitFunction = () => {
 		isUpdatingTitle = true;
 		return async ({ update }) => {
 			await update(); // This will trigger the form action and invalidate
 			isUpdatingTitle = false;
 			isEditingTitle = false; // Exit edit mode after update attempt
 		};
-	}
+	};
 
 	// Function to be used with use:enhance for title regeneration
-	async function handleRegenerateSubmit() {
+	const handleRegenerateSubmit: SubmitFunction = () => {
 		isRegeneratingTitle = true;
 		return async ({ update }) => {
 			await update(); // This will trigger the form action and invalidate
 			isRegeneratingTitle = false;
 		};
-	}
+	};
 </script>
 
 <div class="mb-6 flex w-full flex-col items-center justify-between">
@@ -68,7 +69,7 @@
 				<input
 					type="text"
 					name="title"
-					class="input input-lg w-full input-ghost text-center text-3xl font-bold"
+					class="input w-full input-ghost text-center text-3xl font-bold input-lg"
 					bind:value={editedTitle}
 					onkeydown={handleKeyDown}
 					disabled={isUpdatingTitle}
@@ -182,7 +183,7 @@
 		<div class="w-24 text-right">
 			<button
 				onclick={onDeleteClick}
-				class="btn btn-sm btn-error"
+				class="btn btn-error btn-sm"
 				class:hidden={dreamStatus === 'PENDING_ANALYSIS'}
 			>
 				{m.delete_dream_button()}

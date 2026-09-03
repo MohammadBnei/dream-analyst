@@ -4,7 +4,10 @@ import type { Actions, PageServerLoad } from './$types';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
 
-const DEFAULT_PAGE_SIZE = 10; // Define a default page size
+const DEFAULT_PAGE_SIZE = 10;
+const MAX_PAGE_SIZE = 100;
+/** Whitelist: this value is interpolated into a Prisma orderBy key. */
+const SORTABLE_FIELDS = ['dreamDate', 'title'] as const;
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	const sessionUser = locals.user;
@@ -16,9 +19,25 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const prisma = await getPrismaClient();
 
 	const searchQuery = url.searchParams.get('query') || '';
-	const page = parseInt(url.searchParams.get('page') || '1');
-	const pageSize = parseInt(url.searchParams.get('pageSize') || String(DEFAULT_PAGE_SIZE));
-	const sortOrder = url.searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc'; // Default to 'desc'
+
+	// These come straight from the query string. parseInt alone accepts NaN and
+	// unbounded values, so `?page=abc` produced `skip: NaN` and `?pageSize=99999999`
+	// was honoured as written.
+	const clampInt = (raw: string | null, fallback: number, min: number, max: number) => {
+		const n = Number.parseInt(raw ?? '', 10);
+		return Number.isFinite(n) ? Math.min(Math.max(n, min), max) : fallback;
+	};
+	const page = clampInt(url.searchParams.get('page'), 1, 1, Number.MAX_SAFE_INTEGER);
+	const pageSize = clampInt(url.searchParams.get('pageSize'), DEFAULT_PAGE_SIZE, 1, MAX_PAGE_SIZE);
+	const sortOrder = url.searchParams.get('sortOrder') === 'asc' ? 'asc' : 'desc';
+	// The UI writes ?sortBy=... but the load never read it, so ordering was always
+	// by dreamDate and picking "title" in the sort control did nothing.
+	const sortByParam = url.searchParams.get('sortBy');
+	const sortBy: (typeof SORTABLE_FIELDS)[number] = SORTABLE_FIELDS.includes(
+		sortByParam as (typeof SORTABLE_FIELDS)[number]
+	)
+		? (sortByParam as (typeof SORTABLE_FIELDS)[number])
+		: 'dreamDate';
 
 	const skip = (page - 1) * pageSize;
 	const take = pageSize;
@@ -59,9 +78,7 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 	const [dreams, totalDreams] = await prisma.$transaction([
 		prisma.dream.findMany({
 			where: whereClause,
-			orderBy: {
-				dreamDate: sortOrder
-			},
+			orderBy: { [sortBy]: sortOrder },
 			skip,
 			take
 		}),
@@ -85,7 +102,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		pageSize: pageSize,
 		totalPages: totalPages,
 		totalDreams: totalDreams,
-		sortOrder: sortOrder
+		sortOrder: sortOrder,
+		sortBy: sortBy
 	};
 };
 

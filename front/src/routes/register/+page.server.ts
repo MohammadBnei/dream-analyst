@@ -77,15 +77,9 @@ export const actions = {
 		});
 
 		// Grant initial daily credits
-		const updatedCredits = await creditService.grantDailyCredits(newUser.id);
+		await creditService.grantDailyCredits(newUser.id);
 
-		const token = generateToken(
-			newUser.id,
-			newUser.username,
-			newUser.email,
-			newUser.role,
-			updatedCredits
-		);
+		const token = generateToken(newUser.id, newUser.username, newUser.email, newUser.role);
 		setAuthTokenCookie(cookies, token);
 
 		throw redirect(302, '/');

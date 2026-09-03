@@ -44,9 +44,7 @@ export const handleOrigin: Handle = async ({ event, resolve }) => {
 	const publicOrigin = env.PUBLIC_ORIGIN || event.url.origin; // From env var or ingress host
 	event.url = new URL(event.url.pathname + event.url.search, publicOrigin);
 
-	
 	return resolve(event);
 };
-
 
 export const handle: Handle = sequence(handleParaglide, handleAuth, handleOrigin);

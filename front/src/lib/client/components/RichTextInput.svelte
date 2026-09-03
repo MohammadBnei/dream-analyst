@@ -6,6 +6,7 @@
 	export let rows: number = 5;
 	export let onInput: (value: string) => void = () => {}; // Callback prop for input changes
 	export let name = 'rawText';
+	export let id: string | undefined = undefined;
 
 	let isRecording = false;
 	let recordingError: string | null = null;
@@ -38,7 +39,7 @@
 		const response = await fetch(`/api/transcribe?${qs}`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/octet-stream' },
-			body: pcm
+			body: pcm as unknown as BodyInit
 		});
 		if (!response.ok) {
 			let message = `HTTP ${response.status}`;
@@ -85,10 +86,10 @@
 				// A failed chunk abandons the stream rather than retrying it:
 				// ordering is load-bearing, so a re-sent chunk arriving after a
 				// later one would corrupt everything following it.
-				onError: (e: Error) => {
+				onError: ((e: Error) => {
 					recordingError = m.transcription_failed_message({ message: e.message });
 					stopRecording();
-				}
+				}) as () => void
 			});
 			await dictation.start();
 			isRecording = true;
@@ -131,6 +132,7 @@
 		<fieldset class="fieldset rounded-box border border-base-300 bg-base-200 p-4">
 			<legend class="fieldset-legend">{m.audio_input_fieldset_legend()}</legend>
 			<textarea
+				{id}
 				{placeholder}
 				{rows}
 				{name}
@@ -175,7 +177,7 @@
 						>
 						{m.cancel_transcription_button()}
 					{:else if isArming}
-						<span class="loading loading-spinner loading-xs"></span>
+						<span class="loading loading-xs loading-spinner"></span>
 						{m.starting_recording_button()}
 					{:else}
 						<svg

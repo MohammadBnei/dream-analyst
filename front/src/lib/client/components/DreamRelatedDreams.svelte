@@ -6,10 +6,15 @@
 
 	const dispatch = createEventDispatcher();
 
-	let { dreamId, relatedDreams } = $props<{
+	// Aliased because inline generics inside template expressions get mangled by
+	// prettier-plugin-svelte (it parses `<App.Dream>` as markup).
+	type RelatedDream = Partial<App.Dream>;
+
+	interface Props {
 		dreamId: string;
-		relatedDreams: Partial<App.Dream[]>;
-	}>();
+		relatedDreams: RelatedDream[];
+	}
+	let { dreamId, relatedDreams }: Props = $props();
 
 	let isEditing = $state(false);
 	let currentRelatedIds = $state<string[]>(relatedDreams.map((d) => d.id || ''));
@@ -95,7 +100,7 @@
 					}}
 				>
 					<input type="hidden" name="relatedDreamIds" value={JSON.stringify(currentRelatedIds)} />
-					<button type="submit" class="btn btn-sm btn-primary" disabled={isUpdatingRelatedDreams}>
+					<button type="submit" class="btn btn-primary btn-sm" disabled={isUpdatingRelatedDreams}>
 						{#if isUpdatingRelatedDreams}
 							<span class="loading loading-sm loading-spinner"></span>
 						{:else}
@@ -233,9 +238,10 @@
 						return;
 					}
 
-					return async ({ result }) => { // Removed 'update' as it's not needed here
+					return async ({ result }) => {
+						// Removed 'update' as it's not needed here
 						if (result.type === 'success') {
-							searchResults = result.data?.dreams || [];
+							searchResults = (result.data?.dreams as RelatedDream[] | undefined) ?? [];
 						} else if (result.type === 'error') {
 							console.error('Failed to search dreams:', result.error);
 							searchResults = [];

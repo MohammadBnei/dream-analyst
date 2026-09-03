@@ -162,7 +162,6 @@
 		// if their internal state changes and needs to be reflected in the parent or other components.
 		invalidate('dream');
 	}
-
 </script>
 
 <div class="container mx-auto max-w-4xl md:p-4">
@@ -202,10 +201,7 @@
 					<DreamChatSection dreamId={dream.id} />
 				{/if}
 
-				<DreamRelatedDreams
-					dreamId={dream.id}
-					relatedDreams={dream.relatedTo || []}
-				/>
+				<DreamRelatedDreams dreamId={dream.id} relatedDreams={dream.relatedTo || []} />
 
 				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />
 			</div>

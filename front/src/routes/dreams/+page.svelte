@@ -14,7 +14,7 @@
 	let currentPage = $derived(data.currentPage);
 	let totalPages = $derived(data.totalPages);
 	let totalDreams = $derived(data.totalDreams);
-	let sortOrder = $derived(data.sortOrder);
+	let sortOrder = $derived(data.sortOrder as 'asc' | 'desc');
 	let sortBy = $derived(data.sortBy || 'dreamDate'); // New: Get sortBy from data, default to 'dreamDate'
 	let pageSize = $derived(data.pageSize); // Get pageSize from data
 
@@ -36,8 +36,8 @@
 	async function updateUrl(
 		newQuery: string = searchQuery,
 		newPage: number = currentPage,
-		newSortBy: 'dreamDate' | 'title' = sortBy, // New: sortBy parameter
-		newSortOrder = sortOrder as 'asc' | 'desc' | undefined
+		newSortBy: 'dreamDate' | 'title' = sortBy,
+		newSortOrder: 'asc' | 'desc' = sortOrder
 	) {
 		const params = new URLSearchParams();
 		if (newQuery) params.set('query', newQuery);
@@ -99,7 +99,7 @@
 	{#if dreams.length === 0}
 		<NoDreamsMessage />
 	{:else}
-		<ul class="list bg-base-100 rounded-box shadow-md">
+		<ul class="list rounded-box bg-base-100 shadow-md">
 			{#each dreams as dream (dream.id)}
 				<DreamCard {dream} />
 			{/each}

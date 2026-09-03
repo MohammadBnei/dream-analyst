@@ -1,6 +1,7 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
+	import type { EnhanceResult } from '$lib/client/enhance';
 
 	let { dreamDate, onUpdate } = $props();
 
@@ -31,14 +32,15 @@
 		editedDreamDate = (event.target as HTMLInputElement).value;
 	}
 
-	async function handleSubmit({ update }) {
+	// The callback returned from use:enhance, so it receives { result, update }.
+	const handleSubmit: EnhanceResult = async ({ update }) => {
 		isSavingDreamDate = true;
 		dreamDateEditError = null;
 		await update();
 		isSavingDreamDate = false;
 		isEditingDreamDate = false; // Exit edit mode on success or failure
 		onUpdate(); // Notify parent of update attempt
-	}
+	};
 </script>
 
 <div class="mb-6">
@@ -79,7 +81,7 @@
 				<button onclick={handleCancelDreamDateEdit} type="button" class="btn btn-ghost btn-sm"
 					>{m.cancel_button()}</button
 				>
-				<button type="submit" class="btn btn-sm btn-primary" disabled={isSavingDreamDate}>
+				<button type="submit" class="btn btn-primary btn-sm" disabled={isSavingDreamDate}>
 					{#if isSavingDreamDate}
 						<span class="loading loading-spinner"></span>
 						{m.save_button()}

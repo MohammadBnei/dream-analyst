@@ -237,10 +237,7 @@ class ServerChatService {
 							controller.enqueue(encoder.encode(JSON.stringify({ final: true }) + '\n'));
 						}
 					} catch (error) {
-						console.error(
-							`Chat for dream ${dreamId}: Error during LLM stream processing:`,
-							error
-						);
+						console.error(`Chat for dream ${dreamId}: Error during LLM stream processing:`, error);
 						controller.enqueue(
 							encoder.encode(
 								JSON.stringify({

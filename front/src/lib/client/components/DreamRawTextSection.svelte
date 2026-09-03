@@ -2,6 +2,7 @@
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
+	import type { EnhanceResult } from '$lib/client/enhance';
 
 	let { rawText, onUpdate } = $props();
 
@@ -32,14 +33,14 @@
 		editedRawText = value;
 	}
 
-	async function handleSubmit({ update }) {
+	const handleSubmit: EnhanceResult = async ({ update }) => {
 		isSavingEdit = true;
 		editError = null;
 		await update();
 		isSavingEdit = false;
 		isEditing = false; // Exit edit mode on success or failure
 		onUpdate(); // Notify parent of update attempt
-	}
+	};
 </script>
 
 <div class="mb-6">
@@ -82,7 +83,7 @@
 				>
 				<button
 					type="submit"
-					class="btn btn-sm btn-primary"
+					class="btn btn-primary btn-sm"
 					disabled={isSavingEdit || editedRawText.length < 10}
 				>
 					{#if isSavingEdit}

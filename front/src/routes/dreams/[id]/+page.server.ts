@@ -84,6 +84,7 @@ export const load: PageServerLoad = async ({ params, locals, url }) => {
 				title: true,
 				interpretation: true,
 				status: true,
+				tags: true,
 				dreamDate: true,
 				createdAt: true,
 				updatedAt: true,

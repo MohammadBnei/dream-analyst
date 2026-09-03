@@ -17,7 +17,7 @@
 	let abortController: AbortController | null = null; // To manage stream cancellation
 	let isFullScreen = $state(false); // New state for full screen toggle
 
-	onMount(async () => {
+	onMount(() => {
 		chatService = new ClientChatService(dreamId, {
 			onMessage: (data) => {
 				// Update the last message if it's from the assistant and still streaming
@@ -57,7 +57,10 @@
 			}
 		});
 
-		chatMessages = await chatService.loadHistory();
+		// Fire-and-forget: onMount stays sync so the cleanup below is honoured.
+		void chatService.loadHistory().then((history) => {
+			chatMessages = history;
+		});
 
 		return () => {
 			chatService?.closeStream();
@@ -145,7 +148,7 @@
 	<div class="flex items-center justify-between">
 		<h3 class="mb-4 text-lg font-semibold">{m.chat_with_ai_heading()}</h3>
 		<label class="swap">
-			<input type="checkbox" bind:checked={isFullScreen}/>
+			<input type="checkbox" bind:checked={isFullScreen} />
 			<div class="swap-on" aria-label="full screen">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

@@ -218,7 +218,9 @@ Title:`;
 		}
 
 		// Collect all unique related dream IDs
-		allRelatedDreams.forEach((d) => relatedDreamIds.push(d.id));
+		for (const d of allRelatedDreams) {
+			if (d.id) relatedDreamIds.push(d.id);
+		}
 
 		return prisma.dream.update({
 			where: { id: dream.id },
