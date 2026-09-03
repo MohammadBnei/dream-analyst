@@ -1,6 +1,16 @@
 import { getPrismaClient } from '$lib/server/db';
 import type { UserRole } from '@prisma/client'; // Import new enums
-import { serverEnv } from '$lib/server/env'; // Import env
+import { serverEnv } from '$lib/server/env';
+
+/**
+ * Thrown when a charge cannot proceed because of balance or daily limit.
+ *
+ * Callers used to detect this with `e.message.includes('Insufficient credits')`,
+ * which silently stops working the moment anyone rewords the message.
+ */
+export class InsufficientCreditsError extends Error {
+	readonly name = 'InsufficientCreditsError';
+} // Import env
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 // Define credit costs and daily limits per role
@@ -67,7 +77,7 @@ class CreditService {
 			const dailyUsage = await this.getDailyCreditUsage(userId);
 			const limit = dailyLimits()[user.role];
 			if (dailyUsage + amount > limit) {
-				throw new Error(
+				throw new InsufficientCreditsError(
 					`Daily credit limit exceeded. You have used ${dailyUsage}/${limit} credits today.`
 				);
 			}

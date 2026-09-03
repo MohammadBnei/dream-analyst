@@ -1,40 +1,25 @@
 import { error } from '@sveltejs/kit';
-import { getPrismaClient } from '$lib/server/db';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { getServerChatService } from '$lib/server/chatService';
-
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
+import { InsufficientCreditsError } from '$lib/server/creditService';
+import { requireUser, requireOwnedDream } from '$lib/server/guards';
 
 export async function POST({ params, locals, request }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
-	const prisma = await getPrismaClient(); // Still need prisma to fetch the dream
-	const chatService = getServerChatService(); // Get the new chat service instance
+	if (!dreamId) error(400, 'Dream ID is required.');
 
-	if (!dreamId) {
-		throw error(400, 'Dream ID is required.');
-	}
-
-	const dream = await prisma.dream.findUnique({
-		where: { id: dreamId }
-	});
-
-	if (!dream || dream.userId !== sessionUser.id) {
-		throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
-	}
+	const sessionUser = requireUser(locals);
+	const dream = await requireOwnedDream(locals, dreamId);
+	const chatService = getServerChatService();
 
 	if (!dream.interpretation) {
-		throw error(400, 'Dream must have an initial interpretation before starting a chat.');
+		error(400, 'Dream must have an initial interpretation before starting a chat.');
 	}
 
 	const { message: userMessage } = await request.json();
 	if (!userMessage || typeof userMessage !== 'string') {
-		throw error(442, 'User message is required and must be a string.');
+		// Was 442, which is not an assigned HTTP status code.
+		error(422, 'User message is required and must be a string.');
 	}
 
 	const dreamPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
@@ -59,25 +44,23 @@ export async function POST({ params, locals, request }) {
 		});
 	} catch (e) {
 		console.error(`Error in chat-interpretation endpoint for dream ${dreamId}:`, e);
-		if (
-			(e as Error).message.includes('Insufficient credits') ||
-			(e as Error).message.includes('Daily credit limit exceeded')
-		) {
-			throw error(402, (e as Error).message); // 402 Payment Required
-		}
-		throw error(500, `Failed to initiate chat: ${(e as Error).message}`);
+		// Typed, not string-matched: the previous check broke on any rewording.
+		if (e instanceof InsufficientCreditsError) error(402, e.message);
+		error(500, 'Failed to initiate chat.');
 	}
 }
 
 // GET endpoint to retrieve chat history
 export async function GET({ params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
-	const chatService = getServerChatService(); // Get the new chat service instance
+	if (!dreamId) error(400, 'Dream ID is required.');
 
-	if (!dreamId) {
-		throw error(400, 'Dream ID is required.');
-	}
+	// Previously unchecked: chatService scopes by dreamId + userId so no cross-user
+	// read was possible, but asking for someone else's dream returned an empty 200
+	// instead of 404.
+	const sessionUser = requireUser(locals);
+	await requireOwnedDream(locals, dreamId);
+	const chatService = getServerChatService();
 
 	try {
 		const history = await chatService.loadChatHistory(dreamId, sessionUser.id);
@@ -88,19 +71,18 @@ export async function GET({ params, locals }) {
 		});
 	} catch (e) {
 		console.error(`Error loading chat history for dream ${dreamId}:`, e);
-		throw error(500, `Failed to load chat history: ${(e as Error).message}`);
+		error(500, 'Failed to load chat history.');
 	}
 }
 
 // DELETE endpoint to clear chat history
 export async function DELETE({ params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
-	const chatService = getServerChatService(); // Get the new chat service instance
+	if (!dreamId) error(400, 'Dream ID is required.');
 
-	if (!dreamId) {
-		throw error(400, 'Dream ID is required.');
-	}
+	const sessionUser = requireUser(locals);
+	await requireOwnedDream(locals, dreamId);
+	const chatService = getServerChatService();
 
 	try {
 		await chatService.clearChatHistory(dreamId, sessionUser.id);
@@ -112,6 +94,6 @@ export async function DELETE({ params, locals }) {
 		});
 	} catch (e) {
 		console.error(`Error clearing chat history for dream ${dreamId}:`, e);
-		throw error(500, `Failed to clear chat history: ${(e as Error).message}`);
+		error(500, 'Failed to clear chat history.');
 	}
 }

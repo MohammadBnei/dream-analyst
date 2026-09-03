@@ -1,6 +1,6 @@
 import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
+import { getCreditService, InsufficientCreditsError } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
 import { getLLMService } from './llmService';
@@ -138,7 +138,9 @@ class ServerChatService {
 			// Check if user has enough credits before saving message and calling LLM
 			const hasCredits = await creditService.checkCredits(userId, cost);
 			if (!hasCredits) {
-				throw new Error('Insufficient credits for chat message or daily limit exceeded.');
+				throw new InsufficientCreditsError(
+					'Insufficient credits for chat message or daily limit exceeded.'
+				);
 			}
 			// Save user message to DB first to get its ID, then deduct credits linked to it
 			userChatMessage = await this.saveChatMessage(

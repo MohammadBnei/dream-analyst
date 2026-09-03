@@ -158,4 +158,7 @@ TONE AND ETHICS:
 - Do not state factual future events based on dreams. Dreams are indications, not guarantees.
 `;
 
-export type DreamPromptType = 'jungian' | 'freudian' | 'simple' | 'islamic';
+/** Single source of truth: the type is derived from this, so they cannot drift. */
+export const DREAM_PROMPT_TYPES = ['jungian', 'freudian', 'simple', 'islamic'] as const;
+
+export type DreamPromptType = (typeof DREAM_PROMPT_TYPES)[number];

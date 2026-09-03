@@ -4,46 +4,30 @@ import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
 import { DreamStatus } from '@prisma/client';
 import type Redis from 'ioredis';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import { DREAM_PROMPT_TYPES, type DreamPromptType } from '$lib/prompts/dreamAnalyst';
+import { requireOwnedDream } from '$lib/server/guards';
 
 const encoder = new TextEncoder();
 
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
-
 export async function GET({ params, locals, platform, request }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	if (!dreamId) error(400, 'Dream ID is required.');
 
-	if (!sessionUser) {
-		throw error(401, 'Unauthorized');
-	}
-
-	if (!dreamId) {
-		throw error(400, 'Dream ID is required.');
-	}
+	const dream = await requireOwnedDream(locals, dreamId);
 
 	const streamStateStore = await getStreamStateStore();
-	const prisma = await getPrismaClient();
+	const prisma = getPrismaClient();
 	// NOTE: no credit check happens here. Analysis triggered directly through this
 	// endpoint is currently uncharged; charging is added with the credit work.
 
-	const dream = await prisma.dream.findUnique({
-		where: { id: dreamId }
-	});
-
-	if (!dream || dream.userId !== sessionUser.id) {
-		throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
-	}
-
-	// Extract promptType from query parameters, default to 'jungian'
-	const url = new URL(request.url);
-	const promptType: DreamPromptType =
-		(url.searchParams.get('promptType') as DreamPromptType) || 'jungian';
+	// Was cast straight from the query string, so an unknown value reached
+	// promptService.getSystemPrompt() and threw inside stream setup.
+	const requestedPromptType = new URL(request.url).searchParams.get('promptType');
+	const promptType: DreamPromptType = DREAM_PROMPT_TYPES.includes(
+		requestedPromptType as DreamPromptType
+	)
+		? (requestedPromptType as DreamPromptType)
+		: 'jungian';
 
 	// If analysis is already completed or failed (either in DB or Redis), just return the final result
 	if (dream.status === DreamStatus.COMPLETED || dream.status === DreamStatus.ANALYSIS_FAILED) {
