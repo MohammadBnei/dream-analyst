@@ -8,19 +8,14 @@ import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
 
 class DreamAnalysisService {
 	private llmService: ReturnType<typeof getLLMService>;
-	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
+	private prisma: ReturnType<typeof getPrismaClient>;
 
 	constructor() {
 		this.llmService = getLLMService();
-		getPrismaClient().then((client) => {
-			this.prisma = client;
-		});
+		this.prisma = getPrismaClient();
 	}
 
 	private async getPrisma(): Promise<Awaited<ReturnType<typeof getPrismaClient>>> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
 		return this.prisma;
 	}
 

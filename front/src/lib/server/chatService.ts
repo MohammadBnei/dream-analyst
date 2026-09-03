@@ -6,21 +6,15 @@ import { promptService } from '$lib/prompts/promptService';
 import { getLLMService } from './llmService';
 
 class ServerChatService {
-	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
+	private prisma: ReturnType<typeof getPrismaClient>;
 	private llmService: ReturnType<typeof getLLMService>; // Add LLMService instance
 
 	constructor() {
-		// Initialize prisma client here, or ensure it's initialized before use
-		getPrismaClient().then((client) => {
-			this.prisma = client;
-		});
-		this.llmService = getLLMService(); // Initialize LLMService
+		this.prisma = getPrismaClient();
+		this.llmService = getLLMService();
 	}
 
 	private async getPrisma(): Promise<Awaited<ReturnType<typeof getPrismaClient>>> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
 		return this.prisma;
 	}
 

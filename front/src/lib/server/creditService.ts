@@ -1,27 +1,36 @@
 import { getPrismaClient } from '$lib/server/db';
 import type { UserRole } from '@prisma/client'; // Import new enums
-import { env } from '$env/dynamic/private'; // Import env
+import { serverEnv } from '$lib/server/env'; // Import env
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 // Define credit costs and daily limits per role
-const CREDIT_COSTS = {
-	DREAM_ANALYSIS: parseInt(env.CREDIT_COST_DREAM_ANALYSIS || '2', 10), // Cost for one dream analysis
-	CHAT_MESSAGE: parseInt(env.CREDIT_COST_CHAT_MESSAGE || '1', 10) // Cost for one AI chat message
+// Read through serverEnv() rather than parseInt(env.X || 'default'): that form
+// silently produced NaN limits on a typo'd value, and NaN comparisons are always
+// false, so a malformed limit disabled the check instead of failing.
+// Functions, not constants: evaluating at module scope would validate the
+// environment at import time, which also happens during `vite build`.
+const creditCosts = () => {
+	const e = serverEnv();
+	return {
+		DREAM_ANALYSIS: e.CREDIT_COST_DREAM_ANALYSIS,
+		CHAT_MESSAGE: e.CREDIT_COST_CHAT_MESSAGE
+	};
 };
 
-const DAILY_CREDIT_LIMITS: Record<UserRole, number> = {
-	BASIC: parseInt(env.DAILY_LIMIT_BASIC || '10', 10),
-	VIP: parseInt(env.DAILY_LIMIT_VIP || '50', 10),
-	ADMIN: parseInt(env.DAILY_LIMIT_ADMIN || '999999', 10) // Effectively unlimited
+const dailyLimits = (): Record<UserRole, number> => {
+	const e = serverEnv();
+	return {
+		BASIC: e.DAILY_LIMIT_BASIC,
+		VIP: e.DAILY_LIMIT_VIP,
+		ADMIN: e.DAILY_LIMIT_ADMIN
+	};
 };
 
 class CreditService {
-	private prisma: Awaited<ReturnType<typeof getPrismaClient>> | undefined;
+	private prisma: ReturnType<typeof getPrismaClient>;
 
 	constructor() {
-		getPrismaClient().then((client) => {
-			this.prisma = client;
-		});
+		this.prisma = getPrismaClient();
 	}
 
 	/**
@@ -39,10 +48,6 @@ class CreditService {
 		actionType: 'DREAM_ANALYSIS' | 'CHAT_MESSAGE',
 		relatedId?: string
 	): Promise<number> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
-
 		if (amount <= 0) {
 			throw new Error('Deduction amount must be positive.');
 		}
@@ -60,7 +65,7 @@ class CreditService {
 		if (user.role !== 'ADMIN') {
 			// Admins bypass daily limits
 			const dailyUsage = await this.getDailyCreditUsage(userId);
-			const limit = DAILY_CREDIT_LIMITS[user.role];
+			const limit = dailyLimits()[user.role];
 			if (dailyUsage + amount > limit) {
 				throw new Error(
 					`Daily credit limit exceeded. You have used ${dailyUsage}/${limit} credits today.`
@@ -129,10 +134,6 @@ class CreditService {
 		amount: number,
 		reason?: string // Added reason
 	): Promise<number> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
-
 		if (amount <= 0) {
 			throw new Error('Grant amount must be positive.');
 		}
@@ -188,10 +189,6 @@ class CreditService {
 		amount: number,
 		reason?: string // Added reason
 	): Promise<number> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
-
 		if (amount <= 0) {
 			throw new Error('Deduction amount must be positive.');
 		}
@@ -238,9 +235,6 @@ class CreditService {
 	 * @returns True if credits are sufficient, false otherwise.
 	 */
 	async checkCredits(userId: string, amount: number): Promise<boolean> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 			select: { credits: true, role: true }
@@ -256,7 +250,7 @@ class CreditService {
 
 		// Check daily limit
 		const dailyUsage = await this.getDailyCreditUsage(userId);
-		const limit = DAILY_CREDIT_LIMITS[user.role];
+		const limit = dailyLimits()[user.role];
 		if (dailyUsage + amount > limit) {
 			return false;
 		}
@@ -270,9 +264,6 @@ class CreditService {
 	 * @returns The total credits used today.
 	 */
 	async getDailyCreditUsage(userId: string): Promise<number> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
 		const startOfDay = new Date();
 		startOfDay.setHours(0, 0, 0, 0);
 
@@ -306,10 +297,6 @@ class CreditService {
 	 * @returns The new credit balance.
 	 */
 	async grantDailyCredits(userId: string): Promise<number> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
-
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 			select: { role: true, credits: true }
@@ -337,7 +324,7 @@ class CreditService {
 			return user.credits; // Credits already granted for today
 		}
 
-		const amountToGrant = DAILY_CREDIT_LIMITS[user.role]; // Grant credits up to the daily limit
+		const amountToGrant = dailyLimits()[user.role];
 
 		// Grant credits and record transaction
 		const updatedUser = await this.prisma.$transaction(async (tx) => {
@@ -365,9 +352,6 @@ class CreditService {
 	 * @returns The current credit balance.
 	 */
 	async getCreditsBalance(userId: string): Promise<number> {
-		if (!this.prisma) {
-			this.prisma = await getPrismaClient();
-		}
 		const user = await this.prisma.user.findUnique({
 			where: { id: userId },
 			select: { credits: true }
@@ -381,7 +365,7 @@ class CreditService {
 	 * @returns The credit cost.
 	 */
 	getCost(actionType: 'DREAM_ANALYSIS' | 'CHAT_MESSAGE'): number {
-		return CREDIT_COSTS[actionType];
+		return creditCosts()[actionType];
 	}
 
 	/**
@@ -390,7 +374,7 @@ class CreditService {
 	 * @returns The daily credit limit.
 	 */
 	getDailyLimit(role: UserRole): number {
-		return DAILY_CREDIT_LIMITS[role];
+		return dailyLimits()[role];
 	}
 }
 
