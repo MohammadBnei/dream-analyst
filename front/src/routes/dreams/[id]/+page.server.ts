@@ -4,8 +4,9 @@ import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types';
 import { error, isHttpError, isRedirect } from '@sveltejs/kit';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
-import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService';
+import { checkCredits, costOf, deductCredits } from '$lib/server/credits';
+import { generateDreamTitle } from '$lib/server/analysis';
+import { findAndSetRelatedDreams } from '$lib/server/relatedDreams';
 import { buildTsQueryFromRaw, dreamSearchFilter } from '$lib/server/search/tsquery';
 import { dreamAction } from '$lib/server/guards';
 
@@ -218,7 +219,7 @@ export const actions: Actions = {
 	}),
 
 	regenerateTitle: dreamAction('regenerate title', async ({ dream }) => {
-		const title = await getDreamAnalysisService().generateDreamTitle(dream.rawText);
+		const title = await generateDreamTitle(dream.rawText);
 		return {
 			success: true,
 			dream: await getPrismaClient().dream.update({
@@ -269,7 +270,7 @@ export const actions: Actions = {
 	}),
 
 	regenerateRelatedDreams: dreamAction('regenerate related dreams', async ({ dream }) => {
-		return { success: true, dream: await getDreamAnalysisService().findAndSetRelatedDreams(dream) };
+		return { success: true, dream: await findAndSetRelatedDreams(dream) };
 	}),
 
 	searchDreams: dreamAction('search dreams', async ({ dream, user, formData }) => {
@@ -301,11 +302,9 @@ export const actions: Actions = {
 	resetAnalysis: dreamAction('reset analysis', async ({ dream, user, formData }) => {
 		const { promptType } = v.parse(ResetAnalysisSchema, { promptType: formData.get('promptType') });
 		const prisma = getPrismaClient();
-		const creditService = getCreditService();
-		const dreamAnalysisService = getDreamAnalysisService();
 
-		const cost = creditService.getCost('DREAM_ANALYSIS');
-		if (!(await creditService.checkCredits(user.id, cost))) {
+		const cost = costOf('DREAM_ANALYSIS');
+		if (!(await checkCredits(user.id, cost))) {
 			return fail(402, {
 				error: 'Insufficient credits for dream analysis or daily limit exceeded.'
 			});
@@ -323,11 +322,11 @@ export const actions: Actions = {
 
 		updated = await prisma.dream.update({
 			where: { id: updated.id },
-			data: { title: await dreamAnalysisService.generateDreamTitle(updated.rawText) }
+			data: { title: await generateDreamTitle(updated.rawText) }
 		});
-		updated = await dreamAnalysisService.findAndSetRelatedDreams(updated);
+		updated = await findAndSetRelatedDreams(updated);
 
-		await creditService.deductCredits(user.id, cost, 'DREAM_ANALYSIS', updated.id);
+		await deductCredits(user.id, cost, 'DREAM_ANALYSIS', updated.id);
 
 		return { success: true, message: 'Dream status reset to PENDING_ANALYSIS.', dream: updated };
 	}),

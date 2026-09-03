@@ -3,7 +3,8 @@ import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { Actions } from './$types';
 import { DreamStatus, type Dream } from '@prisma/client';
-import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
+import { generateDreamTitle } from '$lib/server/analysis';
+import { findAndSetRelatedDreams } from '$lib/server/relatedDreams';
 import { parseDreamDate } from '$lib/server/dreamDate';
 
 const CreateDreamSchema = v.object({
@@ -42,7 +43,6 @@ export const actions: Actions = {
 		}
 
 		const prisma = await getPrismaClient();
-		const dreamAnalysisService = getDreamAnalysisService();
 
 		let newDream: Dream;
 		try {
@@ -57,13 +57,13 @@ export const actions: Actions = {
 			});
 
 			await Promise.all([
-				dreamAnalysisService.generateDreamTitle(newDream.rawText).then((title) =>
+				generateDreamTitle(newDream.rawText).then((title) =>
 					prisma.dream.update({
 						where: { id: newDream.id },
 						data: { title }
 					})
 				),
-				dreamAnalysisService.findAndSetRelatedDreams(newDream)
+				findAndSetRelatedDreams(newDream)
 			]);
 		} catch (e) {
 			console.error('Error saving dream:', e);

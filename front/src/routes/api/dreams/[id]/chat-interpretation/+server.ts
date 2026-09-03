@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { DreamPromptType } from '$lib/promptTypes';
-import { getServerChatService } from '$lib/server/chatService';
-import { InsufficientCreditsError } from '$lib/server/creditService';
+import { chatWithAI, clearChatHistory, loadChatHistory } from '$lib/server/chat';
+import { InsufficientCreditsError } from '$lib/server/credits';
 import { requireUser, requireOwnedDream } from '$lib/server/guards';
 
 export async function POST({ params, locals, request }) {
@@ -10,7 +10,6 @@ export async function POST({ params, locals, request }) {
 
 	const sessionUser = requireUser(locals);
 	const dream = await requireOwnedDream(locals, dreamId);
-	const chatService = getServerChatService();
 
 	if (!dream.interpretation) {
 		error(400, 'Dream must have an initial interpretation before starting a chat.');
@@ -25,7 +24,7 @@ export async function POST({ params, locals, request }) {
 	const dreamPromptType: DreamPromptType = (dream.promptType as DreamPromptType) || 'jungian';
 
 	try {
-		const aiStream = await chatService.chatWithAI(
+		const aiStream = await chatWithAI(
 			dreamId,
 			sessionUser.id,
 			userMessage,
@@ -60,10 +59,9 @@ export async function GET({ params, locals }) {
 	// instead of 404.
 	const sessionUser = requireUser(locals);
 	await requireOwnedDream(locals, dreamId);
-	const chatService = getServerChatService();
 
 	try {
-		const history = await chatService.loadChatHistory(dreamId, sessionUser.id);
+		const history = await loadChatHistory(dreamId, sessionUser.id);
 		return new Response(JSON.stringify(history), {
 			headers: {
 				'Content-Type': 'application/json'
@@ -82,10 +80,9 @@ export async function DELETE({ params, locals }) {
 
 	const sessionUser = requireUser(locals);
 	await requireOwnedDream(locals, dreamId);
-	const chatService = getServerChatService();
 
 	try {
-		await chatService.clearChatHistory(dreamId, sessionUser.id);
+		await clearChatHistory(dreamId, sessionUser.id);
 		return new Response(JSON.stringify({ message: 'Chat history cleared.' }), {
 			status: 200,
 			headers: {

@@ -1,11 +1,10 @@
 import { error, json } from '@sveltejs/kit';
-import { getServerChatService } from '$lib/server/chatService'; // Import the new service
+import { deleteChatMessage } from '$lib/server/chat';
 
 export async function DELETE({ params, locals }) {
 	const dreamId = params.id;
 	const messageId = params.messageId;
 	const sessionUser = locals.user;
-	const chatService = getServerChatService(); // Get the new chat service instance
 
 	if (!sessionUser) {
 		throw error(401, 'Unauthorized');
@@ -16,7 +15,7 @@ export async function DELETE({ params, locals }) {
 	}
 
 	try {
-		await chatService.deleteChatMessage(messageId, dreamId, sessionUser.id);
+		await deleteChatMessage(messageId, dreamId, sessionUser.id);
 		return json({ message: 'Chat message deleted successfully' }, { status: 200 });
 	} catch (e) {
 		console.error(`Error deleting chat message ${messageId} for dream ${dreamId}:`, e);

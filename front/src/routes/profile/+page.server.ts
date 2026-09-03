@@ -1,6 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import { getCreditService } from '$lib/server/creditService';
+import { grantDailyCredits, getDailyCreditUsage, dailyLimitFor } from '$lib/server/credits';
 import { generateToken, setAuthTokenCookie } from '$lib/server/auth';
 import * as v from 'valibot';
 
@@ -21,7 +21,6 @@ export const load = async ({ locals }) => {
 	}
 
 	const prisma = await getPrismaClient();
-	const creditService = getCreditService();
 
 	const user = await prisma.user.findUnique({
 		where: { id: locals.user.id },
@@ -39,7 +38,7 @@ export const load = async ({ locals }) => {
 	}
 
 	// Ensure credits are up-to-date (e.g., daily grant on page load)
-	const updatedCredits = await creditService.grantDailyCredits(user.id);
+	const updatedCredits = await grantDailyCredits(user.id);
 	user.credits = updatedCredits;
 
 	return {
@@ -50,8 +49,8 @@ export const load = async ({ locals }) => {
 			role: user.role,
 			credits: user.credits
 		},
-		dailyLimit: creditService.getDailyLimit(user.role),
-		dailyUsage: await creditService.getDailyCreditUsage(user.id)
+		dailyLimit: dailyLimitFor(user.role),
+		dailyUsage: await getDailyCreditUsage(user.id)
 	};
 };
 

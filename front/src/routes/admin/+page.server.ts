@@ -1,6 +1,11 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import { getCreditService } from '$lib/server/creditService';
+import {
+	adminAdjustCredits,
+	dailyLimitFor,
+	getDailyCreditUsage,
+	grantDailyCredits
+} from '$lib/server/credits';
 import { UserRole } from '@prisma/client';
 import * as v from 'valibot';
 
@@ -32,7 +37,6 @@ export const load = async ({ locals }) => {
 	}
 
 	const prisma = await getPrismaClient();
-	const creditService = getCreditService();
 
 	const users = await prisma.user.findMany({
 		select: {
@@ -50,13 +54,13 @@ export const load = async ({ locals }) => {
 	// For each user, ensure daily credits are granted and get daily usage
 	const usersWithDailyInfo = await Promise.all(
 		users.map(async (user) => {
-			const updatedCredits = await creditService.grantDailyCredits(user.id); // Ensure daily credits are granted
-			const dailyUsage = await creditService.getDailyCreditUsage(user.id);
+			const updatedCredits = await grantDailyCredits(user.id);
+			const dailyUsage = await getDailyCreditUsage(user.id);
 			return {
 				...user,
 				credits: updatedCredits, // Use the updated credits
 				dailyUsage: dailyUsage,
-				dailyLimit: creditService.getDailyLimit(user.role)
+				dailyLimit: dailyLimitFor(user.role)
 			};
 		})
 	);
@@ -111,23 +115,15 @@ export const actions = {
 
 		try {
 			const validatedData = v.parse(UpdateUserCreditsSchema, { userId, amount, action });
-			const creditService = getCreditService();
 
-			let newCredits: number;
-			if (validatedData.action === 'grant') {
-				newCredits = await creditService.adminGrantCredits(
-					locals.user.id,
-					validatedData.userId,
-					validatedData.amount
-				);
-			} else {
-				// 'deduct'
-				newCredits = await creditService.adminDeductCredits(
-					locals.user.id,
-					validatedData.userId,
-					validatedData.amount
-				);
-			}
+			// adminGrantCredits and adminDeductCredits were near-identical; they are one
+			// function taking a direction now.
+			const newCredits = await adminAdjustCredits(
+				locals.user.id,
+				validatedData.userId,
+				validatedData.amount,
+				validatedData.action
+			);
 
 			return {
 				success: true,

@@ -9,6 +9,10 @@ dotenv.config();
  */
 export default defineConfig({
 	testDir: './tests',
+	/* tests/integration and tests/setup are bun test files - they import bun:test,
+	   which Node's ESM loader cannot resolve. Playwright's default testMatch picks
+	   up *.test.ts, so they have to be excluded explicitly. */
+	testIgnore: ['**/integration/**', '**/setup/**'],
 	/* Run tests in files in parallel */
 	fullyParallel: true,
 	/* Fail the build on CI if you accidentally left test.only in the source code. */

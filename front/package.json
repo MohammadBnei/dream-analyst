@@ -19,7 +19,8 @@
 		"start": "bun run scripts/migrate-deploy.ts && bun ./build/index.js",
 		"test:unit": "bun test src/",
 		"e2e": "playwright test",
-		"generate": "prisma generate && paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide"
+		"generate": "prisma generate && paraglide-js compile --project ./project.inlang --outdir ./src/lib/paraglide",
+		"test:integration": "bun test tests/integration/"
 	},
 	"devDependencies": {
 		"@eslint/compat": "^2.1.0",

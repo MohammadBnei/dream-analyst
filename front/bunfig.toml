@@ -1,0 +1,4 @@
+[test]
+# Stubs SvelteKit's virtual $env modules so server code is importable under
+# `bun test`. See tests/setup/bun-preload.ts.
+preload = ["./tests/setup/bun-preload.ts"]

@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { hashPassword, generateToken, setAuthTokenCookie } from '$lib/server/auth';
 import { getPrismaClient } from '$lib/server/db';
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
+import { grantDailyCredits } from '$lib/server/credits';
 import { UserRole } from '@prisma/client'; // Import UserRole enum
 
 export const actions = {
@@ -37,7 +37,6 @@ export const actions = {
 		}
 
 		const prisma = await getPrismaClient();
-		const creditService = getCreditService();
 
 		const existingUser = await prisma.user.findUnique({
 			where: { username }
@@ -77,7 +76,7 @@ export const actions = {
 		});
 
 		// Grant initial daily credits
-		await creditService.grantDailyCredits(newUser.id);
+		await grantDailyCredits(newUser.id);
 
 		const token = generateToken(newUser.id, newUser.username, newUser.email, newUser.role);
 		setAuthTokenCookie(cookies, token);

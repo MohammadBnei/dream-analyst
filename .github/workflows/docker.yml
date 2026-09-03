@@ -90,6 +90,11 @@ jobs:
       - name: Apply migrations
         run: bunx prisma migrate deploy
 
+      # Integration tests exercise the real credit functions against this
+      # job's Postgres. They cannot run in `quality`, which has no database.
+      - name: Integration tests
+        run: bun run test:integration
+
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
 
