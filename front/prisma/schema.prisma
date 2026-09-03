@@ -61,6 +61,11 @@ model Dream {
   relatedTo Dream[] @relation("RelatedDreams")
   relatedBy Dream[] @relation("RelatedDreams")
 
+  // Postgres does not index foreign keys automatically. Every dreams query is
+  // scoped by userId and ordered by dreamDate or createdAt.
+  @@index([userId, dreamDate(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, status])
   @@map("dreams")
 }
 
@@ -77,6 +82,7 @@ model DreamChat {
 
   creditTransaction CreditTransaction? // Optional link to a credit transaction
 
+  @@index([dreamId, createdAt])
   @@map("dream_chat")
 }
 
@@ -98,6 +104,9 @@ model CreditTransaction {
   dream       Dream?     @relation(fields: [relatedDreamId], references: [id])
   chatMessage DreamChat? @relation(fields: [relatedChatMessageId], references: [id])
 
+  // Read on every credit check and on the daily-usage aggregate.
+  @@index([userId, createdAt])
+  @@index([relatedDreamId])
   @@map("credit_transaction")
 }
 
