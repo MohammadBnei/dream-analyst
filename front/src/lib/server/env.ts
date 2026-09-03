@@ -38,6 +38,9 @@ const ServerEnvSchema = v.object({
 	REDIS_URL: nonEmpty('REDIS_URL'),
 	OPENROUTER_API_KEY: nonEmpty('OPENROUTER_API_KEY'),
 
+	// Configurable so the streaming path can be exercised against a local stub;
+	// the default is the only value production should ever use.
+	OPENROUTER_BASE_URL: v.optional(v.string(), 'https://openrouter.ai/api/v1'),
 	OPENROUTER_MODEL_NAME: v.optional(v.string(), 'mistralai/mistral-7b-instruct-v0.2'),
 	OPENROUTER_WEAK_MODEL: v.optional(v.string(), 'meta-llama/llama-3.1-70b-instruct'),
 	ORIGIN: v.optional(v.string(), ''),

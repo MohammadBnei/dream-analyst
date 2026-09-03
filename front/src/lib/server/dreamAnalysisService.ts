@@ -1,8 +1,7 @@
 import type { Dream } from '@prisma/client';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
-import { getLLMService } from '$lib/server/llmService';
+import { getLLMService, type ChatMessage } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
 import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
 
@@ -44,7 +43,10 @@ class DreamAnalysisService {
 			}
 			humanMessageContent += `My current dream: ${dream.rawText}`;
 
-			const messages = [new SystemMessage(systemPrompt), new HumanMessage(humanMessageContent)];
+			const messages: ChatMessage[] = [
+				{ role: 'system', content: systemPrompt },
+				{ role: 'user', content: humanMessageContent }
+			];
 
 			// Use the LLMService to stream the chat completion
 			const stream = await this.llmService.streamChatCompletion(messages, signal);

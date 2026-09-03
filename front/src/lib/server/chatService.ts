@@ -1,9 +1,8 @@
-import { HumanMessage, SystemMessage, AIMessage } from '@langchain/core/messages';
 import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
 import { getCreditService, InsufficientCreditsError } from '$lib/server/creditService'; // Import credit service
 import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
 import { promptService } from '$lib/prompts/promptService';
-import { getLLMService } from './llmService';
+import { getLLMService, type ChatMessage } from './llmService';
 
 class ServerChatService {
 	private prisma: ReturnType<typeof getPrismaClient>;
@@ -189,17 +188,18 @@ class ServerChatService {
                 Keep responses concise and focused on the dream.
             `;
 
-			const messages: (SystemMessage | HumanMessage | AIMessage)[] = [
-				new SystemMessage(chatSystemPrompt),
+			const messages: ChatMessage[] = [
+				{ role: 'system', content: chatSystemPrompt },
 				// Add previous chat messages (excluding the current user message, which is added separately)
 				...history
 					.filter((msg) => msg.id !== userChatMessage.id)
 					.map((msg) => {
-						if (msg.role === 'user') return new HumanMessage(msg.content);
-						if (msg.role === 'assistant') return new AIMessage(msg.content);
-						return new SystemMessage(msg.content); // Should not happen with current roles
+						if (msg.role === 'user') return { role: 'user' as const, content: msg.content };
+						if (msg.role === 'assistant')
+							return { role: 'assistant' as const, content: msg.content };
+						return { role: 'system' as const, content: msg.content };
 					}),
-				new HumanMessage(userMessage) // Add the current user message
+				{ role: 'user' as const, content: userMessage }
 			];
 
 			const stream = await this.llmService.streamChatCompletion(messages, signal); // Use LLMService

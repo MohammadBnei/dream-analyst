@@ -16,5 +16,8 @@ test-results
 # Bun specific
 bun.lockb
 
-# Prisma
-prisma/migrations
+# NOTE: prisma/migrations is deliberately NOT ignored. It was excluded here while
+# the container's start command runs `prisma migrate deploy`, which exits 0 on an
+# empty migrations directory - so the image silently applied nothing for the life
+# of the deployment. Excluding it again re-breaks database migration in
+# production, without any error to notice.
