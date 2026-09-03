@@ -1,3 +1,17 @@
+> **This is a product wish-list, not a description of the application.**
+>
+> Most of what follows is not built. Sections 3-7 in particular (redundancy
+> highlighting, progression scoring, hierarchical tags, bookmarks, export,
+> comparative view, timeline, heatmap, pattern reports, push notifications,
+> notification preferences, model versioning, tag taxonomy editor, analytics)
+> describe intent, not behaviour.
+>
+> For what the application actually does, see `../README.md`. This file is kept
+> because the product thinking is worth having; it is explicitly marked so nobody
+> reads it as a specification again.
+
+---
+
 ## 1️⃣ Core Journal Workflow
 
 | Feature                 | What the user sees / does                                                      | Why it matters                                           |
