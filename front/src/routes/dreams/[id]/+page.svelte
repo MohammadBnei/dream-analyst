@@ -123,9 +123,10 @@
 				if (data.status) {
 					dream.status = data.status as DreamStatus;
 				}
-				if (data.message) {
-					streamError = data.message;
-				}
+				// Only a failure message is an error. This previously assigned any
+				// message, so a successful run published "Processing completed." and
+				// the UI rendered it in the red error alert.
+				streamError = data.status === 'ANALYSIS_FAILED' ? (data.message ?? null) : null;
 				await invalidate('dream'); // Invalidate to ensure latest DB state, including final interpretation/tags/status
 			},
 			onError: (errorMsg) => {
