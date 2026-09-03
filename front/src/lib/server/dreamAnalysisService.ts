@@ -3,7 +3,7 @@ import type { DreamPromptType } from '$lib/promptTypes';
 import { promptService } from '$lib/server/prompts/promptService';
 import { getLLMService, type ChatMessage } from '$lib/server/llmService';
 import { getPrismaClient } from '$lib/server/db';
-import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
+import { buildTsQueryFromRaw, dreamSearchFilter } from '$lib/server/search/tsquery';
 
 class DreamAnalysisService {
 	private llmService: ReturnType<typeof getLLMService>;
@@ -120,23 +120,7 @@ Keywords:`;
 					where: {
 						userId: dream.userId,
 						id: { not: dream.id }, // Exclude the current dream
-						OR: [
-							{
-								rawText: {
-									search: searchQuery // Use OR for full-text search
-								}
-							},
-							{
-								interpretation: {
-									search: searchQuery
-								}
-							},
-							{
-								title: {
-									search: searchQuery
-								}
-							}
-						]
+						OR: dreamSearchFilter(searchQuery)
 					},
 					orderBy: {
 						dreamDate: 'desc'

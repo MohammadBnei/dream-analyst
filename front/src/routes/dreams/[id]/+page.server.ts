@@ -6,7 +6,7 @@ import { error, isHttpError, isRedirect } from '@sveltejs/kit';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
 import { getCreditService } from '$lib/server/creditService'; // Import credit service
 import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService';
-import { buildTsQueryFromRaw } from '$lib/server/search/tsquery';
+import { buildTsQueryFromRaw, dreamSearchFilter } from '$lib/server/search/tsquery';
 import { dreamAction } from '$lib/server/guards';
 
 /** Shared by the two actions that return a dream plus its relations. */
@@ -282,11 +282,7 @@ export const actions: Actions = {
 			where: {
 				userId: user.id,
 				id: { not: dream.id },
-				OR: [
-					{ title: { search: safeSearchQuery } },
-					{ rawText: { search: safeSearchQuery } },
-					{ interpretation: { search: safeSearchQuery } }
-				]
+				OR: dreamSearchFilter(safeSearchQuery)
 			},
 			select: { id: true, title: true, rawText: true, dreamDate: true },
 			take: 10
