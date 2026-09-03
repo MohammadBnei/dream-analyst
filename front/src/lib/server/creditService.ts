@@ -27,6 +27,18 @@ const creditCosts = () => {
 	};
 };
 
+/**
+ * Day boundary in the server's local timezone. Both the spend window and grant
+ * idempotency key off this, so they stay consistent with each other.
+ * ponytail: server-local, not per-user. Fine while the audience is one timezone;
+ * revisit if that stops being true.
+ */
+function startOfToday(): Date {
+	const d = new Date();
+	d.setHours(0, 0, 0, 0);
+	return d;
+}
+
 const dailyLimits = (): Record<UserRole, number> => {
 	const e = serverEnv();
 	return {
@@ -62,44 +74,50 @@ class CreditService {
 			throw new Error('Deduction amount must be positive.');
 		}
 
-		// Check daily limit first
-		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: { role: true }
-		});
-
-		if (!user) {
-			throw new Error('User not found.');
-		}
-
-		if (user.role !== 'ADMIN') {
-			// Admins bypass daily limits
-			const dailyUsage = await this.getDailyCreditUsage(userId);
-			const limit = dailyLimits()[user.role];
-			if (dailyUsage + amount > limit) {
-				throw new InsufficientCreditsError(
-					`Daily credit limit exceeded. You have used ${dailyUsage}/${limit} credits today.`
-				);
-			}
-		}
-
-		// Perform deduction and record transaction in a single Prisma transaction
 		try {
 			const updatedUser = await this.prisma.$transaction(async (tx) => {
-				const currentUser = await tx.user.findUnique({
-					where: { id: userId },
-					select: { credits: true }
-				});
+				// Serialise concurrent charges for this user, so the limit check below
+				// cannot be overtaken between reading and writing.
+				await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))`;
 
-				if (!currentUser) {
-					throw new Error('User not found.');
+				const user = await tx.user.findUnique({
+					where: { id: userId },
+					select: { role: true }
+				});
+				if (!user) throw new Error('User not found.');
+
+				// Inside the transaction now. It used to run before it, so the balance
+				// could move between the check and the write.
+				if (user.role !== 'ADMIN') {
+					const spent = await tx.creditTransaction.aggregate({
+						where: { userId, createdAt: { gte: startOfToday() }, amount: { lt: 0 } },
+						_sum: { amount: true }
+					});
+					const dailyUsage = Math.abs(spent._sum.amount ?? 0);
+					const limit = dailyLimits()[user.role];
+					if (dailyUsage + amount > limit) {
+						throw new InsufficientCreditsError(
+							`Daily credit limit exceeded. You have used ${dailyUsage}/${limit} credits today.`
+						);
+					}
 				}
 
-				const newBalance = currentUser.credits - amount;
+				// Conditional decrement: the row is only updated when the balance can
+				// cover it. Replaces a read-modify-write that had no `credits >= amount`
+				// guard and no negative check, so concurrent charges could both pass and
+				// drive the balance below zero.
+				const charged = await tx.user.updateMany({
+					where: { id: userId, credits: { gte: amount } },
+					data: { credits: { decrement: amount } }
+				});
 
-				await tx.user.update({
+				if (charged.count !== 1) {
+					throw new InsufficientCreditsError('Insufficient credits.');
+				}
+
+				const after = await tx.user.findUniqueOrThrow({
 					where: { id: userId },
-					data: { credits: newBalance }
+					select: { credits: true }
 				});
 
 				await tx.creditTransaction.create({
@@ -112,7 +130,7 @@ class CreditService {
 					}
 				});
 
-				return newBalance;
+				return after.credits;
 			});
 			return updatedUser;
 		} catch (error) {
@@ -273,31 +291,28 @@ class CreditService {
 	 * @param userId The ID of the user.
 	 * @returns The total credits used today.
 	 */
+	/**
+	 * Credits SPENT today. Always >= 0.
+	 *
+	 * This used to sum every transaction type for the day, including the positive
+	 * DAILY_GRANT, and then negate the total when it came out positive. So a user
+	 * who had just been granted 10 and spent nothing reported usage of -10, and the
+	 * limit check `dailyUsage + amount > limit` became `-10 + 2 > 10` - false. Every
+	 * user effectively got roughly double their intended daily cap.
+	 *
+	 * Only debits count against a spend limit, so restrict to negative amounts.
+	 */
 	async getDailyCreditUsage(userId: string): Promise<number> {
-		const startOfDay = new Date();
-		startOfDay.setHours(0, 0, 0, 0);
-
-		const transactions = await this.prisma.creditTransaction.aggregate({
+		const spent = await this.prisma.creditTransaction.aggregate({
 			where: {
-				userId: userId,
-				createdAt: {
-					gte: startOfDay
-				}
+				userId,
+				createdAt: { gte: startOfToday() },
+				amount: { lt: 0 }
 			},
-			_sum: {
-				amount: true
-			}
+			_sum: { amount: true }
 		});
 
-		if (!transactions?._sum?.amount) {
-			return 0;
-		}
-
-		if (transactions._sum.amount > 0) {
-			return -transactions._sum.amount || 0;
-		}
-
-		return Math.abs(transactions._sum.amount || 0);
+		return Math.abs(spent._sum.amount ?? 0);
 	}
 
 	/**
@@ -306,54 +321,58 @@ class CreditService {
 	 * @param userId The ID of the user.
 	 * @returns The new credit balance.
 	 */
+	/**
+	 * Grants the daily allowance at most once per user per day.
+	 *
+	 * The previous implementation counted today's DAILY_GRANT rows and then
+	 * inserted - a check-then-act with an await in the middle. Under READ COMMITTED
+	 * two concurrent callers both saw zero and both granted. This is not
+	 * theoretical: production contains two users who received a double grant
+	 * (2025-10-30 and 2026-01-17). It is called from login, from every profile page
+	 * load, and from a Promise.all over every user on every admin page load, so
+	 * concurrent calls are routine.
+	 *
+	 * A transaction-scoped advisory lock serialises the check and the insert per
+	 * user. Chosen over a unique index because the two historical duplicates would
+	 * block the index from being created, and deleting billing history to make a
+	 * constraint fit is the wrong trade.
+	 */
 	async grantDailyCredits(userId: string): Promise<number> {
-		const user = await this.prisma.user.findUnique({
-			where: { id: userId },
-			select: { role: true, credits: true }
-		});
+		return this.prisma.$transaction(async (tx) => {
+			// Held until this transaction ends. hashtextextended gives a stable
+			// 64-bit key from the user id; the second argument namespaces it so it
+			// cannot collide with an unrelated advisory lock.
+			await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${userId}, 0))`;
 
-		if (!user) {
-			throw new Error('User not found.');
-		}
-
-		const startOfDay = new Date();
-		startOfDay.setHours(0, 0, 0, 0);
-
-		// Check if daily credits have already been granted today
-		const alreadyGranted = await this.prisma.creditTransaction.count({
-			where: {
-				userId: userId,
-				actionType: 'DAILY_GRANT',
-				createdAt: {
-					gte: startOfDay
-				}
-			}
-		});
-
-		if (alreadyGranted > 0) {
-			return user.credits; // Credits already granted for today
-		}
-
-		const amountToGrant = dailyLimits()[user.role];
-
-		// Grant credits and record transaction
-		const updatedUser = await this.prisma.$transaction(async (tx) => {
-			await tx.user.update({
+			const user = await tx.user.findUnique({
 				where: { id: userId },
-				data: { credits: { increment: amountToGrant } }
+				select: { role: true, credits: true }
+			});
+			if (!user) throw new Error('User not found.');
+
+			const alreadyGranted = await tx.creditTransaction.count({
+				where: {
+					userId,
+					actionType: 'DAILY_GRANT',
+					createdAt: { gte: startOfToday() }
+				}
+			});
+			if (alreadyGranted > 0) return user.credits;
+
+			const amountToGrant = dailyLimits()[user.role];
+
+			const updated = await tx.user.update({
+				where: { id: userId },
+				data: { credits: { increment: amountToGrant } },
+				select: { credits: true }
 			});
 
 			await tx.creditTransaction.create({
-				data: {
-					userId: userId,
-					amount: amountToGrant,
-					actionType: 'DAILY_GRANT'
-				}
+				data: { userId, amount: amountToGrant, actionType: 'DAILY_GRANT' }
 			});
-			return (user.credits || 0) + amountToGrant;
-		});
 
-		return updatedUser;
+			return updated.credits;
+		});
 	}
 
 	/**
