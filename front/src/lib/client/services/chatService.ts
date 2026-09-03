@@ -1,4 +1,5 @@
 import { browser } from '$app/environment';
+import { readNdjson } from '$lib/client/ndjson';
 
 interface ChatStreamChunk {
 	content?: string;
@@ -16,9 +17,7 @@ interface ChatCallbacks {
 export class ClientChatService {
 	private dreamId: string;
 	private callbacks: ChatCallbacks;
-	// Removed abortController and jsonBuffer from here, as they are now managed per-request in Svelte component
 	// private abortController: AbortController | null = null;
-	// private jsonBuffer: string = '';
 
 	constructor(dreamId: string, callbacks: ChatCallbacks) {
 		this.dreamId = dreamId;
@@ -66,10 +65,8 @@ export class ClientChatService {
 			return;
 		}
 
-		// The abortController and jsonBuffer are now managed by the calling component
 		// this.abortController = new AbortController();
 		// const signal = this.abortController.signal;
-		let jsonBuffer = ''; // Use a local buffer for this stream
 
 		try {
 			const response = await fetch(`/api/dreams/${this.dreamId}/chat-interpretation`, {
@@ -89,58 +86,24 @@ export class ClientChatService {
 
 			console.debug('Chat stream started for dream:', this.dreamId);
 
-			const reader = response.body.getReader();
-			const decoder = new TextDecoder();
-
 			const readStream = async () => {
 				try {
-					while (true) {
-						const { done, value } = await reader.read();
-						if (done) {
-							console.debug('Chat stream finished for dream:', this.dreamId);
-							this.callbacks.onEnd({}); // Indicate stream end, let the component invalidate
-							break;
-						}
-
-						jsonBuffer += decoder.decode(value, { stream: true });
-
-						let boundary = jsonBuffer.indexOf('\n');
-						while (boundary !== -1) {
-							const line = jsonBuffer.substring(0, boundary).trim();
-							jsonBuffer = jsonBuffer.substring(boundary + 1);
-
-							if (line) {
-								try {
-									const parsed: ChatStreamChunk = JSON.parse(line);
-									this.callbacks.onMessage(parsed);
-
-									if (parsed.final) {
-										this.callbacks.onEnd({ message: parsed.message }); // Pass final message
-										// No need to call closeStream here, as the component manages the abortController
-										// this.closeStream();
-										return; // Exit readStream
-									}
-								} catch (e) {
-									console.warn('Failed to parse chat stream message as JSON:', line, e);
-									this.callbacks.onError(`Failed to parse chat data: ${line}`);
-								}
-							}
-							boundary = jsonBuffer.indexOf('\n');
+					for await (const parsed of readNdjson<ChatStreamChunk>(response.body!)) {
+						this.callbacks.onMessage(parsed);
+						if (parsed.final) {
+							this.callbacks.onEnd({ message: parsed.message });
+							return;
 						}
 					}
+					this.callbacks.onEnd({});
 				} catch (error) {
 					if (signal?.aborted) {
-						// Check if the signal was aborted
-						console.debug('Chat stream aborted by user for dream:', this.dreamId);
 						this.callbacks.onClose?.();
 					} else {
 						console.error('Chat stream reading error for dream:', this.dreamId, error);
 						this.callbacks.onError(`Chat stream error: ${(error as Error).message}`);
-						this.callbacks.onEnd({ message: (error as Error).message }); // Indicate failure
+						this.callbacks.onEnd({ message: (error as Error).message });
 					}
-				} finally {
-					reader.releaseLock();
-					// this.abortController = null; // Managed by component
 				}
 			};
 
