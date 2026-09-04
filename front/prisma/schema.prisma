@@ -50,6 +50,11 @@ model Dream {
   interpretation    String?
   title             String?             // New field for AI-generated title
   status            DreamStatus         @default(PENDING_ANALYSIS)
+  /// Set when an analysis run has been paid for, and CLEARED when that run
+  /// reaches a terminal state. A consumable token, not a flag: one entitlement
+  /// funds exactly one run. Also the exactly-once guard — the charge is
+  /// conditional on `updateMany where analysisPaidAt: null` returning count 1.
+  analysisPaidAt    DateTime?           @map("analysis_paid_at")
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
   promptType        String?             @default("jungian") // Added promptType field

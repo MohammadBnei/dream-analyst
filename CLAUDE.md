@@ -91,6 +91,22 @@ component once imported `promptService` as a value to read four names and shippe
 prompts to every visitor. Import `DreamPromptType` from `$lib/promptTypes`, always with the `type`
 keyword.
 
+**An analysis is paid for by a token, not a flag.** `dreams.analysisPaidAt` is set by
+`claimAnalysis` and cleared the moment a run reaches a terminal state, so one charge funds exactly
+one run. The charge is conditional on `updateMany where analysisPaidAt: null` returning 1 — that
+compare-and-swap _is_ the exactly-once guard, so concurrent requests cannot double-charge or
+double-run. `stream-analysis` answers 402 when the token is absent, which is what makes unpaid work
+structurally impossible rather than merely unreachable: status alone was never enough, because
+several code paths write status. Everything that can end a run routes through `failRun` /
+`updateResultInDb`, the only places the token is released.
+
+**A failed run gets exactly one free retry**, counted from the ledger (`amount < 0` rows vs
+`amount = 0` rows for that dream). Without the cap, cancel-and-retry was an infinite free analysis.
+
+**The daily grant is not the daily cap.** `DAILY_GRANT_*` is what a user receives each day;
+`DAILY_LIMIT_*` is the most they may spend in one day. They used to be the same number, which meant
+every balance was topped back to exactly what could be spent and credits could never run out.
+
 **Credits are money.** Charges are a conditional `updateMany` guarded on sufficient balance, inside
 a transaction behind a per-user advisory lock, with a DB `CHECK (credits >= 0)` as backstop. Don't
 reintroduce read-modify-write. `pg_advisory_xact_lock` returns void, so it needs `$executeRaw`, not
@@ -129,13 +145,14 @@ the database. Never assign to a `$derived`.
 No single file holds this; it spans seven plus Redis pub/sub, and the producer and consumer never
 appear in each other's call graph.
 
-1. `routes/dreams/new/+page.server.ts` creates the dream `PENDING_ANALYSIS`, generates a title and
-   related dreams, and redirects. **No analysis starts here.**
+1. `routes/dreams/new/+page.server.ts` creates the dream `PENDING_ANALYSIS`, calls `claimAnalysis`
+   to charge for it, generates a title and related dreams, and redirects. **No analysis starts
+   here.** The row is created _before_ the charge, so a user who cannot pay still keeps their text.
 2. The client (`lib/client/services/dreamAnalysisService.ts`) opens
    `GET /api/dreams/[id]/stream-analysis`.
-3. That endpoint either returns one final frame (already COMPLETED/FAILED), or marks the stream
-   started and fire-and-forgets a `StreamProcessor`, then subscribes to Redis pub/sub and relays
-   NDJSON to the browser.
+3. That endpoint either returns one final frame (already COMPLETED/FAILED), refuses with 402 if
+   nothing was paid, or marks the stream started and fire-and-forgets a `StreamProcessor`, then
+   subscribes to Redis pub/sub and relays NDJSON to the browser.
 4. `lib/server/streamProcessor.ts` consumes the LLM iterable, accumulates, writes Redis state and
    publishes each delta.
 5. `lib/client/ndjson.ts` reads the frames back on the client.
@@ -172,6 +189,11 @@ when you hit it — take that path rather than inventing one. Don't add a marker
 
 ## Known gaps
 
-- **A dream's first analysis is free.** `dreams/new` makes three LLM calls and charges nothing;
-  only re-analysis (`resetAnalysis`) and chat messages charge. Charging it is an open pricing
-  decision, not a bug to fix silently.
+- **`regenerateTitle` and `regenerateRelatedDreams` are free, unlimited and unrate-limited.** They
+  are cheap-model calls, and charging them would be incoherent while the same calls are free on the
+  create path. If logs show abuse, the fix is a rate-limit bucket, not a charge.
+- **A user cannot see their credit balance** anywhere except the banner that appears when they
+  cannot afford an analysis. There is no wallet page.
+- **`activeStreamProcessors` is an in-process `Map`, so a second replica would run its own
+  analyses.** Redis holds the stream _state_, but not the lock on who is producing it. Deploy stays
+  single-replica until that moves into Redis.

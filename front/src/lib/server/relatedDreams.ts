@@ -18,6 +18,7 @@ const DREAM_WITH_RELATIONS = {
 	title: true,
 	interpretation: true,
 	status: true,
+	analysisPaidAt: true,
 	dreamDate: true,
 	createdAt: true,
 	updatedAt: true,

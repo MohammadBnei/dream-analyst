@@ -1,6 +1,6 @@
 import { getPrismaClient } from '$lib/server/db';
 import { serverEnv } from '$lib/server/env';
-import type { PrismaClient, UserRole } from '@prisma/client';
+import type { DreamStatus, PrismaClient, UserRole } from '@prisma/client';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/client';
 
 /**
@@ -39,12 +39,28 @@ const creditCosts = (): Record<CreditAction, number> => {
 	};
 };
 
+/** The most that may be SPENT in a day. A burst ceiling, not an allowance. */
 const dailyLimits = (): Record<UserRole, number> => {
 	const e = serverEnv();
 	return {
 		BASIC: e.DAILY_LIMIT_BASIC,
 		VIP: e.DAILY_LIMIT_VIP,
 		ADMIN: e.DAILY_LIMIT_ADMIN
+	};
+};
+
+/**
+ * How much is GRANTED each day — deliberately less than the spend cap.
+ *
+ * These used to be the same number, so every balance was topped back to exactly
+ * what could be spent that day and credits could never actually run out.
+ */
+const dailyGrants = (): Record<UserRole, number> => {
+	const e = serverEnv();
+	return {
+		BASIC: e.DAILY_GRANT_BASIC,
+		VIP: e.DAILY_GRANT_VIP,
+		ADMIN: e.DAILY_GRANT_ADMIN
 	};
 };
 
@@ -206,7 +222,7 @@ export async function grantDailyCredits(
 		});
 		if (alreadyGranted > 0) return user.credits;
 
-		const amountToGrant = dailyLimits()[user.role];
+		const amountToGrant = dailyGrants()[user.role];
 
 		const updated = await tx.user.update({
 			where: { id: userId },
@@ -256,5 +272,109 @@ export async function adminAdjustCredits(
 		});
 
 		return updated.credits;
+	});
+}
+
+/**
+ * The outcome of trying to pay for one analysis run.
+ *
+ * `claimed-by-other` is not an error: a concurrent request won the claim, so an
+ * analysis is already paid for and running. The caller should proceed as though
+ * it succeeded, without charging again.
+ */
+export type AnalysisClaim = 'charged' | 'free-retry' | 'insufficient' | 'claimed-by-other';
+
+/**
+ * Acquire the right to run one analysis on a dream, charging for it.
+ *
+ * This is the ONLY place that decides whether an analysis is paid for. Every
+ * entry point routes through it, so there is one implementation to get right and
+ * one to audit.
+ *
+ * `dream.analysisPaidAt` is a consumable token, not a flag: it is set here and
+ * cleared by StreamProcessor when the run reaches a terminal state, so one
+ * entitlement funds exactly one run. That also makes this exactly-once — the
+ * charge is conditional on winning a compare-and-swap from NULL, which is
+ * precise because the column changes for exactly one reason. Guarding on `status`
+ * instead would not be: three other code paths write it.
+ *
+ * A failed run may be retried once for free, per charge. The allowance is counted
+ * in the ledger as zero-amount DREAM_ANALYSIS rows, which needs no schema change:
+ * every credit aggregate filters `amount < 0`, so zero rows are invisible to
+ * balances, daily spend and limits. Without the cap this is a two-click exploit —
+ * the Cancel button marks a run ANALYSIS_FAILED, so pay-once-then-cancel-forever
+ * would be free.
+ */
+export async function claimAnalysis(
+	dream: { id: string; userId: string; status: DreamStatus },
+	userId: string,
+	prisma: PrismaClient = getPrismaClient()
+): Promise<AnalysisClaim> {
+	// The one choke point is the one place a caller bug could charge the wrong
+	// account, so it does not take ownership on trust.
+	if (dream.userId !== userId) {
+		throw new Error('Refusing to charge: dream does not belong to this user.');
+	}
+
+	// Before deciding affordability, not after. Grants otherwise fire on ~7% of
+	// days (login, register, /profile, /admin only) while sessions last 30 days,
+	// so an entitled user would be told they cannot afford what they were owed.
+	await grantDailyCredits(userId, prisma);
+
+	// Compare-and-swap: whoever moves the token from NULL owns this run.
+	const claimed = await prisma.dream.updateMany({
+		where: { id: dream.id, analysisPaidAt: null },
+		data: { analysisPaidAt: new Date() }
+	});
+	if (claimed.count !== 1) return 'claimed-by-other';
+
+	const cost = costOf('DREAM_ANALYSIS');
+
+	try {
+		if (dream.status === 'ANALYSIS_FAILED' && (await hasFreeRetry(dream.id, prisma))) {
+			await prisma.creditTransaction.create({
+				data: {
+					userId,
+					amount: 0,
+					actionType: 'DREAM_ANALYSIS',
+					relatedDreamId: dream.id,
+					notes: 'free retry after a failed analysis'
+				}
+			});
+			return 'free-retry';
+		}
+
+		await deductCredits(userId, cost, 'DREAM_ANALYSIS', dream.id, prisma);
+		return 'charged';
+	} catch (e) {
+		// Release the token so the user can try again once they have credits.
+		await prisma.dream.update({
+			where: { id: dream.id },
+			data: { analysisPaidAt: null }
+		});
+		if (e instanceof InsufficientCreditsError) return 'insufficient';
+		throw e;
+	}
+}
+
+/** True when this dream has had fewer free retries than paid charges. */
+async function hasFreeRetry(dreamId: string, prisma: PrismaClient): Promise<boolean> {
+	const rows = await prisma.creditTransaction.findMany({
+		where: { relatedDreamId: dreamId, actionType: 'DREAM_ANALYSIS' },
+		select: { amount: true }
+	});
+	const paid = rows.filter((r) => r.amount < 0).length;
+	const freeUsed = rows.filter((r) => r.amount === 0).length;
+	return freeUsed < paid;
+}
+
+/** Release the entitlement when a run reaches a terminal state. */
+export async function releaseAnalysisClaim(
+	dreamId: string,
+	prisma: PrismaClient = getPrismaClient()
+): Promise<void> {
+	await prisma.dream.updateMany({
+		where: { id: dreamId },
+		data: { analysisPaidAt: null }
 	});
 }

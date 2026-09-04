@@ -14,7 +14,11 @@
 		isLoadingStream = $bindable(),
 		streamError,
 		onRegenerateAnalysis, // This callback now expects a promptType argument
-		onCancelAnalysis
+		onCancelAnalysis,
+		// PENDING_ANALYSIS with nothing paid for it: the user ran out of credits when
+		// the dream was created. Without this the button below renders for neither
+		// branch and the dream is unanalysable forever.
+		unpaid = false
 	} = $props();
 
 	let isEditingInterpretation = $state(false);
@@ -92,7 +96,7 @@
 					{/each}
 				</select>
 
-				{#if status === 'COMPLETED' || status === 'ANALYSIS_FAILED'}
+				{#if status === 'COMPLETED' || status === 'ANALYSIS_FAILED' || unpaid}
 					<form
 						method="POST"
 						action="?/resetAnalysis"
@@ -123,7 +127,7 @@
 									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
 								/>
 							</svg>
-							{m.regenerate_analysis_button()}
+							{unpaid ? m.analyze_dream_button() : m.regenerate_analysis_button()}
 						</button>
 					</form>
 				{:else if status === 'PENDING_ANALYSIS' && isLoadingStream}

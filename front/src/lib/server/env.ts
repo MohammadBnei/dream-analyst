@@ -71,9 +71,20 @@ const ServerEnvSchema = v.object({
 
 	CREDIT_COST_DREAM_ANALYSIS: count(2),
 	CREDIT_COST_CHAT_MESSAGE: count(1),
+	// The daily SPEND cap (a burst ceiling)...
 	DAILY_LIMIT_BASIC: count(10),
 	DAILY_LIMIT_VIP: count(50),
-	DAILY_LIMIT_ADMIN: count(999999)
+	DAILY_LIMIT_ADMIN: count(999999),
+
+	// ...and, separately, how much is GRANTED each day. These were the same number:
+	// grantDailyCredits used the spend cap as the grant amount, so every balance was
+	// topped back to exactly what could be spent that day and credits could never
+	// run out. Granting less than the cap is what makes a balance mean something —
+	// unused credits accumulate, heavy use exhausts them, and the cap still limits a
+	// single day's burst.
+	DAILY_GRANT_BASIC: count(4),
+	DAILY_GRANT_VIP: count(20),
+	DAILY_GRANT_ADMIN: count(999999)
 });
 
 export type ServerEnv = v.InferOutput<typeof ServerEnvSchema>;

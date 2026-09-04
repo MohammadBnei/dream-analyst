@@ -15,6 +15,7 @@
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from '$lib/client/components/DreamRelatedDreams.svelte'; // Import the new component
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let { data, form } = $props();
 
@@ -22,6 +23,22 @@
 	let dream = $derived(data.dream);
 	let nextDreamId = $derived(data.nextDreamId);
 	let prevDreamId = $derived(data.prevDreamId);
+
+	// An analysis this dream has not paid for. Either it was never affordable (from
+	// load) or the user just tried and could not afford it (from the 402).
+	let unpaid = $derived(data.unpaid || form?.reason === 'insufficient_credits');
+	let analysisCost = $derived(form?.analysisCost ?? data.analysisCost);
+	let creditsBalance = $derived(form?.creditsBalance ?? data.creditsBalance ?? 0);
+	// Unpaid does not mean unaffordable: a dream saved yesterday when credits ran
+	// out is affordable again today, and telling that user they are broke is a lie.
+	// Only explain when they actually cannot proceed - the refusal they just got,
+	// or a balance that does not cover the price.
+	let blocked = $derived(
+		unpaid && (form?.reason === 'insufficient_credits' || creditsBalance < analysisCost)
+	);
+	// Credits in hand but still refused: the daily cap is what stopped them, and
+	// saying "not enough credits" while they hold six of them reads as a bug.
+	let cappedNotBroke = $derived(blocked && creditsBalance >= analysisCost);
 
 	type DreamStatus = typeof dream.status;
 
@@ -92,7 +109,9 @@
 	});
 
 	onMount(async () => {
-		if (displayStatus === 'PENDING_ANALYSIS') {
+		// Not when unpaid: the endpoint would answer 402, and the user would watch a
+		// spinner turn into an error for something they never asked to start.
+		if (displayStatus === 'PENDING_ANALYSIS' && !data.unpaid) {
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			// Use the dream's promptType to start the stream
 			startStream(selectedPromptType);
@@ -195,7 +214,23 @@
 
 				<DreamRawTextSection rawText={dream.rawText} onUpdate={handleDreamUpdate} />
 
+				{#if blocked}
+					<div role="alert" class="my-4 alert alert-warning">
+						<div>
+							<h3 class="font-bold">
+								{cappedNotBroke ? m.daily_limit_reached_title() : m.insufficient_credits_title()}
+							</h3>
+							<div class="text-sm">
+								{cappedNotBroke
+									? m.daily_limit_reached_detail({ balance: creditsBalance })
+									: m.insufficient_credits_detail({ cost: analysisCost, balance: creditsBalance })}
+							</div>
+						</div>
+					</div>
+				{/if}
+
 				<DreamInterpretationSection
+					{unpaid}
 					interpretation={streamedInterpretation}
 					tags={streamedTags}
 					status={displayStatus}

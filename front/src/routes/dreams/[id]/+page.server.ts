@@ -4,7 +4,7 @@ import * as v from 'valibot';
 import type { PageServerLoad, Actions } from './$types';
 import { error, isHttpError, isRedirect } from '@sveltejs/kit';
 import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
-import { checkCredits, costOf, deductCredits } from '$lib/server/credits';
+import { claimAnalysis, costOf, getCreditsBalance } from '$lib/server/credits';
 import { generateDreamTitle } from '$lib/server/analysis';
 import { findAndSetRelatedDreams } from '$lib/server/relatedDreams';
 import { buildTsQueryFromRaw, dreamSearchFilter } from '$lib/server/search/tsquery';
@@ -34,14 +34,6 @@ const UpdateInterpretationSchema = v.object({
 		v.string(),
 		v.minLength(10, 'Interpretation must be at least 10 characters long.')
 	)
-});
-
-const UpdateStatusSchema = v.object({
-	status: v.picklist([
-		DreamStatus.PENDING_ANALYSIS,
-		DreamStatus.COMPLETED,
-		DreamStatus.ANALYSIS_FAILED
-	])
 });
 
 const UpdateDreamDateSchema = v.object({
@@ -104,6 +96,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				dreamDate: true,
 				createdAt: true,
 				updatedAt: true,
+				analysisPaidAt: true,
 				promptType: true, // Select promptType
 				relatedTo: {
 					select: {
@@ -157,10 +150,18 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			take: 1
 		});
 
+		// A dream can sit PENDING_ANALYSIS with nothing paid for it - the user ran out
+		// of credits at creation. The page has to offer to pay rather than silently
+		// try to stream, so it needs the price and what they actually have.
+		const unpaid = dream.status === 'PENDING_ANALYSIS' && dream.analysisPaidAt === null;
+
 		return {
 			dream: dreamWithParsedTags,
 			nextDreamId: nextDream?.id || null,
-			prevDreamId: prevDream?.id || null
+			prevDreamId: prevDream?.id || null,
+			unpaid,
+			analysisCost: costOf('DREAM_ANALYSIS'),
+			creditsBalance: unpaid ? await getCreditsBalance(sessionUser.id) : null
 		};
 	} catch (e) {
 		// error() signals by throwing, so the 404 raised above lands here; without
@@ -303,10 +304,15 @@ export const actions: Actions = {
 		const { promptType } = v.parse(ResetAnalysisSchema, { promptType: formData.get('promptType') });
 		const prisma = getPrismaClient();
 
-		const cost = costOf('DREAM_ANALYSIS');
-		if (!(await checkCredits(user.id, cost))) {
+		// Pay BEFORE doing the work. This previously checked credits, ran two LLM
+		// calls, and only then charged - so a charge that failed left the work done
+		// and unpaid, reported as a generic 500.
+		const claim = await claimAnalysis(dream, user.id);
+		if (claim === 'insufficient') {
 			return fail(402, {
-				error: 'Insufficient credits for dream analysis or daily limit exceeded.'
+				reason: 'insufficient_credits',
+				analysisCost: costOf('DREAM_ANALYSIS'),
+				creditsBalance: await getCreditsBalance(user.id)
 			});
 		}
 
@@ -326,19 +332,6 @@ export const actions: Actions = {
 		});
 		updated = await findAndSetRelatedDreams(updated);
 
-		await deductCredits(user.id, cost, 'DREAM_ANALYSIS', updated.id);
-
-		return { success: true, message: 'Dream status reset to PENDING_ANALYSIS.', dream: updated };
-	}),
-
-	updateStatus: dreamAction('update status', async ({ dream, formData }) => {
-		const { status } = v.parse(UpdateStatusSchema, { status: formData.get('status') });
-		return {
-			success: true,
-			dream: await getPrismaClient().dream.update({
-				where: { id: dream.id },
-				data: { status, updatedAt: new Date() }
-			})
-		};
+		return { success: true, dream: updated };
 	})
 };

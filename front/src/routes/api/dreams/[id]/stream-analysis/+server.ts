@@ -17,8 +17,6 @@ export async function GET({ params, locals, platform, request }) {
 
 	const streamStateStore = await getStreamStateStore();
 	const prisma = getPrismaClient();
-	// NOTE: no credit check happens here. Analysis triggered directly through this
-	// endpoint is currently uncharged; charging is added with the credit work.
 
 	// Was cast straight from the query string, so an unknown value reached
 	// promptService.getSystemPrompt() and threw inside stream setup.
@@ -44,6 +42,17 @@ export async function GET({ params, locals, platform, request }) {
 				Connection: 'keep-alive'
 			}
 		});
+	}
+
+	// An analysis runs only when one has been paid for. `analysisPaidAt` is the
+	// entitlement: set by claimAnalysis when charged, cleared when the run ends.
+	//
+	// This is a state check, not billing logic - and it is what makes unpaid work
+	// structurally impossible rather than merely unreachable. Gating on status
+	// alone was not enough: other code paths write status, so a dream could arrive
+	// here PENDING_ANALYSIS without anyone having paid.
+	if (dream.status === DreamStatus.PENDING_ANALYSIS && dream.analysisPaidAt === null) {
+		error(402, 'This analysis has not been paid for.');
 	}
 
 	// If status is PENDING_ANALYSIS, ensure a background process is running

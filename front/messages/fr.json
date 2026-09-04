@@ -19,7 +19,6 @@
 	"app_description": "Votre compagnon personnel pour explorer les profondeurs de vos rêves grâce à la psychologie jungienne et à l'IA.",
 	"app_name": "Journal de Rêves IA",
 	"aria_cancel_title_edit": "Annuler la modification du titre",
-	"aria_change_status": "Changer le statut",
 	"aria_close_sidebar": "Fermer le menu",
 	"aria_edit_date": "Modifier la date",
 	"aria_edit_email": "Modifier l'adresse e-mail",
@@ -44,7 +43,6 @@
 	"cancel_analysis_button": "Annuler l'Analyse",
 	"cancel_button": "Annuler",
 	"cancel_transcription_button": "Annuler la transcription",
-	"change_status_option": "Changer le statut",
 	"chat_with_ai_heading": "Discuter avec l'IA",
 	"confirm_delete_chat_message": "Êtes-vous sûr de vouloir supprimer ce message de chat ? Cette action est irréversible.",
 	"confirm_deletion_message": "Êtes-vous sûr de vouloir supprimer ce rêve ? Cette action est irréversible.",
@@ -147,7 +145,6 @@
 	"related_dreams_title": "Rêves Associés",
 	"reset_dream_status_failed_error": "Échec de la réinitialisation du statut du rêve.",
 	"reset_search_button": "Réinitialiser la recherche",
-	"reset_to_failed_analysis_option": "Réinitialiser à l'analyse en échec",
 	"retry_analysis_button": "Réessayer l'Analyse",
 	"retry_button": "Réessayer",
 	"role_label": "Rôle",
@@ -184,5 +181,10 @@
 	"username_or_email_label": "Nom d'utilisateur ou E-mail",
 	"view_details_button": "Voir les détails",
 	"what_did_you_dream_label": "Qu'avez-vous rêvé ?",
-	"your_dreams_title": "Vos Rêves"
+	"your_dreams_title": "Vos Rêves",
+	"analyze_dream_button": "Analyser ce rêve",
+	"insufficient_credits_title": "Crédits insuffisants",
+	"insufficient_credits_detail": "Il faut {cost} crédits pour analyser un rêve, et il vous en reste {balance}. Votre rêve est enregistré : revenez demain, vos crédits quotidiens seront rechargés.",
+	"daily_limit_reached_title": "Limite quotidienne atteinte",
+	"daily_limit_reached_detail": "Vous avez atteint votre nombre d'analyses pour aujourd'hui. Vos {balance} crédits restent disponibles : réessayez demain."
 }

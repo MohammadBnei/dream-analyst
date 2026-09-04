@@ -1,15 +1,14 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
-	import { invalidateAll, goto } from '$app/navigation';
+	import { goto } from '$app/navigation';
 	import DreamCard from '$lib/client/components/DreamCard.svelte';
 	import DreamPagination from '$lib/client/components/DreamPagination.svelte';
 	import DreamSearchAndSort from '$lib/client/components/DreamSearchAndSort.svelte';
-	import ErrorMessage from '$lib/client/components/ErrorMessage.svelte';
 	import NoDreamsMessage from '$lib/client/components/NoDreamsMessage.svelte';
 	import * as m from '$lib/paraglide/messages';
 
 	// Data loaded from +page.server.ts
-	let { data, form } = $props();
+	let { data } = $props();
 
 	let dreams = $derived(data.dreams);
 	let currentPage = $derived(data.currentPage);
@@ -19,19 +18,7 @@
 	let sortBy = $derived(data.sortBy || 'dreamDate'); // New: Get sortBy from data, default to 'dreamDate'
 	let pageSize = $derived(data.pageSize); // Get pageSize from data
 
-	let clientError: string | null = $state(null);
 	let searchQuery: string = $state(data.query || '');
-
-	// Handle form action responses
-	$effect(() => {
-		if (form?.success) {
-			invalidateAll();
-		}
-		if (form?.error) {
-			console.error('Form action error:', form.error);
-			clientError = form.error;
-		}
-	});
 
 	// Function to update URL with new query parameters
 	async function updateUrl(
@@ -101,8 +88,6 @@
 			onSortChange={handleSortChange}
 		/>
 	</div>
-
-	<ErrorMessage bind:clientError />
 
 	{#if dreams.length === 0}
 		<NoDreamsMessage />

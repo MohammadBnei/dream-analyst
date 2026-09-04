@@ -19,7 +19,6 @@
 	"app_description": "Your personal companion for exploring the depths of your dreams with Jungian psychology and AI.",
 	"app_name": "Dream Journal AI",
 	"aria_cancel_title_edit": "Cancel title edit",
-	"aria_change_status": "Change status",
 	"aria_close_sidebar": "Close menu",
 	"aria_edit_date": "Edit date",
 	"aria_edit_email": "Edit email",
@@ -44,7 +43,6 @@
 	"cancel_analysis_button": "Cancel Analysis",
 	"cancel_button": "Cancel",
 	"cancel_transcription_button": "Cancel Transcription",
-	"change_status_option": "Change Status",
 	"chat_with_ai_heading": "Chat with AI",
 	"confirm_delete_chat_message": "Are you sure you want to delete this chat message? This action cannot be undone.",
 	"confirm_deletion_message": "Are you sure you want to delete this dream? This action cannot be undone.",
@@ -147,7 +145,6 @@
 	"related_dreams_title": "Related Dreams",
 	"reset_dream_status_failed_error": "Failed to reset dream status.",
 	"reset_search_button": "Reset Search",
-	"reset_to_failed_analysis_option": "Reset to Failed Analysis",
 	"retry_analysis_button": "Retry Analysis",
 	"retry_button": "Retry",
 	"role_label": "Role",
@@ -184,5 +181,10 @@
 	"username_or_email_label": "Username or Email",
 	"view_details_button": "View Details",
 	"what_did_you_dream_label": "What did you dream?",
-	"your_dreams_title": "Your Dreams"
+	"your_dreams_title": "Your Dreams",
+	"analyze_dream_button": "Analyze this dream",
+	"insufficient_credits_title": "Not enough credits",
+	"insufficient_credits_detail": "Analysing a dream costs {cost} credits and you have {balance} left. Your dream is saved - come back tomorrow, when your daily credits are topped up.",
+	"daily_limit_reached_title": "Daily limit reached",
+	"daily_limit_reached_detail": "You have used today's analyses. Your {balance} credits are still there - try again tomorrow."
 }
