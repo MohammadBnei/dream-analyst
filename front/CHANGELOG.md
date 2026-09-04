@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.32.2](https://github.com/MohammadBnei/dream-analyst/compare/0.32.1...0.32.2) (2026-09-04)
+
+### Bug Fixes
+
+* **deps:** patch the markdown renderer's tree ([fbd7c82](https://github.com/MohammadBnei/dream-analyst/commit/fbd7c82ec74d81fb0e363d84d6c3a1a0010c18e4))
+
 ## [0.32.1](https://github.com/MohammadBnei/dream-analyst/compare/0.32.0...0.32.1) (2026-09-04)
 
 ### Bug Fixes
