@@ -26,6 +26,17 @@ WORKDIR /app
 RUN rm -rf node_modules && bun install --frozen-lockfile --production && bun run prisma generate
 
 FROM node:22-alpine AS runner
+# The base image ships the npm CLI, which nothing here runs - `bun start` calls
+# `bun run prisma migrate deploy` and then bun serves the build. It is dead
+# weight that carried half the image's fixable HIGH CVEs (tar, pacote, sigstore,
+# picomatch, brace-expansion, ip-address) purely as npm's own dependencies.
+# node itself stays: the Prisma CLI needs it.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+
+# OpenSSL is in the TLS path for every outbound LLM and database call, so it is
+# worth patching ahead of a base-image bump rather than waiting for one.
+RUN apk upgrade --no-cache libcrypto3 libssl3
+
 COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
