@@ -52,6 +52,13 @@ COPY --from=builder /app/scripts /app/scripts
 # scripts/migrate-deploy.ts imports this for its JSON log formatting.
 COPY --from=builder /app/src/lib/server/logger.ts /app/src/lib/server/logger.ts
 
+# The build and the pruned dependency tree only meet here, so this is the only
+# place a "bundled, but its dependency was pruned" mismatch is visible. It
+# shipped once: svelte-streamdown was a devDependency, SvelteKit bundled its
+# components into the SSR output, and @floating-ui/dom, marked and tailwind-merge
+# were pruned - every dream page 500ed while /healthz and /readyz stayed green.
+RUN bun run scripts/check-runtime-deps.ts
+
 # Run unprivileged. `node` (uid 1000) already exists in the base image.
 RUN chown -R node:node /app
 USER node
