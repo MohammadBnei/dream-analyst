@@ -1,5 +1,28 @@
 # Changelog
 
+# [0.32.0](https://github.com/MohammadBnei/dream-analyst/compare/0.31.3...0.32.0) (2026-09-04)
+
+### Bug Fixes
+
+* **auth:** DB-backed sessions, route guards, shared ownership checks ([8878e16](https://github.com/MohammadBnei/dream-analyst/commit/8878e166e4d9c3add715e8baddddea6836a885ff))
+* bring lint to zero and fix the bugs it exposed ([315b65a](https://github.com/MohammadBnei/dream-analyst/commit/315b65a502f376b1b671befe28bc9e418f427054))
+* **credits:** correct the daily limit, make charges and grants atomic ([2ccaa96](https://github.com/MohammadBnei/dream-analyst/commit/2ccaa969e86b1602c62ea8fb9b4eb74e07ab2caa))
+* **deploy:** ship migrations in the image ([949b85a](https://github.com/MohammadBnei/dream-analyst/commit/949b85aebc674c485bbfca1502b3e529bb2f5bbd))
+* **docker:** clear every fixable CRITICAL/HIGH from the image ([8d41474](https://github.com/MohammadBnei/dream-analyst/commit/8d41474bea42d8c59b334d3297dff64c3c5958b3))
+* resolve all 149 type errors, incl. four real bugs ([25c263a](https://github.com/MohammadBnei/dream-analyst/commit/25c263a5c00bfc37d1a1c7c2062abb5efa2ea77f))
+* **security:** remove unauthenticated dream result endpoint ([e9e306a](https://github.com/MohammadBnei/dream-analyst/commit/e9e306adf7a3f8f17b52b419f30f1c86a1742378))
+* **security:** stop shipping the system prompts to the browser ([f4373cd](https://github.com/MohammadBnei/dream-analyst/commit/f4373cd6b22b70f4eb25919f4967c50789b0f16a))
+* **stream:** close leaked Redis subscribers, stop truncating slow clients ([29bc489](https://github.com/MohammadBnei/dream-analyst/commit/29bc489e62e9724c715606f0dfe4d32c20a5336f))
+* **ui:** one status mapping, real SVG components, accessible names ([878ae35](https://github.com/MohammadBnei/dream-analyst/commit/878ae3553538aff3ab9643e9fc7069c5cbebba44))
+* **ui:** repair Svelte 5 reactivity bugs and finish the runes migration ([d0a0fa5](https://github.com/MohammadBnei/dream-analyst/commit/d0a0fa57e5753ec7b57b741b770d8f013683f375))
+* validate configuration, split liveness from readiness ([b1e7c26](https://github.com/MohammadBnei/dream-analyst/commit/b1e7c2622a4cb63c2fb125a5a642d94b5431176d))
+
+### Features
+
+* **credits:** charge for a dream's first analysis ([a4f9d66](https://github.com/MohammadBnei/dream-analyst/commit/a4f9d6665e132659852479cc592c7eac8a793acf))
+* **db:** add missing indexes and a non-negative credits constraint ([fe36ebc](https://github.com/MohammadBnei/dream-analyst/commit/fe36ebc88decff287662e01aa6b40d20934e8f91))
+* **security:** rate limit auth and the expensive endpoints ([cda0410](https://github.com/MohammadBnei/dream-analyst/commit/cda04108f3f8b3fb82d3df7b6845f515bbe39c4f))
+
 ## [0.31.3](https://github.com/MohammadBnei/dream-analyst/compare/0.31.2...0.31.3) (2026-09-01)
 
 ### Bug Fixes
