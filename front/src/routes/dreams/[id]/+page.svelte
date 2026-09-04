@@ -239,7 +239,11 @@
 					<DreamChatSection dreamId={dream.id} />
 				{/if}
 
-				<DreamElements elements={dream.elements ?? []} counts={data.elementCounts ?? {}} />
+				<DreamElements
+					elements={dream.elements ?? []}
+					counts={data.elementCounts ?? {}}
+					extracted={Boolean(dream.elementsExtractedAt)}
+				/>
 
 				<DreamRelatedDreams dreamId={dream.id} relatedDreams={dream.relatedTo || []} />
 

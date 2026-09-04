@@ -16,6 +16,14 @@ COPY . .
 RUN bun run generate
 RUN bun run build
 
+
+# The backfill tool, bundled so it can run in this image. It imports through
+# `$lib`, which resolves only via the gitignored .svelte-kit/tsconfig.json, and
+# it needs `$env/dynamic/private`, a Vite virtual module - bundling settles the
+# first and externalises the second for scripts/env-preload.ts to supply. Without
+# this, the only way to give existing dreams their symbols was a laptop pointed
+# at the production database.
+RUN bun run build:reextract
 # Production dependencies only, resolved separately so the runner does not carry
 # the dev tree (previously the entire node_modules was copied, ~900MB including
 # eslint, playwright, svelte-check and the Prisma engines' build tooling).
@@ -41,6 +49,8 @@ COPY --from=builder /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
 COPY --from=prod-deps /app/node_modules /app/node_modules
+# Includes build/reextract.js, the bundled backfill tool. If this COPY is ever
+# narrowed, carry that file explicitly.
 COPY --from=builder /app/build /app/build
 COPY --from=builder /app/package.json /app/
 COPY --from=builder /app/prisma.config.ts /app/

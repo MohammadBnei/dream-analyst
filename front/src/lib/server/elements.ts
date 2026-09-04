@@ -204,14 +204,30 @@ export async function resolveElements(
 	// second entry, pushing both further down. That buries precisely the
 	// rare-but-recurring symbol this feature exists to surface.
 	const kindsInPlay = new Set(unresolved.map((u) => u.el.kind));
-	const candidates: Candidate[] = vocabulary
-		.filter((e) => kindsInPlay.has(e.kind as ElementKind))
-		.map((e) => ({
-			id: e.id,
-			kind: e.kind,
-			label: e.label,
-			also: [...new Set(e.occurrences.map((o) => o.rawLabel))].filter((r) => r !== e.label)
-		}));
+	const inPlay = vocabulary.filter((e) => kindsInPlay.has(e.kind as ElementKind));
+	const candidates: Candidate[] = inPlay.slice(0, MAX_MATCHER_CANDIDATES).map((e) => ({
+		id: e.id,
+		kind: e.kind,
+		label: e.label,
+		// Aliases are what let `l'ocean` find the entry it was merged into last
+		// time, but they are also unbounded per entry, so they are the first thing
+		// trimmed.
+		also: [...new Set(e.occurrences.map((o) => o.rawLabel))]
+			.filter((r) => r !== e.label)
+			.slice(0, 5)
+	}));
+	if (inPlay.length > candidates.length) {
+		// Never truncate silently: a shrinking candidate list degrades merge quality
+		// invisibly, and this log is the only place it surfaces.
+		console.warn(
+			JSON.stringify({
+				msg: 'elements.candidates_truncated',
+				userId,
+				available: inPlay.length,
+				sent: candidates.length
+			})
+		);
+	}
 
 	if (candidates.length) {
 		try {
@@ -293,9 +309,20 @@ export async function persistElements(
 		).map((r) => [r.entryId, r.note])
 	);
 
-	await prisma.$transaction([
-		prisma.dreamElement.deleteMany({ where: { dreamId } }),
-		prisma.dreamElement.createMany({
+	// Serialised per dream. Under READ COMMITTED the delete in a second, concurrent
+	// extraction re-evaluates after the first commits, finds the original rows
+	// already gone, deletes nothing, and inserts alongside the first one's rows -
+	// so "replace" quietly became "union", with skipDuplicates absorbing the
+	// collisions and the row count silently exceeding MAX_ELEMENTS_PER_DREAM.
+	// Reachable from a double-submitted reset, a second regenerate click, or
+	// reextract running while a stream completes.
+	//
+	// pg_advisory_xact_lock returns void, so it needs $executeRaw, not $queryRaw -
+	// the same shape credits.ts uses for the same reason.
+	await prisma.$transaction(async (tx) => {
+		await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${dreamId}, 0))`;
+		await tx.dreamElement.deleteMany({ where: { dreamId } });
+		await tx.dreamElement.createMany({
 			data: deduped.map((r) => ({
 				dreamId,
 				entryId: r.entryId,
@@ -305,8 +332,8 @@ export async function persistElements(
 				note: previousNotes.get(r.entryId) ?? null
 			})),
 			skipDuplicates: true
-		})
-	]);
+		});
+	});
 	return deduped.length;
 }
 
@@ -474,6 +501,23 @@ const VALENCE_SHIFT_THRESHOLD = 0.35;
 
 /** Two per half. Fewer cannot distinguish a trend from two noisy draws. */
 const MIN_VALENCE_SAMPLES = 4;
+
+/**
+ * Hard ceiling on the matcher's candidate list.
+ *
+ * Not a frequency cap - the spike showed capping by count is self-reinforcing,
+ * because a symbol seen twice a year ago drops below the cut and its next
+ * sighting then mints a second entry, burying the rare-but-recurring image this
+ * feature exists to surface. This is a bound on prompt size, taken last and
+ * logged when it bites, because the failure it prevents is worse: past the
+ * model's context the request 400s, the catch treats every element as new, and
+ * the next prompt is larger still.
+ *
+ * ponytail: newest-first truncation. Upgrade path when a real user passes it -
+ * prefilter candidates by trigram similarity to the extracted labels, which
+ * keeps the long tail reachable instead of dropping it.
+ */
+const MAX_MATCHER_CANDIDATES = 300;
 
 /**
  * Prior notes shown per image. Two is enough to establish that something has

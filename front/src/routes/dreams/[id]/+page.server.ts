@@ -98,6 +98,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				updatedAt: true,
 				analysisPaidAt: true,
 				promptType: true, // Select promptType
+				elementsExtractedAt: true,
 				elements: {
 					select: {
 						rawLabel: true,

@@ -118,7 +118,14 @@ class LLMService {
 				temperature: 0,
 				max_tokens: MAX_TOKENS
 			},
-			{ signal }
+			// maxRetries: 0 makes the caller's AbortSignal the real ceiling. The SDK
+			// sleeps between retries with a plain, non-abortable timer that honours
+			// the server's Retry-After header verbatim, and only checks the signal
+			// between attempts - so with the client default of 2 retries a 429
+			// carrying `Retry-After: 60` would hold the createDream form action for
+			// minutes despite a 10s signal. These calls are free and re-runnable;
+			// giving up immediately is strictly better than making a user wait.
+			{ signal, maxRetries: 0 }
 		);
 		return JSON.parse(sliceJson(response.choices[0]?.message?.content ?? ''));
 	}

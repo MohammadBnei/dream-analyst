@@ -51,6 +51,16 @@ Title:`;
  */
 const PAST_DREAM_CHAR_BUDGET = 6_000;
 
+/**
+ * How many hand-curated relations reach the prompt.
+ *
+ * Bounded because `relatedTo` accumulates: findAndSetRelatedDreams connects
+ * without clearing, deliberately, so that regenerating never deletes a link the
+ * user made. That makes the relation grow monotonically, which is fine for a
+ * badge list and not fine for a prompt.
+ */
+const CURATED_LIMIT = 5;
+
 /** Trim a dream to fit the budget, marking the cut so the model knows it happened. */
 function excerpt(text: string, budget: number): string {
 	return text.length <= budget ? text : `${text.slice(0, budget)}[...]`;
@@ -78,7 +88,21 @@ async function buildPastDreamsContext(dream: Dream, prisma: PrismaClient): Promi
 	]);
 	const seriesIds = series.map((d) => d.id);
 	const echoes = await findDreamsSharingElements(dream, 5, prisma, seriesIds);
-	const echoIds = echoes.map((e) => e.id);
+
+	// Links the dreamer made by hand, which neither signal can rediscover.
+	// Building the prompt from the two queries alone made ?/updateRelatedDreams
+	// and ?/removeRelatedDream decorative: a user could curate a connection and a
+	// paid re-analysis would ignore it. Curation outranks both automatic signals,
+	// so these go first and are not subject to the echo budget's ranking.
+	const curated = await prisma.dream.findUnique({
+		where: { id: dream.id },
+		select: { relatedTo: { select: { id: true }, take: CURATED_LIMIT } }
+	});
+	const curatedIds = (curated?.relatedTo ?? [])
+		.map((d) => d.id)
+		.filter((id) => !seriesIds.includes(id));
+
+	const echoIds = [...new Set([...curatedIds, ...echoes.map((e) => e.id)])];
 
 	const echoDreams = echoIds.length
 		? await prisma.dream.findMany({
@@ -86,8 +110,9 @@ async function buildPastDreamsContext(dream: Dream, prisma: PrismaClient): Promi
 				select: { id: true, title: true, rawText: true, dreamDate: true }
 			})
 		: [];
-	// findMany does not preserve `in` order; restore the overlap ranking.
-	const rank = new Map(echoes.map((e, i) => [e.id, i]));
+	// findMany does not preserve `in` order; restore the intended ranking, with
+	// curated links ahead of overlap matches.
+	const rank = new Map(echoIds.map((id, i) => [id, i]));
 	echoDreams.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
 
 	// The series gets the larger share: it is the spine of the reading.

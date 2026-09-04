@@ -11,10 +11,16 @@
 		entry: { id: string; kind: string; label: string };
 	};
 
-	let { elements = [], counts = {} } = $props<{
+	let {
+		elements = [],
+		counts = {},
+		extracted = true
+	} = $props<{
 		elements?: Element[];
 		/** entryId -> how many of this dreamer's dreams use it. */
 		counts?: Record<string, number>;
+		/** Whether extraction has ever run for this dream. */
+		extracted?: boolean;
 	}>();
 
 	// paraglide compiles messages to named exports, so `m[kind]()` is not
@@ -43,48 +49,57 @@
 	const noted = $derived(elements.filter((e: Element) => e.note));
 </script>
 
-<div class="mt-8 rounded-box bg-base-200 p-6 shadow-lg">
-	<h2 class="mb-4 text-xl font-semibold">{m.symbols_heading()}</h2>
+<!--
+  Hidden entirely for a dream extraction has never touched, rather than shown
+  empty. "No symbols recorded" is a claim about the dream; on a dream predating
+  this feature, or one whose extractor failed, the truth is that nobody looked.
+  Without this every pre-existing dream asserts it has no symbols until a backfill
+  runs.
+-->
+{#if extracted}
+	<div class="mt-8 rounded-box bg-base-200 p-6 shadow-lg">
+		<h2 class="mb-4 text-xl font-semibold">{m.symbols_heading()}</h2>
 
-	{#if grouped.length === 0}
-		<p class="text-sm text-base-content/70">{m.symbols_empty()}</p>
-	{:else}
-		{#each grouped as group (group.kind)}
-			<div class="mb-3">
-				<h3 class="mb-1 text-xs tracking-wide text-base-content/60 uppercase">
-					{kindLabel(group.kind)}
-				</h3>
-				<div class="flex flex-wrap gap-2">
-					{#each group.items as el (el.entry.id)}
-						{@const count = counts[el.entry.id] ?? 1}
-						<a
-							class="badge {elementKindBadge(group.kind)} gap-1 badge-lg"
-							href={resolve(`/dreams?element=${el.entry.id}`)}
-							aria-label={m.filter_by_element({ label: el.entry.label })}
-						>
-							{el.entry.label}
-							{#if count > 1}
-								<span class="opacity-70">×{count}</span>
-							{/if}
-							{#if el.valence !== null}
-								<!-- Direction only. A valence float from a 0.7-temperature model
-								     is false precision; the sign is the only honest reading. -->
-								<span aria-hidden="true">{el.valence < 0 ? '↓' : '↑'}</span>
-							{/if}
-						</a>
-					{/each}
+		{#if grouped.length === 0}
+			<p class="text-sm text-base-content/70">{m.symbols_empty()}</p>
+		{:else}
+			{#each grouped as group (group.kind)}
+				<div class="mb-3">
+					<h3 class="mb-1 text-xs tracking-wide text-base-content/60 uppercase">
+						{kindLabel(group.kind)}
+					</h3>
+					<div class="flex flex-wrap gap-2">
+						{#each group.items as el (el.entry.id)}
+							{@const count = counts[el.entry.id] ?? 1}
+							<a
+								class="badge {elementKindBadge(group.kind)} gap-1 badge-lg"
+								href={resolve(`/dreams?element=${el.entry.id}`)}
+								aria-label={m.filter_by_element({ label: el.entry.label })}
+							>
+								{el.entry.label}
+								{#if count > 1}
+									<span class="opacity-70">×{count}</span>
+								{/if}
+								{#if el.valence !== null}
+									<!-- Direction only. A valence float from a 0.7-temperature model
+									     is false precision; the sign is the only honest reading. -->
+									<span aria-hidden="true">{el.valence < 0 ? '↓' : '↑'}</span>
+								{/if}
+							</a>
+						{/each}
+					</div>
 				</div>
-			</div>
-		{/each}
+			{/each}
 
-		{#if noted.length}
-			<ul class="mt-4 space-y-1 border-t border-base-300 pt-3">
-				{#each noted as el (el.entry.id)}
-					<li class="text-sm text-base-content/80">
-						<span class="font-medium">{el.entry.label}</span> — {el.note}
-					</li>
-				{/each}
-			</ul>
+			{#if noted.length}
+				<ul class="mt-4 space-y-1 border-t border-base-300 pt-3">
+					{#each noted as el (el.entry.id)}
+						<li class="text-sm text-base-content/80">
+							<span class="font-medium">{el.entry.label}</span> — {el.note}
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		{/if}
-	{/if}
-</div>
+	</div>
+{/if}
