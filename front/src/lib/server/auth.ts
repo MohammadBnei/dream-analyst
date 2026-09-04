@@ -1,35 +1,17 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
-import { env } from '$env/dynamic/private';
+import { serverEnv } from '$lib/server/env';
 import type { Cookies } from '@sveltejs/kit';
 import type { UserRole } from '@prisma/client'; // Import UserRole enum
 
-// No fallback, deliberately. This used to default to the literal
-// 'your_jwt_secret_here' when JWT_SECRET was unset — which is exactly what
-// happened in production: session cookies were being signed with a placeholder
-// published in this repository, so anyone reading it could forge an auth_token
-// for any user.
+// Read through serverEnv(), which rejects an empty JWT_SECRET along with every
+// other required variable, in one error naming all of them. The rationale for
+// having no fallback - and for validating at use rather than at import - now
+// lives beside the declaration in env.ts.
 //
-// The fallback is what made that invisible: the app booted, logins worked, and
-// nothing anywhere said the signing key was public. An auth system running
-// without a signing key is not degraded, it is bypassed.
-//
-// Checked at USE, not at import. A module-scope throw also fires during
-// `vite build`, which evaluates server modules — so requiring it there broke
-// the image build rather than the insecure default. Failing on the first sign
-// or verify is just as loud at runtime and does not conflate "cannot build"
-// with "is not configured".
-function jwtSecret(): string {
-	const secret = env.JWT_SECRET;
-	if (!secret) {
-		throw new Error(
-			'JWT_SECRET is not set. Refusing to sign or verify a session token: it would ' +
-				'use a predictable key, which means anyone could forge one. Set it in the ' +
-				'environment (see .env.example).'
-		);
-	}
-	return secret;
-}
+// Still resolved at USE, not at module scope: serverEnv() is lazy, so `vite
+// build` (which evaluates server modules) does not need the environment.
+const jwtSecret = (): string => serverEnv().JWT_SECRET;
 
 const JWT_EXPIRES_IN = '30d'; // Token expiration time
 

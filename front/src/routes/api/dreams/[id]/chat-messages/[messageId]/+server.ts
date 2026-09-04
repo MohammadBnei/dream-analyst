@@ -1,29 +1,17 @@
 import { error, json } from '@sveltejs/kit';
-import { getServerChatService } from '$lib/server/chatService'; // Import the new service
+import { deleteChatMessage } from '$lib/server/chat';
+import { requireOwnedDream, requireUser } from '$lib/server/guards';
 
 export async function DELETE({ params, locals }) {
-	const dreamId = params.id;
-	const messageId = params.messageId;
-	const sessionUser = locals.user;
-	const chatService = getServerChatService(); // Get the new chat service instance
+	const { id: dreamId, messageId } = params;
+	if (!dreamId || !messageId) error(400, 'Dream ID and Message ID are required.');
 
-	if (!sessionUser) {
-		throw error(401, 'Unauthorized');
-	}
+	// This route used to hand-roll its auth check and derive a 404 by
+	// string-matching the thrown message. It is the last API route to adopt the
+	// shared guards.
+	const sessionUser = requireUser(locals);
+	await requireOwnedDream(locals, dreamId);
 
-	if (!dreamId || !messageId) {
-		throw error(400, 'Dream ID and Message ID are required.');
-	}
-
-	try {
-		await chatService.deleteChatMessage(messageId, dreamId, sessionUser.id);
-		return json({ message: 'Chat message deleted successfully' }, { status: 200 });
-	} catch (e) {
-		console.error(`Error deleting chat message ${messageId} for dream ${dreamId}:`, e);
-		// Check for specific error message from service to return 404
-		if ((e as Error).message.includes('not found or not authorized')) {
-			throw error(404, (e as Error).message);
-		}
-		throw error(500, 'Failed to delete chat message.');
-	}
+	await deleteChatMessage(messageId, dreamId, sessionUser.id);
+	return json({ message: 'Chat message deleted successfully' }, { status: 200 });
 }

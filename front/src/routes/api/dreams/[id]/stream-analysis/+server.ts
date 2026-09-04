@@ -4,46 +4,28 @@ import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor';
 import { DreamStatus } from '@prisma/client';
 import type Redis from 'ioredis';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
+import { DREAM_PROMPT_TYPES, type DreamPromptType } from '$lib/promptTypes';
+import { requireOwnedDream } from '$lib/server/guards';
 
 const encoder = new TextEncoder();
 
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
-
 export async function GET({ params, locals, platform, request }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	if (!dreamId) error(400, 'Dream ID is required.');
 
-	if (!sessionUser) {
-		throw error(401, 'Unauthorized');
-	}
-
-	if (!dreamId) {
-		throw error(400, 'Dream ID is required.');
-	}
+	const dream = await requireOwnedDream(locals, dreamId);
 
 	const streamStateStore = await getStreamStateStore();
-	const prisma = await getPrismaClient();
-	const creditService = getCreditService();
+	const prisma = getPrismaClient();
 
-	const dream = await prisma.dream.findUnique({
-		where: { id: dreamId }
-	});
-
-	if (!dream || dream.userId !== sessionUser.id) {
-		throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
-	}
-
-	// Extract promptType from query parameters, default to 'jungian'
-	const url = new URL(request.url);
-	const promptType: DreamPromptType =
-		(url.searchParams.get('promptType') as DreamPromptType) || 'jungian';
+	// Was cast straight from the query string, so an unknown value reached
+	// promptService.getSystemPrompt() and threw inside stream setup.
+	const requestedPromptType = new URL(request.url).searchParams.get('promptType');
+	const promptType: DreamPromptType = DREAM_PROMPT_TYPES.includes(
+		requestedPromptType as DreamPromptType
+	)
+		? (requestedPromptType as DreamPromptType)
+		: 'jungian';
 
 	// If analysis is already completed or failed (either in DB or Redis), just return the final result
 	if (dream.status === DreamStatus.COMPLETED || dream.status === DreamStatus.ANALYSIS_FAILED) {
@@ -60,6 +42,17 @@ export async function GET({ params, locals, platform, request }) {
 				Connection: 'keep-alive'
 			}
 		});
+	}
+
+	// An analysis runs only when one has been paid for. `analysisPaidAt` is the
+	// entitlement: set by claimAnalysis when charged, cleared when the run ends.
+	//
+	// This is a state check, not billing logic - and it is what makes unpaid work
+	// structurally impossible rather than merely unreachable. Gating on status
+	// alone was not enough: other code paths write status, so a dream could arrive
+	// here PENDING_ANALYSIS without anyone having paid.
+	if (dream.status === DreamStatus.PENDING_ANALYSIS && dream.analysisPaidAt === null) {
+		error(402, 'This analysis has not been paid for.');
 	}
 
 	// If status is PENDING_ANALYSIS, ensure a background process is running
@@ -87,75 +80,74 @@ export async function GET({ params, locals, platform, request }) {
 
 		const clientStream = new ReadableStream({
 			async start(controller) {
-				// Send initial state from Redis (if available) or DB
-				const initialRedisState = await streamStateStore.getStreamState(dreamId);
-				const initialDream = await prisma.dream.findUnique({
-					where: { id: dreamId },
-					select: { interpretation: true, tags: true, status: true }
-				});
-
-				const initialContent =
-					initialRedisState?.interpretation || initialDream?.interpretation || '';
-				const initialTags =
-					(initialRedisState?.tags as string[]) || (initialDream?.tags as string[]) || [];
-				const initialStatus =
-					initialRedisState?.status || initialDream?.status || DreamStatus.PENDING_ANALYSIS;
-
-				controller.enqueue(
-					encoder.encode(
-						JSON.stringify({
-							content: initialContent,
-							tags: initialTags,
-							status: initialStatus
-						}) + '\n'
-					)
-				);
-
-				// Subscribe to Redis Pub/Sub for real-time updates
-				subscriberClient = streamStateStore.subscribeToUpdates(dreamId, (message) => {
-					if (streamClosed) return; // Do nothing if stream is already closed
-
-					// Check if controller is still readable before enqueueing
-					if (controller.desiredSize !== null && controller.desiredSize <= 0) {
-						console.debug(`Dream ${dreamId}: Client stream desiredSize <= 0, closing.`);
-						if (subscriberClient) {
-							streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-							subscriberClient = null;
-						}
-						if (!streamClosed) {
-							controller.close();
-							streamClosed = true;
-						}
-						return;
+				// One cleanup path. Previously the unsubscribe was written out three
+				// times (slow-client branch, finalStatus branch, cancel) and skipped
+				// entirely if start() threw after subscribing, leaking the connection.
+				const cleanup = async () => {
+					if (subscriberClient) {
+						const client = subscriberClient;
+						subscriberClient = null;
+						await streamStateStore.unsubscribeFromUpdates(client, dreamId);
 					}
+				};
+				const closeStream = async () => {
+					if (streamClosed) return;
+					streamClosed = true;
+					await cleanup();
+					controller.close();
+				};
 
-					// If the message contains a finalStatus, signal end of stream
-					if (message.finalStatus) {
+				try {
+					const initialRedisState = await streamStateStore.getStreamState(dreamId);
+					const initialDream = await prisma.dream.findUnique({
+						where: { id: dreamId },
+						select: { interpretation: true, tags: true, status: true }
+					});
+
+					controller.enqueue(
+						encoder.encode(
+							JSON.stringify({
+								content: initialRedisState?.interpretation || initialDream?.interpretation || '',
+								tags:
+									(initialRedisState?.tags as string[]) || (initialDream?.tags as string[]) || [],
+								status:
+									initialRedisState?.status || initialDream?.status || DreamStatus.PENDING_ANALYSIS
+							}) + '\n'
+						)
+					);
+
+					subscriberClient = streamStateStore.subscribeToUpdates(dreamId, (message) => {
+						if (streamClosed) return;
+
+						// Every message is enqueued. This used to close the stream when
+						// controller.desiredSize <= 0, treating a slow consumer as a reason
+						// to stop - which silently truncated the analysis mid-sentence for
+						// anyone on a poor connection. Published content is a DELTA, not the
+						// accumulated text, so a dropped frame loses words permanently.
+						//
+						// Buffering is bounded in practice: the LLM call caps at
+						// max_tokens (4096), so a whole analysis is on the order of tens of
+						// kilobytes even if the client reads none of it.
 						controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
-						console.debug(
-							`Dream ${dreamId}: Client stream ending due to finalStatus: ${message.finalStatus}`
-						);
-						if (subscriberClient) {
-							streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-							subscriberClient = null;
+
+						if (message.finalStatus) {
+							void closeStream();
 						}
-						if (!streamClosed) {
-							controller.close();
-							streamClosed = true;
-						}
-					} else {
-						// Otherwise, enqueue the update
-						controller.enqueue(encoder.encode(JSON.stringify(message) + '\n'));
-					}
-				});
+					});
+				} catch (e) {
+					// Without this the subscriber above stayed open forever.
+					await cleanup();
+					controller.error(e);
+				}
 			},
 			async cancel() {
-				console.debug(`Dream ${dreamId}: Client stream cancelled (ReadableStream cancel).`);
-				if (subscriberClient) {
-					await streamStateStore.unsubscribeFromUpdates(subscriberClient, dreamId);
-					subscriberClient = null;
-				}
+				// Fires when the client disconnects.
 				streamClosed = true;
+				if (subscriberClient) {
+					const client = subscriberClient;
+					subscriberClient = null;
+					await streamStateStore.unsubscribeFromUpdates(client, dreamId);
+				}
 			}
 		});
 

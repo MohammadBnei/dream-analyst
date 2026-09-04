@@ -2,64 +2,41 @@ import { error, json } from '@sveltejs/kit';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import { DreamStatus } from '@prisma/client';
-import { getOrCreateStreamProcessor } from '$lib/server/streamProcessor'; // Import getOrCreateStreamProcessor
+import { getStreamProcessor } from '$lib/server/streamProcessor';
+import { requireOwnedDream } from '$lib/server/guards';
 
-function getCurrentUser(locals: App.Locals) {
-	if (!locals.user) {
-		throw error(401, 'Unauthorized');
-	}
-	return locals.user;
-}
-
-export async function POST({ params, locals, platform }) {
+export async function POST({ params, locals }) {
 	const dreamId = params.id;
-	const sessionUser = getCurrentUser(locals);
+	if (!dreamId) error(400, 'Dream ID is required.');
 
-	if (!dreamId) {
-		throw error(400, 'Dream ID is required.');
-	}
+	// Outside the try on purpose: error() signals by throwing, so a 401/404 raised
+	// inside would be caught below and re-reported as a 500.
+	const dream = await requireOwnedDream(locals, dreamId);
 
-	const prisma = await getPrismaClient();
+	const prisma = getPrismaClient();
 	const streamStateStore = await getStreamStateStore();
 
 	try {
-		const dream = await prisma.dream.findUnique({
-			where: { id: dreamId }
-		});
-
-		if (!dream || dream.userId !== sessionUser.id) {
-			throw error(403, 'Forbidden: Dream does not belong to user or does not exist.');
-		}
-
-		// Get the existing processor. We pass the dream and platform just in case
-		// it needs to be created (though it should already exist if analysis is pending).
-		const processor = getOrCreateStreamProcessor(dream, platform);
+		// Lookup only - never create. Creating here would start a new LLM request
+		// purely in order to abort it.
+		const processor = getStreamProcessor(dreamId);
 
 		if (processor) {
-			console.log(
-				`Received cancel request for dream ${dreamId} from user ${sessionUser.id}. Signaling processor to cancel.`
-			);
-			processor.cancelStream(); // This will trigger the AbortController in StreamProcessor
-			// The StreamProcessor's handleStreamAbort will then update the DB status to ANALYSIS_FAILED
-			// and clear its own Redis state.
-		} else {
-			console.log(`No active StreamProcessor found for dream ${dreamId}.`);
-			// If no processor is found, ensure the dream status is updated in DB if it's still PENDING_ANALYSIS
-			if (dream.status === DreamStatus.PENDING_ANALYSIS) {
-				await prisma.dream.update({
-					where: { id: dreamId },
-					data: { status: DreamStatus.ANALYSIS_FAILED } // Mark as failed if cancelled before completion
-				});
-			}
+			processor.cancelStream();
+		} else if (dream.status === DreamStatus.PENDING_ANALYSIS) {
+			await prisma.dream.update({
+				where: { id: dreamId },
+				data: { status: DreamStatus.ANALYSIS_FAILED }
+			});
 		}
 
-		// Clear the Redis state for this stream ID to ensure no client tries to re-subscribe to it
-		// and to remove any lingering state if the processor wasn't found or hadn't fully started.
+		// Clear Redis state so no client re-subscribes to a cancelled stream.
 		await streamStateStore.clearStreamState(dreamId);
 
 		return json({ message: 'Analysis cancellation initiated successfully.' }, { status: 200 });
 	} catch (e) {
+		// Was interpolating the raw message into the response, leaking internals.
 		console.error(`Error cancelling analysis for dream ${dreamId}:`, e);
-		throw error(500, `Failed to cancel analysis: ${(e as Error).message}`);
+		error(500, 'Failed to cancel analysis.');
 	}
 }

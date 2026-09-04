@@ -2,6 +2,7 @@
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
+	import { deserialize } from '$app/forms';
 	import type { UserRole } from '@prisma/client';
 
 	const { data, form } = $props();
@@ -9,7 +10,9 @@
 	let users = $derived(data.users);
 	let userRoles = $derived(data.userRoles);
 
-	let formMessage = $derived<string | null>(null);
+	// Was $derived(null) and then assigned in six places. Assigning to a derived is
+	// a runtime error in Svelte 5, so every one of those writes threw.
+	let formMessage: string | null = $state(null);
 	let formMessageType: 'success' | 'error' | null = $state(null);
 
 	// State for credit adjustment forms
@@ -17,11 +20,10 @@
 	let creditAction: { [key: string]: 'grant' | 'deduct' } = $state({});
 	let isSubmittingCredits: { [key: string]: boolean } = $state({});
 
-	// Effect to update local state when data from load function changes
+	// `users` is derived from data.users, so it needs no copying here; this effect
+	// only seeds the per-user form state.
 	$effect(() => {
 		if (data.users) {
-			users = data.users;
-			// Initialize credit form states for new users
 			users.forEach((user) => {
 				if (creditAmount[user.id] === undefined) creditAmount[user.id] = 1;
 				if (creditAction[user.id] === undefined) creditAction[user.id] = 'grant';
@@ -34,11 +36,11 @@
 	$effect(() => {
 		if (form) {
 			if (form.success) {
-				formMessage = form.message || 'Action successful!';
+				formMessage = form.message || m.admin_action_success();
 				formMessageType = 'success';
 				invalidateAll(); // Invalidate all data to refresh user list and credits
 			} else {
-				formMessage = form.message || 'Action failed.';
+				formMessage = form.message || m.admin_action_failed();
 				formMessageType = 'error';
 			}
 			// Reset submitting state for the specific user if applicable
@@ -57,24 +59,24 @@
 		formData.append('userId', userId);
 		formData.append('role', newRole);
 
-		fetch('?/updateUserRole', {
-			method: 'POST',
-			body: formData
-		})
+		// A form action responds with a serialised { type, data } envelope, not the
+		// action's return value directly. Parsing it as JSON meant result.success was
+		// always undefined, so a SUCCESSFUL role change still reported an error.
+		fetch('?/updateUserRole', { method: 'POST', body: formData })
 			.then(async (response) => {
-				const result = await response.json();
-				if (result.success) {
-					formMessage = result.message;
+				const result = deserialize(await response.text());
+				if (result.type === 'success') {
+					formMessage = (result.data?.message as string) ?? m.admin_action_success();
 					formMessageType = 'success';
-					invalidateAll();
-				} else {
-					formMessage = result.message;
+					await invalidateAll();
+				} else if (result.type === 'failure') {
+					formMessage = (result.data?.message as string) ?? m.admin_action_failed();
 					formMessageType = 'error';
 				}
 			})
 			.catch((error) => {
 				console.error('Error updating user role:', error);
-				formMessage = 'An unexpected error occurred while updating role.';
+				formMessage = m.admin_role_update_error();
 				formMessageType = 'error';
 			});
 	}
@@ -132,7 +134,7 @@
 								value={user.role}
 								onchange={(e) => handleRoleChange(user.id, e)}
 							>
-								{#each userRoles as role}
+								{#each userRoles as role (role)}
 									<option value={role}>{role}</option>
 								{/each}
 							</select>
@@ -156,7 +158,7 @@
 									type="number"
 									name="amount"
 									min="1"
-									class="input-bordered input input-sm w-20"
+									class="input-bordered input w-20 input-sm"
 									bind:value={creditAmount[user.id]}
 									disabled={isSubmittingCredits[user.id]}
 								/>
@@ -171,7 +173,7 @@
 								</select>
 								<button
 									type="submit"
-									class="btn btn-sm btn-primary"
+									class="btn btn-primary btn-sm"
 									disabled={isSubmittingCredits[user.id]}
 								>
 									{#if isSubmittingCredits[user.id]}

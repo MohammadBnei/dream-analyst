@@ -1,23 +1,34 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
-import { getCreditService } from '$lib/server/creditService';
+import {
+	adminAdjustCredits,
+	dailyLimitFor,
+	getDailyCreditUsage,
+	grantDailyCredits
+} from '$lib/server/credits';
 import { UserRole } from '@prisma/client';
-import { z } from 'zod';
+import * as v from 'valibot';
 
-// Zod schema for updating user role
-const UpdateUserRoleSchema = z.object({
-	userId: z.uuid('Invalid user ID.'),
-	role: z.string()
+const UpdateUserRoleSchema = v.object({
+	userId: v.pipe(v.string(), v.uuid('Invalid user ID.')),
+	// Constrained to the real enum: this value is written straight to the DB,
+	// and a bare string let any value through.
+	role: v.picklist(Object.values(UserRole), 'Invalid role.')
 });
 
-// Zod schema for updating user credits
-const UpdateUserCreditsSchema = z.object({
-	userId: z.uuid('Invalid user ID.'),
-	amount: z.number().int('Amount must be an integer.').min(1, 'Amount must be at least 1.'),
-	action: z.enum(['grant', 'deduct'], {
-		errorMap: () => ({ message: 'Invalid credit action.' })
-	})
+const UpdateUserCreditsSchema = v.object({
+	userId: v.pipe(v.string(), v.uuid('Invalid user ID.')),
+	amount: v.pipe(
+		v.number('Amount must be a number.'),
+		v.integer('Amount must be an integer.'),
+		v.minValue(1, 'Amount must be at least 1.')
+	),
+	action: v.picklist(['grant', 'deduct'], 'Invalid credit action.')
 });
+
+/** Our own validation messages are safe to surface; nothing else is. */
+const validationMessage = (e: unknown) =>
+	v.isValiError(e) ? e.issues.map((i) => i.message).join(', ') : null;
 
 export const load = async ({ locals }) => {
 	// Access control: Only ADMIN users can access this page
@@ -26,7 +37,6 @@ export const load = async ({ locals }) => {
 	}
 
 	const prisma = await getPrismaClient();
-	const creditService = getCreditService();
 
 	const users = await prisma.user.findMany({
 		select: {
@@ -44,13 +54,13 @@ export const load = async ({ locals }) => {
 	// For each user, ensure daily credits are granted and get daily usage
 	const usersWithDailyInfo = await Promise.all(
 		users.map(async (user) => {
-			const updatedCredits = await creditService.grantDailyCredits(user.id); // Ensure daily credits are granted
-			const dailyUsage = await creditService.getDailyCreditUsage(user.id);
+			const updatedCredits = await grantDailyCredits(user.id);
+			const dailyUsage = await getDailyCreditUsage(user.id);
 			return {
 				...user,
 				credits: updatedCredits, // Use the updated credits
 				dailyUsage: dailyUsage,
-				dailyLimit: creditService.getDailyLimit(user.role)
+				dailyLimit: dailyLimitFor(user.role)
 			};
 		})
 	);
@@ -64,7 +74,7 @@ export const load = async ({ locals }) => {
 export const actions = {
 	updateUserRole: async ({ request, locals }) => {
 		if (!locals.user || locals.user.role !== UserRole.ADMIN) {
-			throw fail(403, { message: 'Forbidden: Not an admin.' });
+			return fail(403, { message: 'Forbidden: Not an admin.' });
 		}
 
 		const formData = await request.formData();
@@ -72,7 +82,7 @@ export const actions = {
 		const role = formData.get('role') as UserRole;
 
 		try {
-			const validatedData = UpdateUserRoleSchema.parse({ userId, role });
+			const validatedData = v.parse(UpdateUserRoleSchema, { userId, role });
 			const prisma = await getPrismaClient();
 
 			await prisma.user.update({
@@ -86,9 +96,8 @@ export const actions = {
 				message: `User ${validatedData.userId} role updated to ${validatedData.role}.`
 			};
 		} catch (e) {
-			if (e instanceof z.ZodError) {
-				return fail(400, { message: e.message });
-			}
+			const invalid = validationMessage(e);
+			if (invalid) return fail(400, { message: invalid });
 			console.error('Error updating user role:', e);
 			return fail(500, { message: 'Failed to update user role.' });
 		}
@@ -96,7 +105,7 @@ export const actions = {
 
 	updateUserCredits: async ({ request, locals }) => {
 		if (!locals.user || locals.user.role !== UserRole.ADMIN) {
-			throw fail(403, { message: 'Forbidden: Not an admin.' });
+			return fail(403, { message: 'Forbidden: Not an admin.' });
 		}
 
 		const formData = await request.formData();
@@ -105,24 +114,16 @@ export const actions = {
 		const action = formData.get('action') as 'grant' | 'deduct';
 
 		try {
-			const validatedData = UpdateUserCreditsSchema.parse({ userId, amount, action });
-			const creditService = getCreditService();
+			const validatedData = v.parse(UpdateUserCreditsSchema, { userId, amount, action });
 
-			let newCredits: number;
-			if (validatedData.action === 'grant') {
-				newCredits = await creditService.adminGrantCredits(
-					locals.user.id,
-					validatedData.userId,
-					validatedData.amount
-				);
-			} else {
-				// 'deduct'
-				newCredits = await creditService.adminDeductCredits(
-					locals.user.id,
-					validatedData.userId,
-					validatedData.amount
-				);
-			}
+			// adminGrantCredits and adminDeductCredits were near-identical; they are one
+			// function taking a direction now.
+			const newCredits = await adminAdjustCredits(
+				locals.user.id,
+				validatedData.userId,
+				validatedData.amount,
+				validatedData.action
+			);
 
 			return {
 				success: true,
@@ -130,11 +131,11 @@ export const actions = {
 				userId: validatedData.userId
 			};
 		} catch (e) {
-			if (e instanceof z.ZodError) {
-				return fail(400, { message: e.message });
-			}
+			const invalid = validationMessage(e);
+			if (invalid) return fail(400, { message: invalid });
+			// Was interpolating the raw error message, which leaked Prisma internals.
 			console.error('Error updating user credits:', e);
-			return fail(500, { message: `Failed to ${action} credits: ${(e as Error).message}` });
+			return fail(500, { message: `Failed to ${action} credits.` });
 		}
 	}
 };

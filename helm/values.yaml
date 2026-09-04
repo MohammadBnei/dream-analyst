@@ -24,9 +24,13 @@ livenessProbe:
   periodSeconds: 10
   failureThreshold: 3
 
+# Readiness checks Postgres and Redis; liveness deliberately does not. Pointing
+# both at a dependency-checking endpoint means a transient Redis blip restarts
+# the pod and destroys every in-flight analysis, instead of just removing the pod
+# from the load balancer until the dependency answers again.
 readinessProbe:
   enabled: true
-  path: /healthz
+  path: /readyz
   initialDelaySeconds: 5
   periodSeconds: 10
   failureThreshold: 3

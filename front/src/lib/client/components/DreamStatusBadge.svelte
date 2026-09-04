@@ -1,33 +1,13 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import * as m from '$lib/paraglide/messages';
-
-	type DreamStatus = 'COMPLETED' | 'PENDING_ANALYSIS' | 'ANALYSIS_FAILED' | 'STALLED';
+	import { statusBadgeClass } from '$lib/client/dreamStatus';
 
 	let { status } = $props();
-
-	function getStatusBadgeClass(currentStatus: DreamStatus) {
-		switch (currentStatus) {
-			case 'COMPLETED':
-				return 'badge-success';
-			case 'PENDING_ANALYSIS':
-				return 'badge-info';
-			case 'ANALYSIS_FAILED':
-				return 'badge-error';
-			default:
-				return 'badge-neutral';
-		}
-	}
 </script>
 
+<!-- The status-change form that used to live here posted to ?/updateStatus, an
+     action whose picklist accepted PENDING_ANALYSIS - one POST minted a free
+     analysis. It also had no submit control, so it never worked. Cancelling a
+     stuck run is what /api/dreams/[id]/cancel-analysis is for. -->
 <div class="flex items-center gap-2">
-	<span class="badge {getStatusBadgeClass(status)}">{status?.replace('_', ' ')}</span>
-	{#if status === 'PENDING_ANALYSIS'}
-		<form method="POST" action="?/updateStatus" use:enhance>
-			<select name="status" class="select-bordered select select-sm">
-				<option value="" disabled selected>{m.change_status_option()}</option>
-				<option value="ANALYSIS_FAILED">{m.reset_to_failed_analysis_option()}</option>
-			</select>
-		</form>
-	{/if}
+	<span class="badge {statusBadgeClass(status)}">{status?.replace('_', ' ')}</span>
 </div>

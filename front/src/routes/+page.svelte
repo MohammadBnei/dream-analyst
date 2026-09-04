@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 	import dreamerLogo from '$lib/assets/dreamer-logo.png';
 	import darkDreamerLogo from '$lib/assets/dark-dreamer-logo.png';
@@ -18,12 +19,18 @@
 		});
 	}
 
+	/** Not in lib.dom: the beforeinstallprompt event is Chromium-only. */
+	interface BeforeInstallPromptEvent extends Event {
+		prompt(): Promise<void>;
+		userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+	}
+
 	async function installPWA() {
 		if (deferredPrompt) {
 			// Show the install prompt
-			(deferredPrompt as any).prompt();
+			(deferredPrompt as BeforeInstallPromptEvent).prompt();
 			// Wait for the user to respond to the prompt
-			const { outcome } = await (deferredPrompt as any).userChoice;
+			const { outcome } = await (deferredPrompt as BeforeInstallPromptEvent).userChoice;
 			// Optionally, send analytics event with outcome of user choice
 			console.log(`User response to the install prompt: ${outcome}`);
 			// We've used the prompt, and can't use it again, clear it.
@@ -67,9 +74,9 @@
 					{m.home_page_intro()}
 				</p>
 				{#if data.isLoggedIn}
-					<a href="/dreams/new" class="btn btn-primary">{m.add_new_dream_button()}</a>
+					<a href={resolve('/dreams/new')} class="btn btn-primary">{m.add_new_dream_button()}</a>
 				{:else}
-					<a href="/register" class="btn btn-primary">{m.register_button()}</a>
+					<a href={resolve('/register')} class="btn btn-primary">{m.register_button()}</a>
 				{/if}
 			</div>
 		</div>

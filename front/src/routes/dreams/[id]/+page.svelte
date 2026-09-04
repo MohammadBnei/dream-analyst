@@ -2,7 +2,7 @@
 	import { invalidate } from '$app/navigation';
 	import { onMount } from 'svelte';
 	import { DreamAnalysisService } from '$lib/client/services/dreamAnalysisService';
-	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
+	import type { DreamPromptType } from '$lib/promptTypes';
 
 	// New Components
 	import DreamHeader from '$lib/client/components/DreamHeader.svelte';
@@ -15,54 +15,76 @@
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from '$lib/client/components/DreamRelatedDreams.svelte'; // Import the new component
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
+	import * as m from '$lib/paraglide/messages';
 
 	let { data, form } = $props();
 
-	// Initialize with data from the load function
-	let dream = $state(data.dream);
-	let nextDreamId = $state(data.nextDreamId);
-	let prevDreamId = $state(data.prevDreamId);
+	// Derived from load data, not mirrored into $state with a syncing $effect.
+	let dream = $derived(data.dream);
+	let nextDreamId = $derived(data.nextDreamId);
+	let prevDreamId = $derived(data.prevDreamId);
+
+	// An analysis this dream has not paid for. Either it was never affordable (from
+	// load) or the user just tried and could not afford it (from the 402).
+	let unpaid = $derived(data.unpaid || form?.reason === 'insufficient_credits');
+	let analysisCost = $derived(form?.analysisCost ?? data.analysisCost);
+	let creditsBalance = $derived(form?.creditsBalance ?? data.creditsBalance ?? 0);
+	// Unpaid does not mean unaffordable: a dream saved yesterday when credits ran
+	// out is affordable again today, and telling that user they are broke is a lie.
+	// Only explain when they actually cannot proceed - the refusal they just got,
+	// or a balance that does not cover the price.
+	let blocked = $derived(
+		unpaid && (form?.reason === 'insufficient_credits' || creditsBalance < analysisCost)
+	);
+	// Credits in hand but still refused: the daily cap is what stopped them, and
+	// saying "not enough credits" while they hold six of them reads as a bug.
+	let cappedNotBroke = $derived(blocked && creditsBalance >= analysisCost);
 
 	type DreamStatus = typeof dream.status;
 
-	// These states are for real-time streaming updates, not direct dream properties
+	// Streaming state genuinely IS local: it changes faster than the server knows,
+	// and must not be clobbered by an invalidation mid-stream.
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>((dream.tags as string[]) || []);
 
+	// Local override so the badge reacts the instant a stream starts or fails,
+	// ahead of the DB write. Null means "trust the server".
+	let streamStatus = $state<DreamStatus | null>(null);
+	let displayStatus = $derived(streamStatus ?? dream.status);
+
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
-	// isRegeneratingTitle is now managed locally within DreamHeader.svelte
 	// isUpdatingTitle is now managed locally within DreamHeader.svelte
-	let isUpdatingRelatedDreams = $state(false); // New state for updating related dreams
-	let isRegeneratingRelatedDreams = $state(false); // New state for regenerating related dreams
 
 	let analysisService: DreamAnalysisService | null = $state(null);
 	// ClientChatService is instantiated within DreamChatSection, so no need for a top-level state here.
 	// let clientChatService: ClientChatService | null = $state(null);
 
-	// Initialize selectedPromptType from dream data
-	let selectedPromptType: DreamPromptType = $state(
+	// Re-derives when the dream changes, and stays assignable so the select works.
+	let selectedPromptType: DreamPromptType = $derived(
 		(dream.promptType as DreamPromptType) || 'jungian'
 	);
 
-	// Effect to update local state when data from load function changes
-	$effect(() => {
-		if (data.dream) {
-			// Only update if the dream object itself has changed (e.g., ID or updatedAt)
-			// or if it's the initial load.
-			if (!dream || dream.id !== data.dream.id || dream.updatedAt !== data.dream.updatedAt) {
-				dream = data.dream;
-				nextDreamId = data.nextDreamId;
-				prevDreamId = data.prevDreamId;
+	// Bookkeeping, deliberately NOT $state: it must not itself trigger this effect.
+	let lastSyncedDream = '';
 
-				// Reset streamed interpretation/tags if not actively streaming
-				// or if the dream ID has changed (navigating to a new dream)
-				if (!isLoadingStream || dream.id !== data.dream.id) {
-					streamedInterpretation = dream.interpretation || '';
-					streamedTags = (dream.tags as string[]) || [];
-				}
-				selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
-			}
+	// The only state that cannot be derived. It must adopt the server's values when
+	// the dream actually changes, and must NOT be clobbered while a stream is
+	// running - the stream is ahead of the database, which is only written at the
+	// end. Keyed on id+updatedAt so a re-run with unchanged data is a no-op;
+	// syncing on every run would wipe the streamed text the moment the stream
+	// finished, before invalidate() had refreshed it.
+	$effect(() => {
+		const key = `${dream.id}:${dream.updatedAt}`;
+		if (key === lastSyncedDream) return;
+
+		const navigatedToAnotherDream = !lastSyncedDream.startsWith(`${dream.id}:`);
+		lastSyncedDream = key;
+
+		if (!isLoadingStream || navigatedToAnotherDream) {
+			streamedInterpretation = dream.interpretation || '';
+			streamedTags = (dream.tags as string[]) || [];
+			streamStatus = null;
 		}
 	});
 
@@ -87,7 +109,9 @@
 	});
 
 	onMount(async () => {
-		if (dream.status === 'PENDING_ANALYSIS') {
+		// Not when unpaid: the endpoint would answer 402, and the user would watch a
+		// spinner turn into an error for something they never asked to start.
+		if (displayStatus === 'PENDING_ANALYSIS' && !data.unpaid) {
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			// Use the dream's promptType to start the stream
 			startStream(selectedPromptType);
@@ -107,7 +131,7 @@
 		streamedInterpretation = ''; // Clear previous interpretation
 		streamedTags = []; // Clear previous tags
 		// Optimistically set status, but the final status will come from the stream or DB
-		dream.status = 'PENDING_ANALYSIS';
+		streamStatus = 'PENDING_ANALYSIS';
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -118,23 +142,24 @@
 					streamedTags = data.tags;
 				}
 				if (data.status) {
-					dream.status = data.status as DreamStatus;
+					streamStatus = data.status as DreamStatus;
 				}
 			},
 			onEnd: async (data) => {
 				isLoadingStream = false;
 				if (data.status) {
-					dream.status = data.status as DreamStatus;
+					streamStatus = data.status as DreamStatus;
 				}
-				if (data.message) {
-					streamError = data.message;
-				}
+				// Only a failure message is an error. This previously assigned any
+				// message, so a successful run published "Processing completed." and
+				// the UI rendered it in the red error alert.
+				streamError = data.status === 'ANALYSIS_FAILED' ? (data.message ?? null) : null;
 				await invalidate('dream'); // Invalidate to ensure latest DB state, including final interpretation/tags/status
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				dream.status = 'ANALYSIS_FAILED'; // Update local status for immediate feedback
+				streamStatus = 'ANALYSIS_FAILED';
 				streamError = errorMsg;
 				invalidate('dream'); // Invalidate to persist the failed status
 			},
@@ -165,105 +190,13 @@
 		// if their internal state changes and needs to be reflected in the parent or other components.
 		invalidate('dream');
 	}
-
-	// handleRegenerateTitle function is removed as DreamHeader now handles its own form submission.
-	// async function handleRegenerateTitle() {
-	// 	if (!dream.id) {
-	// 		console.warn('Cannot regenerate title: dream ID is not available.');
-	// 		return;
-	// 	}
-	// 	isRegeneratingTitle = true;
-	// 	try {
-	// 		const response = await fetch(`/api/dreams/${dream.id}/regenerate-title`, {
-	// 			method: 'POST',
-	// 			headers: {
-	// 				'Content-Type': 'application/json'
-	// 			}
-	// 		});
-
-	// 		if (response.ok) {
-	// 			// On success, invalidate to re-fetch the dream with the new title
-	// 			await invalidate('dream');
-	// 		} else {
-	// 			const errorData = await response.json();
-	// 			console.error('Error regenerating title:', errorData.error);
-	// 			streamError = errorData.error;
-	// 		}
-	// 	} catch (error) {
-	// 		console.error('Network error regenerating title:', error);
-	// 		streamError = 'Network error regenerating title.';
-	// 	} finally {
-	// 		isRegeneratingTitle = false;
-	// 	}
-	// }
-
-	async function handleUpdateRelatedDreams(updatedRelatedIds: string[]) {
-		if (!dream.id) {
-			console.warn('Cannot update related dreams: dream ID is not available.');
-			return;
-		}
-		isUpdatingRelatedDreams = true;
-		const formData = new FormData();
-		formData.append('relatedDreamIds', JSON.stringify(updatedRelatedIds));
-
-		try {
-			const response = await fetch(`/dreams/${dream.id}?/updateRelatedDreams`, {
-				method: 'POST',
-				body: formData
-			});
-
-			if (response.ok) {
-				// On success, invalidate to re-fetch the dream with the new related dreams
-				await invalidate('dream');
-			} else {
-				const errorData = await response.json();
-				console.error('Error updating related dreams:', errorData.error);
-				streamError = errorData.error;
-			}
-		} catch (error) {
-			console.error('Network error updating related dreams:', error);
-			streamError = 'Network error updating related dreams.';
-		} finally {
-			isUpdatingRelatedDreams = false;
-		}
-	}
-
-	async function handleRegenerateRelatedDreams() {
-		if (!dream.id) {
-			console.warn('Cannot regenerate related dreams: dream ID is not available.');
-			return;
-		}
-		isRegeneratingRelatedDreams = true;
-		try {
-			const response = await fetch(`/api/dreams/${dream.id}/regenerate-related-dreams`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json'
-				}
-			});
-
-			if (response.ok) {
-				// On success, invalidate to re-fetch the dream with the new related dreams
-				await invalidate('dream');
-			} else {
-				const errorData = await response.json();
-				console.error('Error regenerating related dreams:', errorData.error);
-				streamError = errorData.error;
-			}
-		} catch (error) {
-			console.error('Network error regenerating related dreams:', error);
-			streamError = 'Network error regenerating related dreams.';
-		} finally {
-			isRegeneratingRelatedDreams = false;
-		}
-	}
 </script>
 
 <div class="container mx-auto max-w-4xl md:p-4">
 	{#if data.dream}
 		<div class="mb-4 flex items-center justify-between">
 			<DreamHeader
-				dreamStatus={dream.status}
+				dreamStatus={displayStatus}
 				onDeleteClick={openDeleteModal}
 				dreamTitle={dream.title}
 			/>
@@ -272,19 +205,35 @@
 		<div class="card bg-base-100 p-3 py-6 shadow-xl md:p-6">
 			<div class="card-body p-0">
 				<DreamNavigation dreamDate={dream.dreamDate} {prevDreamId} {nextDreamId}>
-					<svelte:fragment slot="status-badge">
-						<DreamStatusBadge status={dream.status} />
-					</svelte:fragment>
+					{#snippet statusBadge()}
+						<DreamStatusBadge status={displayStatus} />
+					{/snippet}
 				</DreamNavigation>
 
 				<DreamDateSection dreamDate={dream.dreamDate} onUpdate={handleDreamUpdate} />
 
 				<DreamRawTextSection rawText={dream.rawText} onUpdate={handleDreamUpdate} />
 
+				{#if blocked}
+					<div role="alert" class="my-4 alert alert-warning">
+						<div>
+							<h3 class="font-bold">
+								{cappedNotBroke ? m.daily_limit_reached_title() : m.insufficient_credits_title()}
+							</h3>
+							<div class="text-sm">
+								{cappedNotBroke
+									? m.daily_limit_reached_detail({ balance: creditsBalance })
+									: m.insufficient_credits_detail({ cost: analysisCost, balance: creditsBalance })}
+							</div>
+						</div>
+					</div>
+				{/if}
+
 				<DreamInterpretationSection
+					{unpaid}
 					interpretation={streamedInterpretation}
 					tags={streamedTags}
-					status={dream.status}
+					status={displayStatus}
 					promptType={selectedPromptType}
 					bind:isLoadingStream
 					{streamError}
@@ -296,14 +245,7 @@
 					<DreamChatSection dreamId={dream.id} />
 				{/if}
 
-				<DreamRelatedDreams
-					dreamId={dream.id}
-					relatedDreams={dream.relatedTo || []}
-					onUpdateRelatedDreams={handleUpdateRelatedDreams}
-					{isUpdatingRelatedDreams}
-					onRegenerateRelatedDreams={handleRegenerateRelatedDreams}
-					{isRegeneratingRelatedDreams}
-				/>
+				<DreamRelatedDreams dreamId={dream.id} relatedDreams={dream.relatedTo || []} />
 
 				<DreamMetadata createdAt={dream.createdAt} updatedAt={dream.updatedAt} />
 			</div>

@@ -43,7 +43,10 @@ if (process.env.NODE_ENV === 'production') {
 
 if (import.meta.main) {
 	const stringLine = JSON.parse(toJsonLine('info', ['hello']));
-	console.assert(stringLine.level === 'info' && stringLine.message === 'hello', 'string arg failed');
+	console.assert(
+		stringLine.level === 'info' && stringLine.message === 'hello',
+		'string arg failed'
+	);
 
 	const errLine = JSON.parse(toJsonLine('error', [new Error('boom')]));
 	console.assert(errLine.message.startsWith('Error: boom'), 'error arg failed');

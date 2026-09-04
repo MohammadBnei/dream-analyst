@@ -3,8 +3,8 @@
 	import StreamedAnalysisDisplay from '$lib/client/components/StreamedAnalysisDisplay.svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
-	import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-	import { promptService } from '$lib/prompts/promptService';
+	import type { EnhanceResult } from '$lib/client/enhance';
+	import { DREAM_PROMPT_TYPES, type DreamPromptType } from '$lib/promptTypes';
 
 	let {
 		interpretation,
@@ -14,7 +14,11 @@
 		isLoadingStream = $bindable(),
 		streamError,
 		onRegenerateAnalysis, // This callback now expects a promptType argument
-		onCancelAnalysis
+		onCancelAnalysis,
+		// PENDING_ANALYSIS with nothing paid for it: the user ran out of credits when
+		// the dream was created. Without this the button below renders for neither
+		// branch and the dream is unanalysable forever.
+		unpaid = false
 	} = $props();
 
 	let isEditingInterpretation = $state(false);
@@ -24,7 +28,10 @@
 
 	// Local state for the selected prompt type in the dropdown
 	let selectedPromptType: DreamPromptType = $state(promptType || 'jungian');
-	const availablePromptTypes: DreamPromptType[] = promptService.getAvailablePromptTypes();
+	// Was promptService.getAvailablePromptTypes(), which imported the prompt module
+	// as a VALUE purely to read four names - dragging every system prompt and both
+	// knowledge bases into the browser bundle.
+	const availablePromptTypes: readonly DreamPromptType[] = DREAM_PROMPT_TYPES;
 
 	// Effect to update local selectedPromptType when the prop changes (e.g., after a successful regeneration)
 	$effect(() => {
@@ -54,41 +61,42 @@
 		selectedPromptType = (event.target as HTMLSelectElement).value as DreamPromptType;
 	}
 
-	async function handleInterpretationSubmit({ update }) {
+	const handleInterpretationSubmit: EnhanceResult = async ({ update }) => {
 		isSavingInterpretationEdit = true;
 		interpretationEditError = null;
 		await update();
 		isSavingInterpretationEdit = false;
 		isEditingInterpretation = false; // Exit edit mode on success or failure
-	}
+	};
 
-	async function handleRegenerateSubmit({ update, result }) {
+	const handleRegenerateSubmit: EnhanceResult = async ({ update, result }) => {
 		await update(); // Update page data from server response
 		if (result.type === 'success') {
 			// Call the parent's onRegenerateAnalysis with the currently selected prompt type
 			onRegenerateAnalysis(selectedPromptType);
 		}
-	}
+	};
 </script>
 
 <div class="mb-6">
 	<div class="mb-2 flex items-center justify-between">
 		<h3 class="text-lg font-semibold">{m.interpretation_heading()}</h3>
 		<div class="flex items-center gap-2">
-			<div class="join-vertical join lg:join-horizontal">
+			<div class="join join-vertical lg:join-horizontal">
 				<!-- Prompt Type Selector -->
 				<select
+					aria-label={m.aria_select_prompt_type()}
 					class="select-bordered select join-item select-sm"
 					bind:value={selectedPromptType}
 					onchange={handlePromptTypeChange}
 					disabled={isLoadingStream}
 				>
-					{#each availablePromptTypes as type}
+					{#each availablePromptTypes as type (type)}
 						<option value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
 					{/each}
 				</select>
 
-				{#if status === 'COMPLETED' || status === 'ANALYSIS_FAILED'}
+				{#if status === 'COMPLETED' || status === 'ANALYSIS_FAILED' || unpaid}
 					<form
 						method="POST"
 						action="?/resetAnalysis"
@@ -102,7 +110,7 @@
 						<input type="hidden" name="promptType" value={selectedPromptType} />
 						<button
 							type="submit"
-							class="btn join-item btn-sm btn-primary"
+							class="btn join-item btn-primary btn-sm"
 							disabled={isLoadingStream}
 						>
 							<svg
@@ -119,7 +127,7 @@
 									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004 12v1m6.707 3.293a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L13 14.586V11a1 1 0 10-2 0v3.586l-1.293-1.293a1 1 0 00-1.414 1.414l3 3z"
 								/>
 							</svg>
-							{m.regenerate_analysis_button()}
+							{unpaid ? m.analyze_dream_button() : m.regenerate_analysis_button()}
 						</button>
 					</form>
 				{:else if status === 'PENDING_ANALYSIS' && isLoadingStream}
@@ -130,7 +138,11 @@
 				{/if}
 			</div>
 			{#if !isEditingInterpretation}
-				<button onclick={toggleInterpretationEditMode} class="btn btn-ghost btn-sm" aria-label="edit interpretation">
+				<button
+					onclick={toggleInterpretationEditMode}
+					class="btn btn-ghost btn-sm"
+					aria-label={m.aria_edit_interpretation()}
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						class="h-5 w-5"
@@ -172,7 +184,7 @@
 				>
 				<button
 					type="submit"
-					class="btn btn-sm btn-primary"
+					class="btn btn-primary btn-sm"
 					disabled={isSavingInterpretationEdit || editedInterpretationText.length < 10}
 				>
 					{#if isSavingInterpretationEdit}

@@ -5,12 +5,14 @@
 
 	const { data, form } = $props();
 
-	let user = $state(data.user);
-	let dailyLimit = $state(data.dailyLimit);
-	let dailyUsage = $state(data.dailyUsage);
+	// $derived, not $state: these mirror load data, and a $state copy keeps the
+	// value from the first render even after invalidateAll() refreshes it.
+	let user = $derived(data.user);
+	let dailyLimit = $derived(data.dailyLimit);
+	let dailyUsage = $derived(data.dailyUsage);
 
-	let editedUsername = $state(user.username);
-	let editedEmail = $state(user.email);
+	let editedUsername = $derived(user.username);
+	let editedEmail = $derived(user.email);
 
 	let isEditingUsername = $state(false);
 	let isEditingEmail = $state(false);
@@ -18,18 +20,21 @@
 	let usernameEditError = $state<string | null>(null);
 	let emailEditError = $state<string | null>(null);
 	let formMessage = $state<string | null>(null);
-	let formMessageType: 'success' | 'error' | null = null;
+	// Was a plain variable. It is written in an effect and read in the template to
+	// choose alert-success vs alert-error, so without $state the alert never
+	// changed colour.
+	let formMessageType: 'success' | 'error' | null = $state(null);
 
 	// Effect to handle form submission responses
 	$effect(() => {
 		if (form) {
 			if (form.success) {
-				formMessage = form.message || 'Update successful!';
+				formMessage = form.message || m.profile_update_success();
 				formMessageType = 'success';
 				// Invalidate all data to ensure header and other parts reflect new user info
 				invalidateAll();
 			} else {
-				formMessage = form.message || 'Update failed.';
+				formMessage = form.message || m.profile_update_failed();
 				formMessageType = 'error';
 			}
 
@@ -104,7 +109,7 @@
 		</div>
 	{/if}
 
-	<div class="card bg-base-100 p-3 py-6 md:p-6 shadow-xl">
+	<div class="card bg-base-100 p-3 py-6 shadow-xl md:p-6">
 		<div class="card-body p-0">
 			<h2 class="mb-4 card-title text-2xl">{m.account_details_heading()}</h2>
 
@@ -115,7 +120,7 @@
 						<button
 							onclick={toggleEditUsername}
 							class="btn btn-ghost btn-sm"
-							aria-label="edit username"
+							aria-label={m.aria_edit_username()}
 						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
@@ -162,7 +167,7 @@
 							<button onclick={handleCancelUsernameEdit} type="button" class="btn btn-ghost btn-sm"
 								>{m.cancel_button()}</button
 							>
-							<button type="submit" class="btn btn-sm btn-primary">{m.save_button()}</button>
+							<button type="submit" class="btn btn-primary btn-sm">{m.save_button()}</button>
 						</div>
 					</form>
 				{:else}
@@ -174,7 +179,11 @@
 				<div class="mb-2 flex items-center justify-between">
 					<p class="font-semibold">{m.email_label()}:</p>
 					{#if !isEditingEmail}
-						<button onclick={toggleEditEmail} class="btn btn-ghost btn-sm" aria-label="edit email">
+						<button
+							onclick={toggleEditEmail}
+							class="btn btn-ghost btn-sm"
+							aria-label={m.aria_edit_email()}
+						>
 							<svg
 								xmlns="http://www.w3.org/2000/svg"
 								class="h-5 w-5"
@@ -220,7 +229,7 @@
 							<button onclick={handleCancelEmailEdit} type="button" class="btn btn-ghost btn-sm"
 								>{m.cancel_button()}</button
 							>
-							<button type="submit" class="btn btn-sm btn-primary">{m.save_button()}</button>
+							<button type="submit" class="btn btn-primary btn-sm">{m.save_button()}</button>
 						</div>
 					</form>
 				{:else}

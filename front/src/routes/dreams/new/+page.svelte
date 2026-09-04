@@ -48,9 +48,9 @@
 				bind:value={dreamText}
 				onInput={handleRichTextInput}
 			/>
-			<label class="label">
+			<p class="label">
 				<span class="label-text-alt">{m.minimum_characters_label({ count: 10 })}</span>
-			</label>
+			</p>
 		</div>
 
 		<div class="form-control">

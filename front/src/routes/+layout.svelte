@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.ico';
 	import * as m from '$lib/paraglide/messages';
@@ -7,9 +8,17 @@
 
 	let { children, data }: LayoutProps = $props();
 
-	const { isLoggedIn, lang, isAdmin } = data;
+	// Derived, not destructured once. `const { isLoggedIn } = data` captures the
+	// value from first render, so the nav kept showing the logged-out links after
+	// login until a full page reload.
+	const isLoggedIn = $derived(data.isLoggedIn);
+	const isAdmin = $derived(data.isAdmin);
+	const lang = $derived(data.lang);
 
-	let currentTheme: string;
+	// Was a plain variable, written in onMount and toggleTheme but read by both
+	// theme checkboxes in the template - so neither ever reflected the real theme
+	// and the two toggles could not agree with each other.
+	let currentTheme = $state('light');
 
 	onMount(() => {
 		// Initialize theme from localStorage or default to 'light'
@@ -58,12 +67,21 @@
 </svelte:head>
 
 <div class="drawer">
-	<input id="my-drawer-3" type="checkbox" class="drawer-toggle" />
+	<input
+		id="my-drawer-3"
+		type="checkbox"
+		class="drawer-toggle"
+		aria-label={m.aria_open_sidebar()}
+	/>
 	<div class="drawer-content flex min-h-screen flex-col">
 		<!-- Navbar -->
 		<div class="navbar w-full bg-base-300">
 			<div class="flex-none lg:hidden">
-				<label for="my-drawer-3" aria-label="open sidebar" class="btn btn-square btn-ghost">
+				<label
+					for="my-drawer-3"
+					aria-label={m.aria_open_sidebar()}
+					class="btn btn-square btn-ghost"
+				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
@@ -79,16 +97,16 @@
 				</label>
 			</div>
 			<div class="mx-2 flex-1 px-2 text-xl font-bold">
-				<a href="/" class="btn text-xl btn-ghost">{m.app_name()}</a>
+				<a href={resolve('/')} class="btn btn-ghost text-xl">{m.app_name()}</a>
 			</div>
 			<div class="hidden flex-none lg:block">
 				<ul class="menu menu-horizontal">
 					<!-- Navbar menu content here -->
 					{#if isLoggedIn}
-						<li><a href="/dreams">{m.dreams_link()}</a></li>
-						<li><a href="/profile">{m.profile_link()}</a></li>
+						<li><a href={resolve('/dreams')}>{m.dreams_link()}</a></li>
+						<li><a href={resolve('/profile')}>{m.profile_link()}</a></li>
 						{#if isAdmin}
-							<li><a href="/admin">{m.admin_link()}</a></li>
+							<li><a href={resolve('/admin')}>{m.admin_link()}</a></li>
 						{/if}
 						<li>
 							<form action="/logout" method="POST">
@@ -96,13 +114,18 @@
 							</form>
 						</li>
 					{:else}
-						<li><a href="/login">{m.login_link()}</a></li>
+						<li><a href={resolve('/login')}>{m.login_link()}</a></li>
 					{/if}
 					<li>
 						<!-- Theme switch toggle -->
 						<label class="swap swap-rotate">
 							<!-- this hidden checkbox controls the state -->
-							<input type="checkbox" onchange={toggleTheme} checked={currentTheme === 'dark'} />
+							<input
+								type="checkbox"
+								aria-label={m.aria_toggle_theme()}
+								onchange={toggleTheme}
+								checked={currentTheme === 'dark'}
+							/>
 
 							<!-- sun icon -->
 							<svg
@@ -134,15 +157,15 @@
 		</main>
 	</div>
 	<div class="drawer-side">
-		<label for="my-drawer-3" aria-label="close sidebar" class="drawer-overlay"></label>
+		<label for="my-drawer-3" aria-label={m.aria_close_sidebar()} class="drawer-overlay"></label>
 		<ul class="menu min-h-full w-80 bg-base-200 p-4">
 			<!-- Sidebar content here -->
-			<li><a href="/">{m.home_link()}</a></li>
+			<li><a href={resolve('/')}>{m.home_link()}</a></li>
 			{#if isLoggedIn}
-				<li><a href="/dreams">{m.dreams_link()}</a></li>
-				<li><a href="/profile">{m.profile_link()}</a></li>
+				<li><a href={resolve('/dreams')}>{m.dreams_link()}</a></li>
+				<li><a href={resolve('/profile')}>{m.profile_link()}</a></li>
 				{#if isAdmin}
-					<li><a href="/admin">{m.admin_link()}</a></li>
+					<li><a href={resolve('/admin')}>{m.admin_link()}</a></li>
 				{/if}
 				<li>
 					<form action="/logout" method="POST">
@@ -150,13 +173,18 @@
 					</form>
 				</li>
 			{:else}
-				<li><a href="/login">{m.login_link()}</a></li>
+				<li><a href={resolve('/login')}>{m.login_link()}</a></li>
 			{/if}
 			<li>
 				<!-- Theme switch toggle for sidebar -->
 				<label class="swap swap-rotate">
 					<!-- this hidden checkbox controls the state -->
-					<input type="checkbox" onchange={toggleTheme} checked={currentTheme === 'dark'} />
+					<input
+						type="checkbox"
+						aria-label={m.aria_toggle_theme()}
+						onchange={toggleTheme}
+						checked={currentTheme === 'dark'}
+					/>
 
 					<!-- sun icon -->
 					<svg

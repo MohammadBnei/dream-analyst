@@ -1,13 +1,24 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
 
-	let { dreamDate, prevDreamId, nextDreamId } = $props();
+	import type { Snippet } from 'svelte';
+
+	interface Props {
+		dreamDate: Date | string;
+		prevDreamId: string | null;
+		nextDreamId: string | null;
+		/** Replaces the legacy named <slot name="status-badge">. */
+		statusBadge?: Snippet;
+	}
+
+	let { dreamDate, prevDreamId, nextDreamId, statusBadge }: Props = $props();
 </script>
 
 <div class="mb-4 flex-col items-center justify-between">
 	<div class="my-2 flex items-center gap-2">
 		{#if prevDreamId}
-			<a href="/dreams/{prevDreamId}" class="btn btn-outline btn-sm">
+			<a href={resolve('/dreams/[id]', { id: prevDreamId })} class="btn btn-outline btn-sm">
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-4 w-4"
@@ -27,7 +38,7 @@
 		{/if}
 
 		{#if nextDreamId}
-			<a href="/dreams/{nextDreamId}" class="btn btn-outline btn-sm">
+			<a href={resolve('/dreams/[id]', { id: nextDreamId })} class="btn btn-outline btn-sm">
 				{m.next_dream_button()}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -50,6 +61,6 @@
 		<h2 class="card-title text-2xl">
 			{m.dream_on_date({ date: new Date(dreamDate).toLocaleDateString() })}
 		</h2>
-		<slot name="status-badge" />
+		{@render statusBadge?.()}
 	</div>
 </div>

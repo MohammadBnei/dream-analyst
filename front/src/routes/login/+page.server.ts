@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { comparePassword, generateToken, setAuthTokenCookie } from '$lib/server/auth';
 import { getPrismaClient } from '$lib/server/db';
-import { getCreditService } from '$lib/server/creditService'; // Import credit service
+import { grantDailyCredits } from '$lib/server/credits';
 
 export const actions = {
 	default: async ({ request, cookies }) => {
@@ -17,7 +17,6 @@ export const actions = {
 		}
 
 		const prisma = await getPrismaClient();
-		const creditService = getCreditService();
 
 		const existingUser = await prisma.user.findFirst({
 			where: {
@@ -45,14 +44,13 @@ export const actions = {
 		}
 
 		// Grant daily credits upon login if not already granted
-		const updatedCredits = await creditService.grantDailyCredits(existingUser.id);
+		await grantDailyCredits(existingUser.id);
 
 		const token = generateToken(
 			existingUser.id,
 			existingUser.username,
 			existingUser.email,
-			existingUser.role,
-			updatedCredits
+			existingUser.role
 		);
 		setAuthTokenCookie(cookies, token);
 

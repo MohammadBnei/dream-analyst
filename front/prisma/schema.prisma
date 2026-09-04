@@ -50,6 +50,11 @@ model Dream {
   interpretation    String?
   title             String?             // New field for AI-generated title
   status            DreamStatus         @default(PENDING_ANALYSIS)
+  /// Set when an analysis run has been paid for, and CLEARED when that run
+  /// reaches a terminal state. A consumable token, not a flag: one entitlement
+  /// funds exactly one run. Also the exactly-once guard — the charge is
+  /// conditional on `updateMany where analysisPaidAt: null` returning count 1.
+  analysisPaidAt    DateTime?           @map("analysis_paid_at")
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
   promptType        String?             @default("jungian") // Added promptType field
@@ -61,6 +66,11 @@ model Dream {
   relatedTo Dream[] @relation("RelatedDreams")
   relatedBy Dream[] @relation("RelatedDreams")
 
+  // Postgres does not index foreign keys automatically. Every dreams query is
+  // scoped by userId and ordered by dreamDate or createdAt.
+  @@index([userId, dreamDate(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, status])
   @@map("dreams")
 }
 
@@ -77,6 +87,7 @@ model DreamChat {
 
   creditTransaction CreditTransaction? // Optional link to a credit transaction
 
+  @@index([dreamId, createdAt])
   @@map("dream_chat")
 }
 
@@ -98,6 +109,9 @@ model CreditTransaction {
   dream       Dream?     @relation(fields: [relatedDreamId], references: [id])
   chatMessage DreamChat? @relation(fields: [relatedChatMessageId], references: [id])
 
+  // Read on every credit check and on the daily-usage aggregate.
+  @@index([userId, createdAt])
+  @@index([relatedDreamId])
   @@map("credit_transaction")
 }
 

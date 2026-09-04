@@ -6,14 +6,119 @@ on:
     tags:
       - '*'
 
+# upload-sarif writes to the Security tab, which the default read-only token
+# cannot do - the scan step would pass and the job would still fail on the
+# upload.
+permissions:
+  contents: read
+  security-events: write
+
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/dream-analyst
   # PLATFORMS: ${{ github.event_name == 'push' && 'linux/amd64, linux/arm64' || 'linux/amd64' }}
   PLATFORMS: linux/amd64
 
 jobs:
+  # Nothing verified that this project compiled before an image was built and
+  # pushed. `bun run lint` and `bun run check` could not even execute (undeclared
+  # typescript-eslint, and generated Prisma/Paraglide output that no step
+  # produced), so 149 type errors and 90 lint errors accumulated unnoticed.
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # `check` runs the generators first (prisma generate + paraglide compile);
+      # neither needs a reachable database.
+      - name: Typecheck
+        run: bun run check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun test src/
+
+  # The e2e suite had never executed - see the note in playwright.config.ts. It
+  # needs real Postgres and Redis, so it is a separate job rather than part of
+  # `quality`, and build-push waits on both.
+  e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: user
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: dreamer
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U user -d dreamer"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://user:password@localhost:5432/dreamer?sslmode=disable
+      REDIS_URL: redis://localhost:6379
+      JWT_SECRET: ci-only-not-a-real-secret-0000000000000000
+      # No LLM call happens in these tests; the value only has to be present.
+      OPENROUTER_API_KEY: ci-placeholder
+      ORIGIN: http://localhost:4173
+      PUBLIC_ORIGIN: http://localhost:4173
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Apply migrations
+        run: bunx prisma migrate deploy
+
+      # Integration tests exercise the real credit functions against this
+      # job's Postgres. They cannot run in `quality`, which has no database.
+      - name: Integration tests
+        run: bun run test:integration
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Run e2e
+        run: bun run e2e
+
+      - name: Upload report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: front/playwright/report
+          retention-days: 7
+
   build-push:
     runs-on: ubuntu-latest
+    needs: [quality, e2e]
     defaults:
       run:
         working-directory: front
@@ -47,25 +152,45 @@ jobs:
         with:
           platforms: ${{ env.PLATFORMS }}
           push: ${{ github.event_name == 'push' }}
+          # On a pull request nothing is pushed, so without this the image never
+          # exists anywhere and Trivy silently pulls the LAST PUBLISHED tag from
+          # the registry and scans that instead - a green scan of code nobody
+          # proposed. Loading it into the local daemon is what makes the scan
+          # about this build. Only possible because PLATFORMS is single-arch.
+          load: true
           context: front
-          secrets: |
-            DB_PATH=${{ secrets.DB_PATH }}
-            ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
-            ORIGIN=${{ secrets.ORIGIN }}
           tags: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}, ${{ env.IMAGE_NAME }}:latest
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
           cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
 
+      # Previously this ran AFTER the push, wrote a SARIF file that nothing
+      # uploaded, and never failed the build - so it could not block anything.
+      # Now it fails the job on a fixable CRITICAL/HIGH, and the report is
+      # uploaded to the Security tab either way.
       - name: Scan Docker image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
+          # Without this the action logs "Building SARIF report with all
+          # severities" and overrides `severity` for the single run it makes -
+          # so `exit-code: 1` fires on any finding at all, and the job failed on
+          # one LOW in a transitive `cookie`. The cost is that the Security tab
+          # receives only what the gate blocks on; the alternative is a gate
+          # that cannot be satisfied.
+          limit-severities-for-sarif: true
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}
           format: 'sarif'
           output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH,MEDIUM'
+          severity: 'CRITICAL,HIGH'
           vuln-type: 'os,library'
           ignore-unfixed: true
+          exit-code: '1'
           cache-dir: ${{ github.workspace }}/.cache/trivy
+
+      - name: Upload Trivy results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
 
   deploy:
     runs-on: ubuntu-latest

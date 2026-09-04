@@ -1,101 +1,98 @@
-import { env } from '$env/dynamic/private';
-import { ChatOpenAI } from '@langchain/openai';
-import { BaseMessage, HumanMessage, SystemMessage } from '@langchain/core/messages'; // Import HumanMessage and SystemMessage
+import OpenAI from 'openai';
+import { serverEnv } from '$lib/server/env';
 
-const OPENROUTER_API_KEY = env.OPENROUTER_API_KEY;
-const OPENROUTER_MODEL_NAME = env.OPENROUTER_MODEL_NAME || 'mistralai/mistral-7b-instruct-v0.2';
-const OPENROUTER_WEAK_MODEL_NAME = env.OPENROUTER_WEAK_MODEL || 'meta-llama/llama-3.1-70b-instruct'; // Add weak model env var
-const YOUR_SITE_URL = env.ORIGIN;
+/**
+ * All model traffic goes through OpenRouter's OpenAI-compatible API.
+ *
+ * This previously used langchain's ChatOpenAI. Four packages (langchain,
+ * @langchain/core, @langchain/community, and an UNDECLARED @langchain/openai
+ * that resolved only through @langchain/community's dependency tree) were
+ * wrapping a single OpenAI-compatible HTTP endpoint that will never be swapped -
+ * OpenRouter is itself the provider-swap layer.
+ *
+ * The official SDK also supplies what was missing entirely: per-request timeout,
+ * bounded retries, and max_tokens. Without those a hung upstream held a stream
+ * processor, its Redis writes and its map entry indefinitely, while the Redis key
+ * expired underneath it.
+ */
+
+/** The wire shape, so callers no longer construct langchain message objects. */
+export type ChatMessage = {
+	role: 'system' | 'user' | 'assistant';
+	content: string;
+};
+
+/** A single analysis should never run longer than this. */
+const REQUEST_TIMEOUT_MS = 120_000;
+/** Bounds a runaway generation; also bounds cost per request. */
+const MAX_TOKENS = 4096;
+const TEMPERATURE = 0.7;
 
 class LLMService {
-	private chat: ChatOpenAI;
-	private weakChat: ChatOpenAI; // Add a separate instance for the weak model
+	private client: OpenAI;
+	private model: string;
+	private weakModel: string;
 
 	constructor() {
-		if (!OPENROUTER_API_KEY) {
-			throw new Error('OPENROUTER_API_KEY is not defined');
-		}
-
-		const commonConfig = {
-			temperature: 0.7, // A reasonable default for creative tasks
-			apiKey: OPENROUTER_API_KEY,
-			configuration: {
-				baseURL: 'https://openrouter.ai/api/v1',
-				defaultHeaders: {
-					...(YOUR_SITE_URL && { 'HTTP-Referer': YOUR_SITE_URL })
-				}
-			}
-		};
-
-		this.chat = new ChatOpenAI({
-			model: OPENROUTER_MODEL_NAME,
-			streaming: true, // Main chat is streaming
-			...commonConfig
-		});
-
-		this.weakChat = new ChatOpenAI({
-			model: OPENROUTER_WEAK_MODEL_NAME,
-			streaming: false, // Weak model is not streaming for this use case
-			...commonConfig
+		const env = serverEnv();
+		this.model = env.OPENROUTER_MODEL_NAME;
+		this.weakModel = env.OPENROUTER_WEAK_MODEL;
+		this.client = new OpenAI({
+			apiKey: env.OPENROUTER_API_KEY,
+			baseURL: env.OPENROUTER_BASE_URL,
+			timeout: REQUEST_TIMEOUT_MS,
+			maxRetries: 2,
+			defaultHeaders: env.ORIGIN ? { 'HTTP-Referer': env.ORIGIN } : undefined
 		});
 	}
 
 	/**
-	 * Streams a chat completion from the LLM.
-	 * @param messages An array of BaseMessage (SystemMessage, HumanMessage, AIMessage).
-	 * @param signal An AbortSignal to cancel the LLM request.
-	 * @returns An AsyncIterable<string> of raw LLM content (string chunks).
+	 * Streams a chat completion as plain text chunks.
+	 *
+	 * The signal is passed to the SDK, so aborting genuinely cancels the upstream
+	 * request rather than just abandoning the iterator.
 	 */
 	public async streamChatCompletion(
-		messages: BaseMessage[],
+		messages: ChatMessage[],
 		signal?: AbortSignal
 	): Promise<AsyncIterable<string>> {
-		try {
-			const stream = await this.chat.stream(messages, {
-				signal: signal
-			});
+		const stream = await this.client.chat.completions.create(
+			{
+				model: this.model,
+				messages,
+				temperature: TEMPERATURE,
+				max_tokens: MAX_TOKENS,
+				stream: true
+			},
+			{ signal }
+		);
 
-			return (async function* () {
-				for await (const chunk of stream) {
-					if (signal?.aborted) {
-						console.debug('LLM stream aborted by signal.');
-						break;
-					}
-					if (chunk.content) {
-						yield chunk.content as string;
-					}
-				}
-			})();
-		} catch (error) {
-			console.error('Error initiating LLM stream:', error);
-			throw error;
-		}
+		return (async function* () {
+			for await (const chunk of stream) {
+				const content = chunk.choices[0]?.delta?.content;
+				if (content) yield content;
+			}
+		})();
 	}
 
-	/**
-	 * Generates a single text completion using the weak LLM.
-	 * @param prompt The prompt string for the weak model.
-	 * @param signal An AbortSignal to cancel the LLM request.
-	 * @returns A Promise that resolves to the generated string.
-	 */
+	/** Single completion from the cheaper model (titles, search keywords). */
 	public async generateText(prompt: string, signal?: AbortSignal): Promise<string> {
-		try {
-			const response = await this.weakChat.invoke([new HumanMessage(prompt)], {
-				signal: signal,
-			});
-			return response.content as string;
-		} catch (error) {
-			console.error('Error generating text with weak LLM:', error);
-			throw error;
-		}
+		const response = await this.client.chat.completions.create(
+			{
+				model: this.weakModel,
+				messages: [{ role: 'user', content: prompt }],
+				temperature: TEMPERATURE,
+				max_tokens: MAX_TOKENS
+			},
+			{ signal }
+		);
+		return response.choices[0]?.message?.content ?? '';
 	}
 }
 
-let llmServiceInstance: LLMService;
+let llmServiceInstance: LLMService | undefined;
 
 export function getLLMService(): LLMService {
-	if (!llmServiceInstance) {
-		llmServiceInstance = new LLMService();
-	}
+	if (!llmServiceInstance) llmServiceInstance = new LLMService();
 	return llmServiceInstance;
 }

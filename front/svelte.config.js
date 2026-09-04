@@ -15,22 +15,12 @@ const config = {
 			out: 'build', // Output directory
 			precompress: true // Enable pre-compressed files
 		}),
-		experimental: {
-			remoteFunctions: true
-		},
 		csrf: {
-			trustedOrigins: ['https://dreamer.bnei.dev', 'http://localhost:5173']
+			// Dev origins are added by vite dev itself; never trust one in a prod build.
+			trustedOrigins: ['https://dreamer.bnei.dev']
 		}
 	},
-	extensions: ['.svelte'],
-	experimental: {
-		async: true
-	},
-	build: {
-		rollupOptions: {
-			external: ['@sveltejs/kit/*']
-		}
-	}
+	extensions: ['.svelte']
 };
 
 export default config;

@@ -9,6 +9,10 @@ dotenv.config();
  */
 export default defineConfig({
 	testDir: './tests',
+	/* tests/integration and tests/setup are bun test files - they import bun:test,
+	   which Node's ESM loader cannot resolve. Playwright's default testMatch picks
+	   up *.test.ts, so they have to be excluded explicitly. */
+	testIgnore: ['**/integration/**', '**/setup/**'],
 	/* Run tests in files in parallel */
 	fullyParallel: true,
 	/* Fail the build on CI if you accidentally left test.only in the source code. */
@@ -26,46 +30,40 @@ export default defineConfig({
 		baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:4173',
 
 		/* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-		trace: 'on-first-retry',
+		trace: 'on-first-retry'
 
-		// Tell all tests to load signed-in state from 'storageState.json'.
-		storageState: 'playwright/.auth/storageState.json'
+		// NO global storageState. It used to point at
+		// 'playwright/.auth/storageState.json', a file that was never written -
+		// global.setup.ts exported a default function (the old globalSetup API)
+		// while being registered as a PROJECT, so it never executed. Every project
+		// then failed on the missing file, which is why this suite had never run.
+		// The specs here test signed-out flows and sign in themselves; add a
+		// storageState fixture when a spec actually needs a pre-authenticated
+		// session.
+	},
+
+	/* Starts the app if one is not already listening, so `bun run e2e` works from
+	   a clean checkout instead of requiring a manually started preview server. */
+	webServer: {
+		command: 'bun run dev --port 4173',
+		url: 'http://localhost:4173',
+		reuseExistingServer: !process.env.CI,
+		timeout: 120_000
 	},
 
 	/* Configure projects for major browsers */
 	projects: [
 		{
-			name: 'setup',
-			testMatch: /global\.setup\.ts/,
-			teardown: 'cleanup auth'
-		},
-		{
 			name: 'chromium',
-			use: { ...devices['Desktop Chrome'] },
-			dependencies: ['setup']
+			use: { ...devices['Desktop Chrome'] }
 		},
-
-		{
-			name: 'firefox',
-			use: { ...devices['Desktop Firefox'] },
-			dependencies: ['setup']
-		},
-
-		{
-			name: 'webkit',
-			use: { ...devices['Desktop Safari'] },
-			dependencies: ['setup']
-		},
-		{
-			name: 'cleanup auth',
-			testMatch: /global\.teardown\.ts/
-		},
-
-		/* Test against mobile viewports. */
 		{
 			name: 'Mobile Chrome',
 			use: { ...devices['Pixel 5'] }
 		}
+		// firefox and webkit are omitted deliberately: they triple the run time and
+		// this suite exercises server behaviour, not rendering differences. Add them
+		// back when there is a rendering bug worth guarding against.
 		// {
 		//   name: 'Mobile Safari',
 		//   use: { ...devices['iPhone 12'] },
@@ -80,6 +78,5 @@ export default defineConfig({
 		//   name: 'Google Chrome',
 		//   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
 		// },
-	],
-
+	]
 });

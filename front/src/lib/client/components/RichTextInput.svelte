@@ -1,20 +1,33 @@
 <script lang="ts">
 	import * as m from '$lib/paraglide/messages';
 
-	export let value: string = '';
-	export let placeholder: string = 'Start typing or record your thoughts...';
-	export let rows: number = 5;
-	export let onInput: (value: string) => void = () => {}; // Callback prop for input changes
-	export let name = 'rawText';
+	interface Props {
+		value?: string;
+		placeholder?: string;
+		rows?: number;
+		/** Called with the textarea's current value on every input. */
+		onInput?: (value: string) => void;
+		name?: string;
+		id?: string;
+	}
 
-	let isRecording = false;
-	let recordingError: string | null = null;
-	let isTranscribing = false;
+	let {
+		value = $bindable(''),
+		placeholder = m.describe_dream_placeholder(),
+		rows = 5,
+		onInput = () => {},
+		name = 'rawText',
+		id
+	}: Props = $props();
+
+	let isRecording = $state(false);
+	let recordingError: string | null = $state(null);
+	let isTranscribing = $state(false);
 	/** True between the click and audio actually being captured. Even fully
 	 *  warmed, getUserMedia takes 100-300ms, and a button that looks ready while
 	 *  the graph is still being built invites the words that then go missing. */
-	let isArming = false;
-	let selectedLanguage: 'en' | 'fr' = 'fr'; // Changed default to French
+	let isArming = $state(false);
+	let selectedLanguage: 'en' | 'fr' = $state('fr');
 
 	// Streaming dictation. Text arrives roughly 560ms behind speech instead of
 	// after you stop, because the server keeps encoder state between chunks —
@@ -38,7 +51,7 @@
 		const response = await fetch(`/api/transcribe?${qs}`, {
 			method: 'POST',
 			headers: { 'content-type': 'application/octet-stream' },
-			body: pcm
+			body: pcm as unknown as BodyInit
 		});
 		if (!response.ok) {
 			let message = `HTTP ${response.status}`;
@@ -85,14 +98,14 @@
 				// A failed chunk abandons the stream rather than retrying it:
 				// ordering is load-bearing, so a re-sent chunk arriving after a
 				// later one would corrupt everything following it.
-				onError: (e: Error) => {
+				onError: ((e: Error) => {
 					recordingError = m.transcription_failed_message({ message: e.message });
 					stopRecording();
-				}
+				}) as () => void
 			});
 			await dictation.start();
 			isRecording = true;
-		} catch (err: any) {
+		} catch (err) {
 			console.error('Error accessing microphone:', err);
 			recordingError = m.microphone_access_error();
 			isRecording = false;
@@ -112,8 +125,10 @@
 		isTranscribing = true;
 		try {
 			await dictation.stop();
-		} catch (err: any) {
-			recordingError = m.transcription_failed_message({ message: err.message || 'Unknown error' });
+		} catch (err) {
+			recordingError = m.transcription_failed_message({
+				message: err instanceof Error ? err.message : 'Unknown error'
+			});
 		} finally {
 			dictation = null;
 			isTranscribing = false;
@@ -131,19 +146,20 @@
 		<fieldset class="fieldset rounded-box border border-base-300 bg-base-200 p-4">
 			<legend class="fieldset-legend">{m.audio_input_fieldset_legend()}</legend>
 			<textarea
+				{id}
 				{placeholder}
 				{rows}
 				{name}
 				bind:value
-				on:input={handleInput}
+				oninput={handleInput}
 				class="textarea-bordered textarea w-full rounded-md p-2 focus:ring-2 focus:ring-primary focus:outline-none"
 			></textarea>
 			<div class="flex items-center space-x-2">
 				<button
-					on:click={isRecording ? stopRecording : startRecording}
-					on:pointerenter={warm}
-					on:pointerdown={warm}
-					on:focus={warm}
+					onclick={isRecording ? stopRecording : startRecording}
+					onpointerenter={warm}
+					onpointerdown={warm}
+					onfocus={warm}
 					type="button"
 					disabled={isTranscribing || isArming}
 					class="btn {isRecording || isTranscribing ? 'btn-error' : 'btn-primary'} btn-sm"
@@ -175,7 +191,7 @@
 						>
 						{m.cancel_transcription_button()}
 					{:else if isArming}
-						<span class="loading loading-spinner loading-xs"></span>
+						<span class="loading loading-xs loading-spinner"></span>
 						{m.starting_recording_button()}
 					{:else}
 						<svg

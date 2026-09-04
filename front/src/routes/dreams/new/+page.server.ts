@@ -2,9 +2,11 @@ import { fail, redirect } from '@sveltejs/kit';
 import { getPrismaClient } from '$lib/server/db';
 import * as v from 'valibot';
 import type { Actions } from './$types';
-import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus enum
-import { getDreamAnalysisService } from '$lib/server/dreamAnalysisService'; // Import dream analysis service
+import { DreamStatus, type Dream } from '@prisma/client';
+import { generateDreamTitle } from '$lib/server/analysis';
+import { findAndSetRelatedDreams } from '$lib/server/relatedDreams';
 import { parseDreamDate } from '$lib/server/dreamDate';
+import { claimAnalysis } from '$lib/server/credits';
 
 const CreateDreamSchema = v.object({
 	rawText: v.pipe(v.string(), v.minLength(10, 'Dream text must be at least 10 characters long.')),
@@ -32,45 +34,60 @@ export const actions: Actions = {
 		let validatedData;
 		try {
 			validatedData = v.parse(CreateDreamSchema, { rawText, dreamDate });
-		} catch (e: any) {
-			const issues = e.issues.map((issue: any) => issue.message);
-			return fail(400, { rawText, dreamDate, error: issues.join(', ') });
+		} catch (e) {
+			if (!v.isValiError(e)) throw e;
+			return fail(400, {
+				rawText,
+				dreamDate,
+				error: e.issues.map((issue) => issue.message).join(', ')
+			});
 		}
 
 		const prisma = await getPrismaClient();
-		const dreamAnalysisService = getDreamAnalysisService();
 
+		// Save the dream before anything else can fail. The text is the one thing we
+		// must never lose; the analysis is a separate, purchasable step.
+		let newDream: Dream;
 		try {
-			let newDream = await prisma.dream.create({
+			newDream = await prisma.dream.create({
 				data: {
 					userId: sessionUser.id,
 					rawText: validatedData.rawText,
 					// undefined => Prisma falls back to the schema default (now())
 					dreamDate: parseDreamDate(validatedData.dreamDate),
-					status: DreamStatus.PENDING_ANALYSIS // Use enum
+					status: DreamStatus.PENDING_ANALYSIS
 				}
 			});
-
-			await Promise.all([
-				dreamAnalysisService.generateDreamTitle(newDream.rawText).then((title) =>
-					prisma.dream.update({
-						where: { id: newDream.id },
-						data: { title }
-					})
-				),
-				dreamAnalysisService.findAndSetRelatedDreams(newDream)
-			]);
-
-			// --- End New Sequential Logic ---
-
-			throw redirect(303, `/dreams/${newDream.id}`);
-		} catch (e: any) {
+		} catch (e) {
 			console.error('Error saving dream:', e);
-			if (e.status === 303) {
-				// Re-throw redirect
-				throw e;
-			}
 			return fail(500, { rawText, dreamDate, error: 'Failed to save dream. Please try again.' });
 		}
+
+		const claim = await claimAnalysis(newDream, sessionUser.id);
+
+		// A title is free and unlimited via ?/regenerateTitle, so it is generated
+		// either way - without it the dreams list shows a bare date. Related dreams
+		// only feed the analysis prompt, so they are skipped when unpaid: they would
+		// be stale by the time the user pays.
+		//
+		// These run in their own try: the dream is already saved and the money
+		// decision already made, so a title or relations failure is not a reason to
+		// refuse the user their navigation.
+		try {
+			await Promise.all([
+				generateDreamTitle(newDream.rawText).then((title) =>
+					prisma.dream.update({ where: { id: newDream.id }, data: { title } })
+				),
+				claim === 'insufficient' ? Promise.resolve(null) : findAndSetRelatedDreams(newDream)
+			]);
+		} catch (e) {
+			console.error(`Dream ${newDream.id}: title/related generation failed:`, e);
+		}
+
+		// Outside the try: redirect() signals by throwing, so inside it the catch
+		// swallowed the redirect and it had to be re-thrown by inspecting e.status.
+		// The dream was saved either way, so this is never a form failure - the
+		// explanation belongs on the page where the user can act on it.
+		redirect(303, `/dreams/${newDream.id}`);
 	}
 };

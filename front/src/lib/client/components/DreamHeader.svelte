@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import * as m from '$lib/paraglide/messages';
-	import { enhance } from '$app/forms'; // Import enhance
+	import { enhance } from '$app/forms';
+	import type { SubmitFunction } from '@sveltejs/kit'; // Import enhance
 
 	let { dreamStatus, onDeleteClick, dreamTitle } = $props(); // Removed onRegenerateTitle, isRegeneratingTitle
 
@@ -37,23 +39,23 @@
 	}
 
 	// Function to be used with use:enhance for title update
-	async function handleUpdateSubmit() {
+	const handleUpdateSubmit: SubmitFunction = () => {
 		isUpdatingTitle = true;
 		return async ({ update }) => {
 			await update(); // This will trigger the form action and invalidate
 			isUpdatingTitle = false;
 			isEditingTitle = false; // Exit edit mode after update attempt
 		};
-	}
+	};
 
 	// Function to be used with use:enhance for title regeneration
-	async function handleRegenerateSubmit() {
+	const handleRegenerateSubmit: SubmitFunction = () => {
 		isRegeneratingTitle = true;
 		return async ({ update }) => {
 			await update(); // This will trigger the form action and invalidate
 			isRegeneratingTitle = false;
 		};
-	}
+	};
 </script>
 
 <div class="mb-6 flex w-full flex-col items-center justify-between">
@@ -68,7 +70,7 @@
 				<input
 					type="text"
 					name="title"
-					class="input input-lg w-full input-ghost text-center text-3xl font-bold"
+					class="input w-full input-ghost text-center text-3xl font-bold input-lg"
 					bind:value={editedTitle}
 					onkeydown={handleKeyDown}
 					disabled={isUpdatingTitle}
@@ -94,7 +96,7 @@
 					class="btn btn-ghost btn-sm"
 					onclick={handleCancelClick}
 					disabled={isUpdatingTitle}
-					aria-label="cancel title edit"
+					aria-label={m.aria_cancel_title_edit()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -116,7 +118,11 @@
 					{m.dream_details_title()}
 				{/if}
 			</h1>
-			<button class="btn ml-2 btn-ghost btn-sm" onclick={handleEditClick} aria-label="edit title">
+			<button
+				class="btn ml-2 btn-ghost btn-sm"
+				onclick={handleEditClick}
+				aria-label={m.aria_edit_title()}
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					fill="none"
@@ -167,7 +173,7 @@
 		{/if}
 	</div>
 	<div class="mt-2 flex w-full justify-between">
-		<a href="/dreams" class="btn btn-ghost">
+		<a href={resolve('/dreams')} class="btn btn-ghost">
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				class="h-5 w-5"
@@ -182,7 +188,7 @@
 		<div class="w-24 text-right">
 			<button
 				onclick={onDeleteClick}
-				class="btn btn-sm btn-error"
+				class="btn btn-error btn-sm"
 				class:hidden={dreamStatus === 'PENDING_ANALYSIS'}
 			>
 				{m.delete_dream_button()}

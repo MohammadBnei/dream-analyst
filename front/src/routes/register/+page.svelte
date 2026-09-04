@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ActionData } from './$types';
 	import * as m from '$lib/paraglide/messages';
 
-	export let form: ActionData;
+	let { form }: { form: ActionData } = $props();
 </script>
 
 <div class="hero min-h-screen bg-base-200">
@@ -68,9 +69,11 @@
 						id="passwordConfirm"
 						required
 					/>
-					<label class="label">
-						<a href="/login" class="label-text-alt link link-hover">{m.have_account_link()}</a>
-					</label>
+					<p class="label">
+						<a href={resolve('/login')} class="label-text-alt link link-hover"
+							>{m.have_account_link()}</a
+						>
+					</p>
 				</div>
 				{#if form?.message}
 					<div role="alert" class="mt-4 alert alert-error">

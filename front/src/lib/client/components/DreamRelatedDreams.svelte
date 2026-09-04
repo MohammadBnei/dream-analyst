@@ -1,18 +1,21 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
-	import { createEventDispatcher } from 'svelte';
 
-	const dispatch = createEventDispatcher();
+	// Aliased because inline generics inside template expressions get mangled by
+	// prettier-plugin-svelte (it parses `<App.Dream>` as markup).
+	type RelatedDream = Partial<App.Dream>;
 
-	let { dreamId, relatedDreams } = $props<{
+	interface Props {
 		dreamId: string;
-		relatedDreams: Partial<App.Dream[]>;
-	}>();
+		relatedDreams: RelatedDream[];
+	}
+	let { dreamId, relatedDreams }: Props = $props();
 
 	let isEditing = $state(false);
-	let currentRelatedIds = $state<string[]>(relatedDreams.map((d) => d.id || ''));
+	let currentRelatedIds = $derived(relatedDreams.map((d) => d.id || ''));
 	let searchQuery = $state('');
 	let searchResults = $state<Partial<App.Dream>[]>([]);
 	let isSearching = $state(false);
@@ -23,13 +26,8 @@
 	let isRegeneratingRelatedDreams = $state(false);
 	let isDeletingRelated = $state<{ [key: string]: boolean }>({}); // Track deletion state for each related dream
 
-	// Effect to update currentRelatedIds when relatedDreams prop changes
-	$effect(() => {
-		currentRelatedIds = relatedDreams.map((d) => d.id || '');
-	});
-
 	function navigateToDream(id: string) {
-		goto(`/dreams/${id}`);
+		goto(resolve('/dreams/[id]', { id }));
 	}
 
 	function handleEditClick() {
@@ -47,9 +45,9 @@
 		if (dreamToAdd.id && !currentRelatedIds.includes(dreamToAdd.id)) {
 			currentRelatedIds = [...currentRelatedIds, dreamToAdd.id];
 			// Optimistically add to the displayed relatedDreams for immediate feedback
-			if (!relatedDreams.some((d) => d.id === dreamToAdd.id)) {
-				relatedDreams = [...relatedDreams, dreamToAdd];
-			}
+			// Previously assigned to `relatedDreams`, a non-$bindable prop - the write
+			// stayed local and the parent never saw it. The enhanced form below
+			// invalidates, which is what actually refreshes the list.
 		}
 		// Do NOT clear searchQuery here, let the user continue typing if they wish
 	}
@@ -83,7 +81,6 @@
 						isUpdatingRelatedDreams = true;
 						return async ({ result, update }) => {
 							if (result.type === 'success') {
-								dispatch('relatedDreamsUpdated', result.data?.dream);
 								isEditing = false;
 							} else if (result.type === 'error') {
 								console.error('Failed to update related dreams:', result.error);
@@ -95,7 +92,7 @@
 					}}
 				>
 					<input type="hidden" name="relatedDreamIds" value={JSON.stringify(currentRelatedIds)} />
-					<button type="submit" class="btn btn-sm btn-primary" disabled={isUpdatingRelatedDreams}>
+					<button type="submit" class="btn btn-primary btn-sm" disabled={isUpdatingRelatedDreams}>
 						{#if isUpdatingRelatedDreams}
 							<span class="loading loading-sm loading-spinner"></span>
 						{:else}
@@ -114,7 +111,7 @@
 				<button
 					class="btn btn-outline btn-sm"
 					onclick={handleEditClick}
-					aria-label="edit related dreams"
+					aria-label={m.aria_edit_related_dreams()}
 				>
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -138,7 +135,6 @@
 						isRegeneratingRelatedDreams = true;
 						return async ({ result, update }) => {
 							if (result.type === 'success') {
-								dispatch('relatedDreamsUpdated', result.data?.dream);
 								isEditing = false; // Exit edit mode after regeneration
 							} else if (result.type === 'error') {
 								console.error('Failed to regenerate related dreams:', result.error);
@@ -171,7 +167,9 @@
 				<div class="badge gap-2 p-3 badge-info">
 					<button class="link" onclick={() => navigateToDream(relatedDream.id || '')}>
 						{relatedDream.title ||
-							(relatedDream.rawText ? relatedDream.rawText.substring(0, 30) + '...' : 'Untitled')}
+							(relatedDream.rawText
+								? relatedDream.rawText.substring(0, 30) + '...'
+								: m.untitled_dream())}
 					</button>
 					{#if isEditing}
 						<form
@@ -181,8 +179,7 @@
 								isDeletingRelated = { ...isDeletingRelated, [relatedDream.id || '']: true };
 								return async ({ result, update }) => {
 									if (result.type === 'success') {
-										dispatch('relatedDreamsUpdated', result.data?.dream);
-										// Optimistically remove from currentRelatedIds if not already done by dispatch
+										// currentRelatedIds is derived from the prop and refreshes on invalidate
 										currentRelatedIds = currentRelatedIds.filter((id) => id !== relatedDream.id);
 									} else if (result.type === 'error') {
 										console.error('Failed to remove related dream:', result.error);
@@ -211,7 +208,7 @@
 			{/each}
 		</div>
 	{:else}
-		<p class="text-gray-500">{m.no_related_dreams()}</p>
+		<p class="text-base-content/60">{m.no_related_dreams()}</p>
 	{/if}
 
 	{#if isEditing}
@@ -233,9 +230,10 @@
 						return;
 					}
 
-					return async ({ result }) => { // Removed 'update' as it's not needed here
+					return async ({ result }) => {
+						// Removed 'update' as it's not needed here
 						if (result.type === 'success') {
-							searchResults = result.data?.dreams || [];
+							searchResults = (result.data?.dreams as RelatedDream[] | undefined) ?? [];
 						} else if (result.type === 'error') {
 							console.error('Failed to search dreams:', result.error);
 							searchResults = [];
@@ -256,22 +254,24 @@
 			</form>
 			<div class="mt-2">
 				{#if isSearching}
-					<p class="text-sm text-gray-500">Searching...</p>
+					<p class="text-sm text-base-content/60">{m.searching()}</p>
 				{:else if searchResults.length > 0}
 					<ul class="menu w-full rounded-box bg-base-200">
-						{#each searchResults.filter((d) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')) as dream}
+						{#each searchResults.filter((d) => d.id !== dreamId && !currentRelatedIds.includes(d.id || '')) as dream (dream.id)}
 							<li>
-								<span class="btn" onclick={() => handleAddRelated(dream)}>
+								<!-- Was a <span> with a click handler: no role, no tabindex, no keyboard
+								     handler - and this is the primary action for linking a dream. -->
+								<button type="button" class="btn" onclick={() => handleAddRelated(dream)}>
 									{dream.title ||
-										(dream.rawText ? dream.rawText.substring(0, 50) + '...' : 'Untitled')}
-								</span>
+										(dream.rawText ? dream.rawText.substring(0, 50) + '...' : m.untitled_dream())}
+								</button>
 							</li>
 						{/each}
 					</ul>
 				{:else if searchQuery.length >= 3}
-					<p class="text-sm text-gray-500">{m.no_dreams_found()}</p>
+					<p class="text-sm text-base-content/60">{m.no_dreams_found()}</p>
 				{:else}
-					<p class="text-sm text-gray-500">{m.search_dreams_hint()}</p>
+					<p class="text-sm text-base-content/60">{m.search_dreams_hint()}</p>
 				{/if}
 			</div>
 		</div>

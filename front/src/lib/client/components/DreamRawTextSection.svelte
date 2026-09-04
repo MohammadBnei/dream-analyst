@@ -2,17 +2,14 @@
 	import RichTextInput from '$lib/client/components/RichTextInput.svelte';
 	import * as m from '$lib/paraglide/messages';
 	import { enhance } from '$app/forms';
+	import type { EnhanceResult } from '$lib/client/enhance';
 
 	let { rawText, onUpdate } = $props();
 
 	let isEditing = $state(false);
-	let editedRawText = $state(rawText);
+	let editedRawText = $derived(rawText);
 	let isSavingEdit = $state(false);
 	let editError = $state<string | null>(null);
-
-	$effect(() => {
-		editedRawText = rawText;
-	});
 
 	function toggleEditMode() {
 		isEditing = !isEditing;
@@ -32,21 +29,25 @@
 		editedRawText = value;
 	}
 
-	async function handleSubmit({ update }) {
+	const handleSubmit: EnhanceResult = async ({ update }) => {
 		isSavingEdit = true;
 		editError = null;
 		await update();
 		isSavingEdit = false;
 		isEditing = false; // Exit edit mode on success or failure
 		onUpdate(); // Notify parent of update attempt
-	}
+	};
 </script>
 
 <div class="mb-6">
 	<div class="mb-2 flex items-center justify-between">
 		<h3 class="text-lg font-semibold">{m.raw_dream_text_heading()}</h3>
 		{#if !isEditing}
-			<button onclick={toggleEditMode} class="btn btn-ghost btn-sm" aria-label="edit raw text">
+			<button
+				onclick={toggleEditMode}
+				class="btn btn-ghost btn-sm"
+				aria-label={m.aria_edit_raw_text()}
+			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
 					class="h-5 w-5"
@@ -82,7 +83,7 @@
 				>
 				<button
 					type="submit"
-					class="btn btn-sm btn-primary"
+					class="btn btn-primary btn-sm"
 					disabled={isSavingEdit || editedRawText.length < 10}
 				>
 					{#if isSavingEdit}

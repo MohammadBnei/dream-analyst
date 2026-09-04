@@ -1,8 +1,8 @@
 import { DreamStatus, type Dream } from '@prisma/client';
 import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
-import type { DreamPromptType } from '$lib/prompts/dreamAnalyst';
-import { getDreamAnalysisService } from './dreamAnalysisService'; // Import the new DreamAnalysisService
+import type { DreamPromptType } from '$lib/promptTypes';
+import { initiateDreamAnalysis } from './analysis';
 
 // Utility function to convert AsyncIterable<string> to ReadableStream<Uint8Array>
 function asyncIterableToReadableStream(
@@ -39,8 +39,12 @@ function asyncIterableToReadableStream(
 export class StreamProcessor {
 	private streamId: string;
 	private platform: App.Platform | undefined;
-	private streamStateStore: Awaited<ReturnType<typeof getStreamStateStore>>;
-	private prisma: Awaited<ReturnType<typeof getPrismaClient>>;
+	private prisma: ReturnType<typeof getPrismaClient>;
+	// Still assigned in init() rather than the constructor, because
+	// getStreamStateStore() is genuinely async (it establishes the Redis publisher).
+	// Asserted rather than optional to avoid a null check at every use site; every
+	// method that touches it runs after init().
+	private streamStateStore!: Awaited<ReturnType<typeof getStreamStateStore>>;
 	abortController: AbortController; // Internal AbortController for server-side cancellation
 
 	private accumulatedInterpretation: string = '';
@@ -51,7 +55,8 @@ export class StreamProcessor {
 	constructor(streamId: string, platform: App.Platform | undefined) {
 		this.streamId = streamId;
 		this.platform = platform;
-		this.abortController = new AbortController(); // Initialize internal AbortController
+		this.prisma = getPrismaClient();
+		this.abortController = new AbortController();
 	}
 
 	/**
@@ -60,7 +65,6 @@ export class StreamProcessor {
 	 */
 	public async init() {
 		this.streamStateStore = await getStreamStateStore();
-		this.prisma = await getPrismaClient();
 	}
 
 	/**
@@ -114,32 +118,21 @@ export class StreamProcessor {
 					await this.handleStreamClose();
 				},
 				abort: async (reason) => {
-					await this.handleStreamAbort(reason);
+					await this.failRun(reason);
 				}
 			}),
 			{ signal: this.abortController.signal } // Pass the internal abort signal to pipeTo
 		);
 
-		// Use platform.context.waitUntil if available (e.g., Cloudflare Workers)
-		if (this.platform?.context?.waitUntil) {
-			this.platform.context.waitUntil(
-				backgroundProcessingPromise.catch((e) => {
-					// Catch and log errors from the pipeTo promise
-					console.error(
-						`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`,
-						e
-					);
-				})
-			);
-		} else {
-			// For Node.js environments, ensure the promise rejection is caught.
-			backgroundProcessingPromise.catch((e) => {
-				console.error(
-					`Stream ${this.streamId}: Unhandled error in background processing pipeTo:`,
-					e
-				);
-			});
-		}
+		// This used to branch on platform.context.waitUntil for Cloudflare Workers.
+		// Both branches did the same thing apart from the waitUntil wrapper, and this
+		// app ships on svelte-adapter-bun, which never populates platform.context - so
+		// only this path ever ran. Kept as the single behaviour.
+		// The map entry was only removed by the WritableStream's close/abort
+		// callbacks. Any other rejection left a dead processor in the map forever, so
+		// every later request for this dream got the corpse back - and left the dream
+		// itself stuck PENDING_ANALYSIS.
+		backgroundProcessingPromise.catch((e) => this.failRun(e));
 	}
 
 	/**
@@ -170,8 +163,7 @@ export class StreamProcessor {
 
 		// Database update only on finalStatus or ANALYSIS_FAILED
 		if (parsedChunk.finalStatus && !this.resultUpdatedInDb) {
-			await this.updateResultInDb(parsedChunk.finalStatus);
-			this.resultUpdatedInDb = true;
+			this.resultUpdatedInDb = await this.updateResultInDb(parsedChunk.finalStatus);
 			console.debug(
 				`Stream ${this.streamId}: Processor updated final status to ${parsedChunk.finalStatus} in DB.`
 			);
@@ -184,8 +176,7 @@ export class StreamProcessor {
 				finalStatus: parsedChunk.finalStatus
 			}); // Publish final status
 		} else if (parsedChunk.status === DreamStatus.ANALYSIS_FAILED && !this.resultUpdatedInDb) {
-			await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED);
-			this.resultUpdatedInDb = true;
+			this.resultUpdatedInDb = await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED);
 			console.debug(
 				`Stream ${this.streamId}: Processor updated final status to ANALYSIS_FAILED (from chunk status) in DB.`
 			);
@@ -214,26 +205,46 @@ export class StreamProcessor {
 		activeStreamProcessors.delete(this.streamId); // Remove from map on completion/close
 	}
 
-	private async handleStreamAbort(reason: any): Promise<void> {
+	/**
+	 * Drives a run to a terminal state. The one exit for every way a run can die:
+	 * the stream aborting, `pipeTo` rejecting, or `init()` never succeeding.
+	 *
+	 * The last two used to only delete the map entry. The dream stayed
+	 * PENDING_ANALYSIS forever - which now also means holding a paid entitlement,
+	 * so every page load would restart the analysis on that single charge.
+	 */
+	public async failRun(reason: unknown): Promise<void> {
 		const errorMessage =
 			reason instanceof Error ? reason.message : String(reason || 'Unknown error');
-		console.error(`Stream ${this.streamId}: Processor aborted:`, errorMessage);
+		console.error(`Stream ${this.streamId}: Processor failed:`, errorMessage);
 
 		if (!this.resultUpdatedInDb) {
-			await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED);
-			console.debug(
-				`Stream ${this.streamId}: Processor aborted, status set to ANALYSIS_FAILED in DB.`
-			);
-			await this.streamStateStore.publishUpdate(this.streamId, {
-				finalStatus: 'ANALYSIS_FAILED',
-				message: `Processing aborted: ${errorMessage}`
-			}); // Publish final status
+			this.resultUpdatedInDb = await this.updateResultInDb(DreamStatus.ANALYSIS_FAILED);
 		}
-		await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on abort
-		activeStreamProcessors.delete(this.streamId); // Remove from map on abortion
+		// Best effort: init() is itself one of the things that can fail here, and it
+		// is what assigns the store - so there may be nobody to publish to.
+		try {
+			await this.streamStateStore?.publishUpdate(this.streamId, {
+				finalStatus: 'ANALYSIS_FAILED',
+				message: `Processing failed: ${errorMessage}`
+			});
+			await this.streamStateStore?.clearStreamState(this.streamId);
+		} catch (e) {
+			console.error(`Stream ${this.streamId}: Failed to clear stream state:`, e);
+		}
+		activeStreamProcessors.delete(this.streamId);
 	}
 
-	private async updateResultInDb(status: DreamStatus): Promise<void> {
+	/**
+	 * Writes the terminal state and RELEASES the paid entitlement in the same
+	 * statement, so one charge funds exactly one run.
+	 *
+	 * Returns whether the write landed. It used to swallow the error while the
+	 * caller set `resultUpdatedInDb = true` regardless — so a failed write left the
+	 * dream PENDING_ANALYSIS with its token intact, and every page load re-streamed
+	 * it.
+	 */
+	private async updateResultInDb(status: DreamStatus): Promise<boolean> {
 		try {
 			await this.prisma.dream.update({
 				where: { id: this.streamId },
@@ -241,14 +252,17 @@ export class StreamProcessor {
 					status: status,
 					interpretation: this.accumulatedInterpretation,
 					tags: this.accumulatedTags,
-					promptType: this.promptType // Save the prompt type
+					promptType: this.promptType,
+					analysisPaidAt: null
 				}
 			});
+			return true;
 		} catch (updateError) {
 			console.error(
 				`Stream ${this.streamId}: Failed to update dream status to ${status} in DB:`,
 				updateError
 			);
+			return false;
 		}
 	}
 }
@@ -257,8 +271,26 @@ export class StreamProcessor {
 const activeStreamProcessors = new Map<string, StreamProcessor>();
 
 /**
- * Initiates or retrieves an existing StreamProcessor for a given stream.
- * This factory function is responsible for creating the source stream (e.g., from n8n).
+ * Look up a running processor WITHOUT creating one.
+ *
+ * Split out from the factory because the cancel endpoint used to call the
+ * create-or-get form: cancelling an analysis that this process was not running
+ * would CREATE a processor, kick off a whole new LLM request, and then abort it -
+ * a spurious billed request per cancel, while the real analysis carried on. It
+ * also made the endpoint's `else` branch unreachable, since the factory never
+ * returns a falsy value.
+ *
+ * ponytail: process-local map, so this only sees analyses started by this pod.
+ * Recovery from a pod restart is Redis key expiry. Upgrade path if a second
+ * replica is ever added: publish cancellation on a Redis channel the owning pod
+ * subscribes to.
+ */
+export function getStreamProcessor(dreamId: string): StreamProcessor | undefined {
+	return activeStreamProcessors.get(dreamId);
+}
+
+/**
+ * Start analysis for a dream, or return the processor already running it.
  * @param dream The dream object.
  * @param platform The SvelteKit platform object.
  * @param promptType The type of prompt to use for analysis.
@@ -284,14 +316,12 @@ export function getOrCreateStreamProcessor(
 	processor
 		.init()
 		.then(async () => {
-			const dreamAnalysisService = getDreamAnalysisService(); // Get DreamAnalysisService here
-
 			// If promptType is not provided, try to get it from the dream object or Redis state
 			const effectivePromptType = promptType || (dream.promptType as DreamPromptType) || 'jungian';
 			processor.setPromptType(effectivePromptType);
 
 			// Create the LangChain stream here, passing the processor's internal abort signal
-			const llmAsyncIterable = await dreamAnalysisService.initiateDreamAnalysis(
+			const llmAsyncIterable = await initiateDreamAnalysis(
 				dream,
 				effectivePromptType,
 				processor.abortController.signal
@@ -305,10 +335,7 @@ export function getOrCreateStreamProcessor(
 			// once the processing is truly complete or failed.
 			processor.startProcessing(llmReadableStream);
 		})
-		.catch((e) => {
-			console.error(`Stream ${dream.id}: Error initializing or starting processor:`, e);
-			activeStreamProcessors.delete(dream.id); // Clean up if initialization fails
-		});
+		.catch((e) => processor.failRun(e));
 
 	return processor;
 }

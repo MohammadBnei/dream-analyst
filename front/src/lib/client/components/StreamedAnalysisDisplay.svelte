@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { statusBadgeClass } from '$lib/client/dreamStatus';
 	import { Streamdown } from 'svelte-streamdown';
 	import * as m from '$lib/paraglide/messages';
 
@@ -9,22 +10,6 @@
 		errorMessage: string | null;
 		status: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle';
 	}>();
-
-	function getStatusBadgeClass(
-		currentStatus: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle'
-	) {
-		switch (currentStatus) {
-			case 'COMPLETED':
-				return 'badge-success';
-			case 'PENDING_ANALYSIS':
-				return 'badge-info';
-			case 'ANALYSIS_FAILED':
-				return 'badge-error';
-			case 'idle':
-			default:
-				return 'badge-neutral';
-		}
-	}
 </script>
 
 <div class="mt-8 rounded-box bg-base-200 p-6 shadow-lg">
@@ -67,8 +52,8 @@
 		<div class="mb-4">
 			<h3 class="mb-2 text-lg font-medium">{m.tags_heading()}:</h3>
 			<div class="flex flex-wrap gap-2">
-				{#each tags as tag}
-					<span class="badge {getStatusBadgeClass(status)} badge-lg">{tag}</span>
+				{#each tags as tag (tag)}
+					<span class="badge {statusBadgeClass(status)} badge-lg">{tag}</span>
 				{/each}
 			</div>
 		</div>

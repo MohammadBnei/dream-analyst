@@ -2,19 +2,24 @@
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
 		"allowJs": true,
-		"checkJs": true,
+		// checkJs is off deliberately. The ONLY hand-written .js file in src/ is
+		// src/lib/client/audio/stt-capture.js, VENDORED verbatim from
+		// MohammadBnei/ukubi-stt ("Do not edit here") so re-copying stays a straight
+		// file replace. It cannot carry local annotations, and under checkJs it
+		// emitted 21 implicit-any/DOM-lib errors. `exclude` does not help: the file is
+		// dynamically imported by RichTextInput.svelte, so it enters the program
+		// regardless. Everything else in src/ is TypeScript under `strict`.
+		// ponytail: flip back to true if a second, non-vendored .js file ever appears.
+		"checkJs": false,
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true,
 		"resolveJsonModule": true,
 		"skipLibCheck": true,
 		"sourceMap": true,
 		"strict": true,
-		"moduleResolution": "bundler"
-	},
-	// Unit test files run under `bun test` (which provides the `bun:test` module
-	// and globals). Exclude them from svelte-check/tsc so they don't require the
-	// Bun ambient types to be installed for a normal type-check.
-	"exclude": ["src/**/*.test.ts"]
+		"moduleResolution": "bundler",
+		"types": ["bun"]
+	}
 	// Path aliases are handled by https://svelte.dev/docs/kit/configuration#alias
 	// except $lib which is handled by https://svelte.dev/docs/kit/configuration#files
 	//

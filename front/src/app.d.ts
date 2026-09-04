@@ -1,8 +1,8 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 
-import type { Dream, DreamChat } from '@prisma/client';
-import type { ChatMessage } from '$lib/types/chat'; // Import the shared ChatMessage interface
-import type { Dream as IDream } from '@prisma/client';
+// $lib/types/chat was imported here but that directory has never existed; the
+// import resolved to `any` under skipLibCheck instead of failing loudly.
+import type { Dream as IDream, DreamChat, UserRole } from '@prisma/client';
 
 // for information about these interfaces
 declare global {
@@ -19,10 +19,9 @@ declare global {
 		}
 		// interface Error {}
 		// interface PageData {}
-		// interface Platform {}
 
-		interface Dream extends IDream {}
-		interface ChatMessage extends DreamChat {}
+		type Dream = IDream;
+		type ChatMessage = DreamChat;
 		interface AnalysisStreamChunk {
 			content?: string;
 			tags?: string[];
@@ -30,9 +29,6 @@ declare global {
 			message?: string;
 			finalStatus?: 'COMPLETED' | 'ANALYSIS_FAILED';
 		}
-
-		// Remove the redundant ChatMessage declaration here
-		// interface ChatMessage extends DreamChat {}
 	}
 }
 

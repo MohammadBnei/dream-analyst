@@ -65,7 +65,11 @@ function encodeRequest(pcm: Buffer, sessionId: string, last: boolean, lang: stri
 	return Buffer.concat([header, body]);
 }
 
-function decodeResponse(buf: Buffer): { text: string; audioSeconds: number; decodeSeconds: number } {
+function decodeResponse(buf: Buffer): {
+	text: string;
+	audioSeconds: number;
+	decodeSeconds: number;
+} {
 	const out = { text: '', audioSeconds: 0, decodeSeconds: 0 };
 	let i = 0;
 	while (i + 5 <= buf.length) {

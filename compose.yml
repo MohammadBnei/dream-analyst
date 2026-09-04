@@ -37,14 +37,22 @@ services:
 
   dreamer:
     build:
-      context: .
+      # The Dockerfile lives in front/, not at the repo root; `compose up` could
+      # not build this service at all.
+      context: front
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: postgres://user:password@postgres:5432/dreamer?sslmode=disable
       REDIS_URL: redis://redis:6379
-      PORT: 4173
+      # Both hard-throw when unset, and neither was passed.
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET (openssl rand -base64 48)}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:?set OPENROUTER_API_KEY}
+      ORIGIN: http://localhost:3000
+      # svelte-adapter-bun listens on 3000, which is also what helm's service
+      # targets; the previous 4173 matched neither.
+      PORT: 3000
     ports:
-      - '4173:4173'
+      - '3000:3000'
     depends_on:
       postgres:
         condition: service_healthy

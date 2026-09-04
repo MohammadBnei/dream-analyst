@@ -42,7 +42,7 @@ async function main() {
 		'I was in a library where all the books were blank, and I desperately tried to write in one.',
 		'A recurring dream of being chased by a shadow figure through a dense forest.',
 		'I found myself in an endless desert, searching for water, but only finding sand.',
-		'Dreamt I was taking an exam I hadn\'t studied for, and the questions were in a foreign language.'
+		"Dreamt I was taking an exam I hadn't studied for, and the questions were in a foreign language."
 	];
 
 	for (const dreamText of adminDreams) {

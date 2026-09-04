@@ -1,87 +1,82 @@
 import { test, expect } from '@playwright/test';
-import { v4 as uuidv4 } from 'uuid';
 
-test.describe('Authentication Flows', () => {
-	const testUsername = `testuser_${uuidv4().slice(0, 8)}`;
-	const testEmail = `test_${uuidv4().slice(0, 8)}@example.com`;
-	const testPassword = 'password123';
+/**
+ * These assert the app's ACTUAL behaviour. The previous version expected
+ * registration to redirect to /login and showed English headings; registration
+ * signs you in and redirects to /, and the default locale is French. It also
+ * never ran - see the note in playwright.config.ts.
+ */
 
-	test('should allow a new user to register and then log in', async ({ page }) => {
-		// 1. Navigate to registration page
+const unique = () => Math.random().toString(36).slice(2, 10);
+
+test.describe('Authentication', () => {
+	test('registers a new user and signs them in', async ({ page }) => {
+		const id = unique();
+
 		await page.goto('/register');
-		await expect(page).toHaveURL(/register/);
-		await expect(page.locator('h1')).toHaveText('Register');
+		await expect(page.locator('h1')).toBeVisible();
 
-		// 2. Fill out registration form
-		await page.fill('input[name="username"]', testUsername);
-		await page.fill('input[name="email"]', testEmail);
-		await page.fill('input[name="password"]', testPassword);
-		await page.fill('input[name="passwordConfirm"]', testPassword);
-
-		// 3. Submit registration form
-		await page.click('button[type="submit"]');
-
-		// 4. Expect redirection to login page after successful registration
-		await page.waitForURL(/login/);
-		await expect(page.locator('h1')).toHaveText('Login');
-		await expect(page.locator('.alert-success')).toContainText(
-			'Registration successful! Please log in.'
-		);
-
-		// 5. Log in with the newly registered user
-		await page.fill('input[name="identity"]', testEmail);
-		await page.fill('input[name="password"]', testPassword);
-		await page.click('button[type="submit"]');
-
-		// 6. Expect redirection to dreams page after successful login
-		await page.waitForURL(/dreams/);
-		await expect(page.locator('h1')).toHaveText('My Dreams');
-	});
-
-	test('should display an error for invalid login credentials', async ({ page }) => {
-		await page.goto('/login');
-		await expect(page).toHaveURL(/login/);
-
-		// Fill with invalid credentials
-		await page.fill('input[name="identity"]', 'nonexistent@example.com');
-		await page.fill('input[name="password"]', 'wrongpassword');
-		await page.click('button[type="submit"]');
-
-		// Expect to stay on the login page and see an error message
-		await expect(page).toHaveURL(/login/);
-		await expect(page.locator('.alert-error')).toBeVisible();
-		await expect(page.locator('.alert-error')).toContainText('Invalid credentials');
-	});
-
-	test('should display an error for missing registration fields', async ({ page }) => {
-		await page.goto('/register');
-		await expect(page).toHaveURL(/register/);
-
-		// Submit an empty form
-		await page.click('button[type="submit"]');
-
-		// Expect to stay on the register page and see error messages (client-side validation might prevent submission, or server-side will return errors)
-		// This assumes server-side validation returns a message. If client-side validation prevents submission,
-		// you might need to check for HTML5 validation messages or specific error indicators.
-		await expect(page).toHaveURL(/register/);
-		await expect(page.locator('.alert-error')).toBeVisible(); // Assuming a general error message for missing fields
-	});
-
-	test('should display an error if passwords do not match during registration', async ({
-		page
-	}) => {
-		await page.goto('/register');
-		await expect(page).toHaveURL(/register/);
-
-		await page.fill('input[name="username"]', `mismatchuser_${uuidv4().slice(0, 8)}`);
-		await page.fill('input[name="email"]', `mismatch_${uuidv4().slice(0, 8)}@example.com`);
+		await page.fill('input[name="username"]', `user_${id}`);
+		await page.fill('input[name="email"]', `user_${id}@example.test`);
 		await page.fill('input[name="password"]', 'password123');
-		await page.fill('input[name="passwordConfirm"]', 'differentpassword'); // Mismatched password
+		await page.fill('input[name="passwordConfirm"]', 'password123');
+		await page.locator('form').first().locator('button[type="submit"]').click();
 
-		await page.click('button[type="submit"]');
+		// Registration establishes a session and lands on the home page.
+		await page.waitForURL('/');
 
-		await expect(page).toHaveURL(/register/);
+		// The session is real: a protected route no longer bounces to /login.
+		await page.goto('/dreams');
+		await expect(page).toHaveURL(/\/dreams$/);
+	});
+
+	test('rejects invalid credentials', async ({ page }) => {
+		await page.goto('/login');
+		await page.fill('input[name="identity"]', `nobody_${unique()}@example.test`);
+		await page.fill('input[name="password"]', 'wrongpassword');
+		await page.locator('form').first().locator('button[type="submit"]').click();
+
+		await expect(page).toHaveURL(/\/login/);
 		await expect(page.locator('.alert-error')).toBeVisible();
-		await expect(page.locator('.alert-error')).toContainText('Passwords do not match');
+	});
+
+	test('rejects an empty registration form', async ({ page }) => {
+		await page.goto('/register');
+		// Bypass the browser's own required-field blocking so the server responds.
+		await page
+			.locator('form')
+			.first()
+			.evaluate((f: HTMLFormElement) => (f.noValidate = true));
+		await page.locator('form').first().locator('button[type="submit"]').click();
+
+		await expect(page).toHaveURL(/\/register/);
+		await expect(page.locator('.alert-error')).toBeVisible();
+	});
+
+	test('rejects mismatched passwords', async ({ page }) => {
+		const id = unique();
+		await page.goto('/register');
+		await page.fill('input[name="username"]', `mismatch_${id}`);
+		await page.fill('input[name="email"]', `mismatch_${id}@example.test`);
+		await page.fill('input[name="password"]', 'password123');
+		await page.fill('input[name="passwordConfirm"]', 'differentpassword');
+		await page.locator('form').first().locator('button[type="submit"]').click();
+
+		await expect(page).toHaveURL(/\/register/);
+		await expect(page.locator('.alert-error')).toBeVisible();
+	});
+});
+
+test.describe('Route guards', () => {
+	for (const path of ['/dreams', '/dreams/new', '/profile', '/admin']) {
+		test(`${path} redirects an anonymous visitor to login`, async ({ page }) => {
+			await page.goto(path);
+			await expect(page).toHaveURL(/\/login/);
+		});
+	}
+
+	test('a protected API answers 401 rather than redirecting', async ({ request }) => {
+		const res = await request.get('/api/dreams/does-not-exist/stream-analysis');
+		expect(res.status()).toBe(401);
 	});
 });

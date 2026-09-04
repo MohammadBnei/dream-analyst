@@ -54,3 +54,21 @@ export function buildTsQuery(terms: string[]): string {
 export function buildTsQueryFromRaw(raw: string): string {
 	return buildTsQuery(parseSearchTerms(raw));
 }
+
+/**
+ * The OR predicate for searching a dream's text fields.
+ *
+ * The same three-field shape was written out in three places (the dreams list,
+ * the related-dream picker, and related-dream discovery), so a change to which
+ * fields are searchable had to be made three times.
+ *
+ * Takes a query already sanitised by buildTsQuery/buildTsQueryFromRaw - raw user
+ * text must never reach to_tsquery.
+ */
+export function dreamSearchFilter(safeTsQuery: string) {
+	return [
+		{ rawText: { search: safeTsQuery } },
+		{ interpretation: { search: safeTsQuery } },
+		{ title: { search: safeTsQuery } }
+	];
+}
