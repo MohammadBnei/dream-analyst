@@ -14,8 +14,10 @@ discussed further in a per-dream chat.
 - **Per-dream chat** — follow-up conversation with the analysis as context.
 - **Related dreams** — Postgres full-text search over your own dreams, seeded by LLM-generated
   keywords.
-- **Credits** — analysis and chat cost credits, with a daily allowance per role
-  (BASIC / VIP / ADMIN). Enforced atomically; see `src/lib/server/creditService.ts`.
+- **Credits** — a daily allowance per role (BASIC / VIP / ADMIN), enforced atomically; see
+  `src/lib/server/credits.ts`. Charged today: chat messages, and _re_-analysis. **Not** charged:
+  a dream's first analysis, title generation, or related-dream keyword extraction — all three
+  make real LLM calls. Charging them is an open pricing decision, not an oversight.
 - **i18n** — French (default) and English via Paraglide.
 
 ## Stack
@@ -46,11 +48,12 @@ bun run dev        # dev server
 bun run build      # production build
 bun run check      # svelte-check (runs the Prisma and Paraglide generators first)
 bun run lint       # prettier --check + eslint
-bun test src/      # unit tests
-bun run e2e        # Playwright (starts its own server)
+bun test src/            # unit tests (no infrastructure)
+bun run test:integration # needs a running Postgres with migrations applied
+bun run e2e              # Playwright (starts its own server)
 ```
 
-`bun run check`, `bun run lint` and both test suites gate the Docker build in CI.
+`bun run check`, `bun run lint` and all three test suites gate the Docker build in CI.
 
 ## Deployment
 
