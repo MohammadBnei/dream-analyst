@@ -170,6 +170,13 @@ jobs:
       - name: Scan Docker image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
+          # Without this the action logs "Building SARIF report with all
+          # severities" and overrides `severity` for the single run it makes -
+          # so `exit-code: 1` fires on any finding at all, and the job failed on
+          # one LOW in a transitive `cookie`. The cost is that the Security tab
+          # receives only what the gate blocks on; the alternative is a gate
+          # that cannot be satisfied.
+          limit-severities-for-sarif: true
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}
           format: 'sarif'
           output: 'trivy-results.sarif'

@@ -57,7 +57,7 @@
 	"dependencies": {
 		"@prisma/adapter-pg": "^7.9.1",
 		"@prisma/client": "^7.9.1",
-		"@sveltejs/kit": "^2.70.1",
+		"@sveltejs/kit": "^2.70.2",
 		"bcrypt": "^6.0.0",
 		"dotenv": "^17.4.2",
 		"ioredis": "^5.11.1",
@@ -87,6 +87,7 @@
 		}
 	},
 	"overrides": {
+		"cookie": "^0.7.0",
 		"deepmerge-ts": "^8.0.0",
 		"fast-uri": "^3.1.6",
 		"lodash": "^4.18.0",
