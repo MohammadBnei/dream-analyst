@@ -4,7 +4,7 @@
 
 image:
   repository: mohammaddocker/dream-analyst
-  tag: "0.31.3"
+  tag: "0.32.0"
 
 annotations:
   secrets.infisical.com/auto-reload: "true"
