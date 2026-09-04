@@ -3,6 +3,7 @@ import { getStreamStateStore } from '$lib/server/streamStateStore';
 import { getPrismaClient } from '$lib/server/db';
 import type { DreamPromptType } from '$lib/promptTypes';
 import { initiateDreamAnalysis } from './analysis';
+import { annotateDream } from './elements';
 
 // Utility function to convert AsyncIterable<string> to ReadableStream<Uint8Array>
 function asyncIterableToReadableStream(
@@ -48,7 +49,6 @@ export class StreamProcessor {
 	abortController: AbortController; // Internal AbortController for server-side cancellation
 
 	private accumulatedInterpretation: string = '';
-	private accumulatedTags: string[] = [];
 	private resultUpdatedInDb: boolean = false;
 	private promptType: DreamPromptType = 'jungian'; // Added promptType property
 
@@ -144,18 +144,14 @@ export class StreamProcessor {
 	}
 
 	private async processChunk(parsedChunk: App.AnalysisStreamChunk): Promise<void> {
-		// Accumulate interpretation and tags in memory
+		// Accumulate interpretation in memory
 		if (parsedChunk.content) {
 			this.accumulatedInterpretation += parsedChunk.content;
-		}
-		if (parsedChunk.tags) {
-			this.accumulatedTags = parsedChunk.tags;
 		}
 
 		// Update Redis with current progress and publish
 		const redisUpdateChunk: App.AnalysisStreamChunk = {
 			content: parsedChunk.content, // Send delta content
-			tags: parsedChunk.tags,
 			status: parsedChunk.status || DreamStatus.PENDING_ANALYSIS // Still specific to DreamStatus
 		};
 		await this.streamStateStore.updateStreamState(this.streamId, redisUpdateChunk, false);
@@ -192,17 +188,71 @@ export class StreamProcessor {
 	}
 
 	private async handleStreamClose(): Promise<void> {
+		// `written` is whether THIS call actually landed the terminal row - not
+		// merely whether nothing had written one yet. The distinction is the whole
+		// point: on a database blip updateResultInDb catches, returns false, and
+		// leaves the dream PENDING_ANALYSIS with its paid token intact. Publishing
+		// COMPLETED and clearing Redis regardless would tell the browser the run
+		// finished while every later page load re-spawned a billed request on that
+		// one charge - the exact regression updateResultInDb's own comment records
+		// as already fixed once.
+		let written = false;
 		if (!this.resultUpdatedInDb) {
-			// If the stream closed without an explicit finalStatus and no error was reported, assume completion
-			await this.updateResultInDb(DreamStatus.COMPLETED);
+			written = await this.updateResultInDb(DreamStatus.COMPLETED);
+			this.resultUpdatedInDb = written;
 			console.debug(`Stream ${this.streamId}: Processor finished, status set to COMPLETED in DB.`);
-			await this.streamStateStore.publishUpdate(this.streamId, {
-				finalStatus: 'COMPLETED',
-				message: 'Processing completed.'
-			}); // Publish final status
+			if (written) {
+				await this.streamStateStore.publishUpdate(this.streamId, {
+					finalStatus: 'COMPLETED',
+					message: 'Processing completed.'
+				}); // Publish final status
+			} else {
+				// The write failed. Leave Redis alone so isStreamOngoing can still see
+				// this run, and tell the client the truth.
+				await this.streamStateStore.publishUpdate(this.streamId, {
+					finalStatus: 'ANALYSIS_FAILED',
+					message: 'Could not save the analysis.'
+				});
+			}
 		}
 		await this.streamStateStore.clearStreamState(this.streamId); // Ensure Redis state is cleared on close
 		activeStreamProcessors.delete(this.streamId); // Remove from map on completion/close
+
+		// Per-element notes, describing what each image did in THIS dream. Free,
+		// additive, and structurally unable to disturb the run it describes.
+		//
+		// Everything about this call site is deliberate:
+		//
+		// - HERE, not in updateResultInDb. That function releases the paid
+		//   entitlement in the same statement that writes the terminal state, and
+		//   anything added inside its `try` would be swallowed by its catch and
+		//   returned as `false` AFTER the commit - which makes the caller write a
+		//   second time and publish a second terminal frame.
+		//
+		// - HERE, not in processChunk. Its `finalStatus` / `status` branches are
+		//   unreachable: the only producer (asyncIterableToReadableStream) emits
+		//   `{content}` and nothing else, so this method is the sole success path.
+		//
+		// - Only when THIS call completed the run. failRun also reaches
+		//   updateResultInDb, and cancelling routes through it - answering a user's
+		//   Stop by starting a new model request is a shape this file has already
+		//   been burned by, see the comment on getStreamProcessor.
+		//
+		// - Promise.resolve().then(), NOT queueMicrotask. A synchronous throw in a
+		//   microtask callback has no enclosing promise to reject and surfaces as
+		//   an uncaught exception; on a single-replica deploy holding
+		//   activeStreamProcessors in memory that kills every other in-flight
+		//   analysis. Wrapping in a promise converts a sync throw into a rejection
+		//   the .catch below can absorb.
+		//
+		// - After the map cleanup above, so annotation never runs while this dream
+		//   still looks like it has a live processor.
+		if (written) {
+			const streamId = this.streamId;
+			Promise.resolve()
+				.then(() => annotateDream(streamId, this.prisma))
+				.catch((e) => console.warn(`Stream ${streamId}: annotation failed:`, e));
+		}
 	}
 
 	/**
@@ -251,7 +301,6 @@ export class StreamProcessor {
 				data: {
 					status: status,
 					interpretation: this.accumulatedInterpretation,
-					tags: this.accumulatedTags,
 					promptType: this.promptType,
 					analysisPaidAt: null
 				}

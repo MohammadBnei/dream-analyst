@@ -14,6 +14,7 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"prisma": "prisma",
+		"reextract": "bun --preload ./tests/setup/bun-preload.ts scripts/reextract.ts",
 		"machine-translate": "inlang machine translate --project project.inlang",
 		"release": "release-it",
 		"start": "bun run scripts/migrate-deploy.ts && bun ./build/index.js",

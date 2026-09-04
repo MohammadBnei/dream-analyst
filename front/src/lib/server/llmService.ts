@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { serverEnv } from '$lib/server/env';
+import { strongModel, weakModel } from '$lib/server/settings';
 
 /**
  * All model traffic goes through OpenRouter's OpenAI-compatible API.
@@ -28,15 +29,36 @@ const REQUEST_TIMEOUT_MS = 120_000;
 const MAX_TOKENS = 4096;
 const TEMPERATURE = 0.7;
 
+/**
+ * Pull the JSON value out of a model reply.
+ *
+ * Picks the opening bracket with the SMALLER index, then the LAST occurrence
+ * of ITS OWN matching partner. The obvious rule - first bracket to last
+ * bracket of either kind - breaks on a reply like
+ * `[{"a":1}] j'espère que ça aide {sourire}`, where it slices to the trailing
+ * brace and throws. Exported for the unit test.
+ */
+export function sliceJson(text: string): string {
+	const firstArr = text.indexOf('[');
+	const firstObj = text.indexOf('{');
+	if (firstArr === -1 && firstObj === -1) throw new Error('no JSON in model output');
+	const useArray = firstArr !== -1 && (firstObj === -1 || firstArr < firstObj);
+	const start = useArray ? firstArr : firstObj;
+	const end = text.lastIndexOf(useArray ? ']' : '}');
+	if (end <= start) throw new Error('no JSON in model output');
+	return text.slice(start, end + 1);
+}
+
 class LLMService {
 	private client: OpenAI;
-	private model: string;
-	private weakModel: string;
+
+	// Model names are NOT captured here. They are resolved per call from
+	// `app_setting`, falling back to the environment, so an operator can change
+	// a model without a deploy or a restart. The client itself (key, base URL,
+	// timeout) is static and stays in the constructor.
 
 	constructor() {
 		const env = serverEnv();
-		this.model = env.OPENROUTER_MODEL_NAME;
-		this.weakModel = env.OPENROUTER_WEAK_MODEL;
 		this.client = new OpenAI({
 			apiKey: env.OPENROUTER_API_KEY,
 			baseURL: env.OPENROUTER_BASE_URL,
@@ -58,7 +80,7 @@ class LLMService {
 	): Promise<AsyncIterable<string>> {
 		const stream = await this.client.chat.completions.create(
 			{
-				model: this.model,
+				model: await strongModel(),
 				messages,
 				temperature: TEMPERATURE,
 				max_tokens: MAX_TOKENS,
@@ -75,11 +97,37 @@ class LLMService {
 		})();
 	}
 
+	/**
+	 * A completion whose answer is expected to be JSON.
+	 *
+	 * Deliberately does NOT send `response_format`. The model name is a free-form
+	 * setting with no allowlist, so a model that does not support json_object
+	 * would turn a configuration value into a request-time 400. Fence-stripping
+	 * is three lines and cannot fail that way.
+	 *
+	 * ponytail: prompt-only JSON. Upgrade path once the model is pinned: send
+	 * `response_format: { type: 'json_schema', strict: true }` and delete sliceJson.
+	 */
+	public async generateJson(prompt: string, model: string, signal?: AbortSignal): Promise<unknown> {
+		const response = await this.client.chat.completions.create(
+			{
+				model,
+				messages: [{ role: 'user', content: prompt }],
+				// Canonicalisation is a judgement, not a creative act: the same dream
+				// should resolve the same way twice.
+				temperature: 0,
+				max_tokens: MAX_TOKENS
+			},
+			{ signal }
+		);
+		return JSON.parse(sliceJson(response.choices[0]?.message?.content ?? ''));
+	}
+
 	/** Single completion from the cheaper model (titles, search keywords). */
 	public async generateText(prompt: string, signal?: AbortSignal): Promise<string> {
 		const response = await this.client.chat.completions.create(
 			{
-				model: this.weakModel,
+				model: await weakModel(),
 				messages: [{ role: 'user', content: prompt }],
 				temperature: TEMPERATURE,
 				max_tokens: MAX_TOKENS

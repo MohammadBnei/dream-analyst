@@ -154,7 +154,6 @@ export const JUNGIAN_KNOWLEDGE = `
 
 4. Frequency Tracking
 - Recurring symbols signal themes in individuation or unmet psychic needs.
-- Use RAG-based retrieval to highlight repeated symbols and patterns.
 
 5. Integrative Reflection
 - Encourage the dreamer to balance the symbol in everyday life.
@@ -202,7 +201,7 @@ Dreams as Tools of Individuation:
 
 5. RECURRING SYMBOLS or THEMES
 - Acts like a myth unfolding in chapters across multiple dreams.
-- Via RAG retrieval, track images (e.g., water, snakes, elevators, children) across dreams to reveal narrative arcs.
+- Track images (e.g., water, snakes, elevators, children) across dreams to reveal narrative arcs.
 - Can show the gradual movement through individuation milestones.
 
 6. SYNTHESIS OR REDISCOVERY
@@ -214,7 +213,7 @@ Dreams as Tools of Individuation:
 
 ❖ SEQUENTIAL DREAM INTERPRETATION (Dream Series)
 - Jung emphasized that individual dreams can only be deeply understood in the context of others.
-- Use RAG search to pull up previous dreams by user to:
+- Read the dreamer's previous dreams to:
   - Track evolution of symbols.
   - See regressions or resistance points.
   - Reinforce progress in confronting recurring complexes.

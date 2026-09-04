@@ -1,11 +1,9 @@
 <script lang="ts">
-	import { statusBadgeClass } from '$lib/client/dreamStatus';
 	import { Streamdown } from 'svelte-streamdown';
 	import * as m from '$lib/paraglide/messages';
 
-	let { interpretation, tags, isLoading, errorMessage, status } = $props<{
+	let { interpretation, isLoading, errorMessage, status } = $props<{
 		interpretation: string;
-		tags: string[];
 		isLoading: boolean;
 		errorMessage: string | null;
 		status: 'PENDING_ANALYSIS' | 'COMPLETED' | 'ANALYSIS_FAILED' | 'idle';
@@ -48,17 +46,6 @@
 		</div>
 	{/if}
 
-	{#if tags.length > 0}
-		<div class="mb-4">
-			<h3 class="mb-2 text-lg font-medium">{m.tags_heading()}:</h3>
-			<div class="flex flex-wrap gap-2">
-				{#each tags as tag (tag)}
-					<span class="badge {statusBadgeClass(status)} badge-lg">{tag}</span>
-				{/each}
-			</div>
-		</div>
-	{/if}
-
 	{#if interpretation}
 		<div class="mb-4">
 			<div class="prose max-w-none">
@@ -70,7 +57,7 @@
 		</div>
 	{/if}
 
-	{#if !isLoading && !errorMessage && !interpretation && !tags.length && status === 'idle'}
+	{#if !isLoading && !errorMessage && !interpretation && status === 'idle'}
 		<p class="mt-4 text-center text-sm text-base-content/70">
 			{m.dream_analysis_instant_message()}
 		</p>

@@ -5,6 +5,7 @@ import type { Actions } from './$types';
 import { DreamStatus, type Dream } from '@prisma/client';
 import { generateDreamTitle } from '$lib/server/analysis';
 import { findAndSetRelatedDreams } from '$lib/server/relatedDreams';
+import { extractDreamElements } from '$lib/server/elements';
 import { parseDreamDate } from '$lib/server/dreamDate';
 import { claimAnalysis } from '$lib/server/credits';
 
@@ -78,7 +79,21 @@ export const actions: Actions = {
 				generateDreamTitle(newDream.rawText).then((title) =>
 					prisma.dream.update({ where: { id: newDream.id }, data: { title } })
 				),
-				claim === 'insufficient' ? Promise.resolve(null) : findAndSetRelatedDreams(newDream)
+				// Elements BEFORE relations, and sequentially: symbol-overlap
+				// retrieval reads the rows extraction writes, so a Promise.all here
+				// would search against an empty set. An async IIFE because you
+				// cannot await between two elements of an array literal.
+				//
+				// Gated with relations on `insufficient`. Extraction is free to the
+				// user but not to us, and dream creation is otherwise an unmetered
+				// LLM spend vector. The unpaid dream is not stranded: its Analyze
+				// button posts ?/resetAnalysis, which extracts.
+				claim === 'insufficient'
+					? Promise.resolve(null)
+					: (async () => {
+							await extractDreamElements(newDream);
+							return findAndSetRelatedDreams(newDream);
+						})()
 			]);
 		} catch (e) {
 			console.error(`Dream ${newDream.id}: title/related generation failed:`, e);

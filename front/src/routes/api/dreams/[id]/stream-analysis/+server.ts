@@ -31,7 +31,6 @@ export async function GET({ params, locals, platform, request }) {
 	if (dream.status === DreamStatus.COMPLETED || dream.status === DreamStatus.ANALYSIS_FAILED) {
 		const finalChunk: App.AnalysisStreamChunk = {
 			content: dream.interpretation || '',
-			tags: (dream.tags as string[]) || [], // Cast Json? to string[]
 			status: dream.status,
 			finalStatus: dream.status === DreamStatus.COMPLETED ? 'COMPLETED' : 'ANALYSIS_FAILED'
 		};
@@ -101,15 +100,13 @@ export async function GET({ params, locals, platform, request }) {
 					const initialRedisState = await streamStateStore.getStreamState(dreamId);
 					const initialDream = await prisma.dream.findUnique({
 						where: { id: dreamId },
-						select: { interpretation: true, tags: true, status: true }
+						select: { interpretation: true, status: true }
 					});
 
 					controller.enqueue(
 						encoder.encode(
 							JSON.stringify({
 								content: initialRedisState?.interpretation || initialDream?.interpretation || '',
-								tags:
-									(initialRedisState?.tags as string[]) || (initialDream?.tags as string[]) || [],
 								status:
 									initialRedisState?.status || initialDream?.status || DreamStatus.PENDING_ANALYSIS
 							}) + '\n'

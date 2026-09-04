@@ -54,6 +54,18 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		};
 	}
 
+	// A symbol facet. It intersects with the userId scope above, so a forged id
+	// belonging to another dreamer resolves to an empty list rather than leaking
+	// anything - there is no ownership check to forget here because the scope is
+	// already the outer condition.
+	//
+	// This is what full-text search cannot do: `?element=` also catches the dreams
+	// where the same symbol was written `l'ocean` or `la mer`.
+	const elementId = url.searchParams.get('element');
+	if (elementId) {
+		whereClause = { ...whereClause, elements: { some: { entryId: elementId } } };
+	}
+
 	const [dreams, totalDreams] = await prisma.$transaction([
 		prisma.dream.findMany({
 			where: whereClause,
@@ -66,16 +78,33 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 		})
 	]);
 
-	// Ensure tags are parsed correctly if stored as JSON string
-	const dreamsWithParsedTags = dreams.map((dream) => ({
-		...dream,
-		tags: dream.tags ? (dream.tags as string[]) : null // Assuming tags are stored as JSON array of strings
-	}));
+	// The strip: this dreamer's most-used entries. Also the only instrument that
+	// makes a degraded matcher visible - it fails silently and writes well-formed
+	// rows either way, so a vocabulary that stops cohering only shows up here.
+	const topEntries = await prisma.vocabularyEntry.findMany({
+		where: { userId: sessionUser.id },
+		select: { id: true, kind: true, label: true, _count: { select: { occurrences: true } } },
+		orderBy: { occurrences: { _count: 'desc' } },
+		take: 15
+	});
+	const vocabulary = topEntries
+		.filter((e) => e._count.occurrences > 0)
+		.map((e) => ({ id: e.id, kind: e.kind, label: e.label, count: e._count.occurrences }));
+
+	const activeElement = elementId
+		? (vocabulary.find((v) => v.id === elementId) ??
+			(await prisma.vocabularyEntry.findFirst({
+				where: { id: elementId, userId: sessionUser.id },
+				select: { id: true, kind: true, label: true }
+			})))
+		: null;
 
 	const totalPages = Math.ceil(totalDreams / pageSize);
 
 	return {
-		dreams: dreamsWithParsedTags,
+		dreams,
+		vocabulary,
+		activeElement,
 		query: searchQuery,
 		currentPage: page,
 		pageSize: pageSize,

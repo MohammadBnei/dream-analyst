@@ -14,6 +14,7 @@
 	import DeleteDreamModal from '$lib/client/components/DeleteDreamModal.svelte';
 	import DreamDateSection from '$lib/client/components/DreamDateSection.svelte';
 	import DreamRelatedDreams from '$lib/client/components/DreamRelatedDreams.svelte'; // Import the new component
+	import DreamElements from '$lib/client/components/DreamElements.svelte';
 	import DreamMetadata from '$lib/client/components/DreamMetadata.svelte';
 	import * as m from '$lib/paraglide/messages';
 
@@ -45,7 +46,6 @@
 	// Streaming state genuinely IS local: it changes faster than the server knows,
 	// and must not be clobbered by an invalidation mid-stream.
 	let streamedInterpretation = $state(dream.interpretation || '');
-	let streamedTags = $state<string[]>((dream.tags as string[]) || []);
 
 	// Local override so the badge reacts the instant a stream starts or fails,
 	// ahead of the DB write. Null means "trust the server".
@@ -83,7 +83,6 @@
 
 		if (!isLoadingStream || navigatedToAnotherDream) {
 			streamedInterpretation = dream.interpretation || '';
-			streamedTags = (dream.tags as string[]) || [];
 			streamStatus = null;
 		}
 	});
@@ -129,7 +128,6 @@
 		isLoadingStream = true;
 		streamError = null;
 		streamedInterpretation = ''; // Clear previous interpretation
-		streamedTags = []; // Clear previous tags
 		// Optimistically set status, but the final status will come from the stream or DB
 		streamStatus = 'PENDING_ANALYSIS';
 
@@ -137,9 +135,6 @@
 			onMessage: (data) => {
 				if (data.content) {
 					streamedInterpretation += data.content;
-				}
-				if (data.tags) {
-					streamedTags = data.tags;
 				}
 				if (data.status) {
 					streamStatus = data.status as DreamStatus;
@@ -154,7 +149,7 @@
 				// message, so a successful run published "Processing completed." and
 				// the UI rendered it in the red error alert.
 				streamError = data.status === 'ANALYSIS_FAILED' ? (data.message ?? null) : null;
-				await invalidate('dream'); // Invalidate to ensure latest DB state, including final interpretation/tags/status
+				await invalidate('dream'); // Invalidate to ensure latest DB state, including final interpretation/status
 			},
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
@@ -232,7 +227,6 @@
 				<DreamInterpretationSection
 					{unpaid}
 					interpretation={streamedInterpretation}
-					tags={streamedTags}
 					status={displayStatus}
 					promptType={selectedPromptType}
 					bind:isLoadingStream
@@ -244,6 +238,8 @@
 				{#if !isLoadingStream}
 					<DreamChatSection dreamId={dream.id} />
 				{/if}
+
+				<DreamElements elements={dream.elements ?? []} counts={data.elementCounts ?? {}} />
 
 				<DreamRelatedDreams dreamId={dream.id} relatedDreams={dream.relatedTo || []} />
 

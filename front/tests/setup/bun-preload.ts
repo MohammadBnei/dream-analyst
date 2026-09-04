@@ -8,6 +8,11 @@ import { mock } from 'bun:test';
  *
  * `$env/dynamic/private` is process.env at runtime, so the stub is the real
  * thing. Registered via bunfig.toml `preload`.
+ *
+ * ALSO USED OUTSIDE TESTS: `bun run reextract` passes this file with an explicit
+ * --preload, because bunfig.toml scopes `preload` to [test]. Keep it loadable
+ * under a plain `bun run`. It is why reextract cannot run inside the container -
+ * `.dockerignore` excludes `tests/`.
  */
 mock.module('$env/dynamic/private', () => ({ env: process.env }));
 mock.module('$env/dynamic/public', () => ({ env: process.env }));

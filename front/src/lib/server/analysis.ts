@@ -2,7 +2,13 @@ import type { Dream, PrismaClient } from '@prisma/client';
 import type { DreamPromptType } from '$lib/promptTypes';
 import { promptService } from '$lib/server/prompts/promptService';
 import { getLLMService, type ChatMessage } from '$lib/server/llmService';
+import { buildElementHistory } from '$lib/server/elements';
 import { getPrismaClient } from '$lib/server/db';
+import {
+	findRecentPastDreams,
+	findDreamsSharingElements,
+	SERIES_LENGTH
+} from '$lib/server/relatedDreams';
 
 /**
  * Producing an interpretation for a dream.
@@ -32,39 +38,110 @@ Title:`;
  * Starts the analysis stream for a dream, using its already-linked related
  * dreams as context.
  *
- * Related dreams and the title are expected to have been set BEFORE this is
- * called - see findAndSetRelatedDreams.
+ * Reads the two past-dream signals directly rather than through `relatedTo`,
+ * which is a single undifferentiated bag that also grows on every regeneration.
  */
+/**
+ * How much past-dream text may reach the prompt.
+ *
+ * A CHARACTER budget, not a row count. `rawText` has no maximum anywhere
+ * (validation is minLength(10) only), so "take 8 dreams" bounds nothing - eight
+ * unbounded texts is still unbounded, and what actually stopped it before was
+ * the provider rejecting the request.
+ */
+const PAST_DREAM_CHAR_BUDGET = 6_000;
+
+/** Trim a dream to fit the budget, marking the cut so the model knows it happened. */
+function excerpt(text: string, budget: number): string {
+	return text.length <= budget ? text : `${text.slice(0, budget)}[...]`;
+}
+
+/**
+ * Builds the past-dream context as TWO distinct blocks.
+ *
+ * Keeping them apart is the point. A dream series is read as chapters - Jung's
+ * own framing, and the reason the recent run is included whether or not it
+ * shares a single symbol with tonight. Symbol echoes are a different signal: an
+ * eighteen-month-old water dream, surfaced because the symbol recurred, with no
+ * claim to being recent.
+ *
+ * Flattened into one undated bag (which is what `relatedTo` is) the model cannot
+ * tell last Tuesday from last year, and neither reading survives.
+ */
+async function buildPastDreamsContext(dream: Dream, prisma: PrismaClient): Promise<string> {
+	// Sequential on purpose: the echo query needs the series ids to exclude them,
+	// and excluding after the fact would waste the echo budget on dreams the
+	// prompt already shows.
+	const [series, history] = await Promise.all([
+		findRecentPastDreams(dream, SERIES_LENGTH, prisma),
+		buildElementHistory(dream, prisma)
+	]);
+	const seriesIds = series.map((d) => d.id);
+	const echoes = await findDreamsSharingElements(dream, 5, prisma, seriesIds);
+	const echoIds = echoes.map((e) => e.id);
+
+	const echoDreams = echoIds.length
+		? await prisma.dream.findMany({
+				where: { id: { in: echoIds } },
+				select: { id: true, title: true, rawText: true, dreamDate: true }
+			})
+		: [];
+	// findMany does not preserve `in` order; restore the overlap ranking.
+	const rank = new Map(echoes.map((e, i) => [e.id, i]));
+	echoDreams.sort((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+
+	// The series gets the larger share: it is the spine of the reading.
+	const seriesBudget = Math.floor(PAST_DREAM_CHAR_BUDGET * 0.6);
+	const echoBudget = PAST_DREAM_CHAR_BUDGET - seriesBudget;
+	const perSeries = series.length ? Math.floor(seriesBudget / series.length) : 0;
+	const perEcho = echoDreams.length ? Math.floor(echoBudget / echoDreams.length) : 0;
+
+	const blocks: string[] = [];
+
+	// First, because it is the shortest and the most specific: counts and arcs
+	// for the images actually in tonight's dream. Empty when nothing recurs, and
+	// then omitted entirely - a heading with nothing under it invites the model
+	// to invent entries beneath it.
+	if (history) blocks.push(history);
+
+	if (series.length) {
+		blocks.push(
+			`Here are some of my past dreams for context, oldest first:
+` +
+				series
+					.map(
+						(d) =>
+							`- ${d.title ?? 'Untitled'} (${d.dreamDate.toLocaleDateString()}):
+"""${excerpt(d.rawText, perSeries)}"""`
+					)
+					.join('\n')
+		);
+	}
+
+	if (echoDreams.length) {
+		blocks.push(
+			`Older dreams of mine that return to the same images as tonight's:
+` +
+				echoDreams
+					.map(
+						(d) =>
+							`- ${d.title ?? 'Untitled'} (${d.dreamDate.toLocaleDateString()}):
+"""${excerpt(d.rawText, perEcho)}"""`
+					)
+					.join('\n')
+		);
+	}
+
+	return blocks.join('\n\n');
+}
+
 export async function initiateDreamAnalysis(
 	dream: Dream,
 	promptType: DreamPromptType = 'jungian',
 	signal?: AbortSignal,
 	prisma: PrismaClient = getPrismaClient()
 ): Promise<AsyncIterable<string>> {
-	// Re-read so the context reflects relations written moments ago.
-	const withRelations = await prisma.dream.findUnique({
-		where: { id: dream.id },
-		select: {
-			id: true,
-			relatedTo: { select: { id: true, title: true, dreamDate: true, rawText: true } }
-		}
-	});
-
-	if (!withRelations) {
-		throw new Error(`Dream with ID ${dream.id} not found for analysis context.`);
-	}
-
-	let pastDreamsContext = '';
-	if (withRelations.relatedTo.length > 0) {
-		pastDreamsContext =
-			`Here are some of my past dreams for context:\n` +
-			withRelations.relatedTo
-				.map(
-					(d) =>
-						`- ${d.title} (Date: ${d.dreamDate.toLocaleDateString()}):\nRaw Text: """${d.rawText}"""`
-				)
-				.join('\n');
-	}
+	const pastDreamsContext = await buildPastDreamsContext(dream, prisma);
 
 	const messages: ChatMessage[] = [
 		{ role: 'system', content: promptService.getSystemPrompt(promptType) },
