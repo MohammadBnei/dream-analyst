@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.32.1](https://github.com/MohammadBnei/dream-analyst/compare/0.32.0...0.32.1) (2026-09-04)
+
+### Bug Fixes
+
+* **deps:** patch lodash-es, pulled in with the streamdown tree ([d7c3948](https://github.com/MohammadBnei/dream-analyst/commit/d7c3948eb59a46bc3fe7ab1b0341511319782440))
+* **docker:** ship svelte-streamdown, and make the image prove its imports resolve ([4cb8bd7](https://github.com/MohammadBnei/dream-analyst/commit/4cb8bd76a5cd052c7bffec93ff0c0ea379fc8468))
+
 # [0.32.0](https://github.com/MohammadBnei/dream-analyst/compare/0.31.3...0.32.0) (2026-09-04)
 
 ### Bug Fixes
