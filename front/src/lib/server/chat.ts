@@ -1,4 +1,6 @@
-import { getPrismaClient } from '$lib/server/db'; // Import Prisma client
+import { error } from '@sveltejs/kit';
+import { getPrismaClient } from '$lib/server/db';
+import type { PrismaClient } from '@prisma/client';
 import { checkCredits, costOf, deductCredits, InsufficientCreditsError } from '$lib/server/credits';
 import type { DreamPromptType } from '$lib/promptTypes';
 import { promptService } from '$lib/server/prompts/promptService';
@@ -6,6 +8,9 @@ import { getLLMService, type ChatMessage } from './llmService';
 
 /**
  * Per-dream chat.
+ *
+ * Like credits.ts and analysis.ts, every function takes the Prisma client as an
+ * optional last argument: call sites pass nothing, tests pass their own.
  *
  * Plain functions rather than a singleton class: the class held only a Prisma
  * client it constructed itself, which made the module impossible to point at a
@@ -17,8 +22,11 @@ import { getLLMService, type ChatMessage } from './llmService';
  * @param userId The ID of the user.
  * @returns An array of ChatMessage.
  */
-export async function loadChatHistory(dreamId: string, userId: string): Promise<App.ChatMessage[]> {
-	const prisma = getPrismaClient();
+export async function loadChatHistory(
+	dreamId: string,
+	userId: string,
+	prisma: PrismaClient = getPrismaClient()
+): Promise<App.ChatMessage[]> {
 	return prisma.dreamChat.findMany({
 		where: {
 			dreamId: dreamId,
@@ -44,9 +52,9 @@ export async function saveChatMessage(
 	userId: string,
 	role: 'user' | 'assistant',
 	content: string,
-	promptType?: DreamPromptType
+	promptType?: DreamPromptType,
+	prisma: PrismaClient = getPrismaClient()
 ): Promise<App.ChatMessage> {
-	const prisma = getPrismaClient();
 	return prisma.dreamChat.create({
 		data: {
 			dreamId: dreamId,
@@ -63,8 +71,11 @@ export async function saveChatMessage(
  * @param dreamId The ID of the dream.
  * @param userId The ID of the user.
  */
-export async function clearChatHistory(dreamId: string, userId: string): Promise<void> {
-	const prisma = getPrismaClient();
+export async function clearChatHistory(
+	dreamId: string,
+	userId: string,
+	prisma: PrismaClient = getPrismaClient()
+): Promise<void> {
 	await prisma.dreamChat.deleteMany({
 		where: {
 			dreamId: dreamId,
@@ -83,20 +94,19 @@ export async function clearChatHistory(dreamId: string, userId: string): Promise
 export async function deleteChatMessage(
 	messageId: string,
 	dreamId: string,
-	userId: string
+	userId: string,
+	prisma: PrismaClient = getPrismaClient()
 ): Promise<void> {
-	const prisma = getPrismaClient();
 	const message = await prisma.dreamChat.findUnique({
 		where: { id: messageId }
 	});
 
-	if (!message) {
-		throw new Error('Chat message not found.');
-	}
-
-	// Ensure the message belongs to the dream and the user
-	if (message.dreamId !== dreamId || message.userId !== userId) {
-		throw new Error('Chat message not found or not authorized for deletion.');
+	// 404 for "missing" and "not yours" alike, so this cannot be used to probe
+	// which message ids exist. Raised as an HttpError rather than a generic Error:
+	// the caller used to detect this by string-matching the message, which breaks
+	// the moment anyone rewords it.
+	if (!message || message.dreamId !== dreamId || message.userId !== userId) {
+		error(404, 'Chat message not found.');
 	}
 
 	await prisma.dreamChat.delete({

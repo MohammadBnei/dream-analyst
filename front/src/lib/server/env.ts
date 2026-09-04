@@ -35,6 +35,20 @@ const nonEmpty = (name: string) => v.pipe(v.string(`${name} is required`), v.min
 
 const ServerEnvSchema = v.object({
 	DATABASE_URL: nonEmpty('DATABASE_URL'),
+
+	// No fallback, deliberately. This used to default to the literal
+	// 'your_jwt_secret_here' when unset - which is exactly what happened in
+	// production: session cookies were signed with a placeholder published in this
+	// repository, so anyone reading it could forge an auth_token for any user. The
+	// fallback is what made it invisible: the app booted, logins worked, and
+	// nothing said the signing key was public. An auth system running without a
+	// signing key is not degraded, it is bypassed.
+	//
+	// Safe to declare here because serverEnv() is LAZY. The original reason this
+	// lived in auth.ts was that a module-scope throw also fires during
+	// `vite build`, breaking the image build rather than reporting a
+	// misconfiguration. Nothing in this file runs at import time.
+	JWT_SECRET: nonEmpty('JWT_SECRET'),
 	REDIS_URL: nonEmpty('REDIS_URL'),
 	OPENROUTER_API_KEY: nonEmpty('OPENROUTER_API_KEY'),
 

@@ -18,16 +18,22 @@
 
 	let { data, form } = $props();
 
-	// Initialize with data from the load function
-	let dream = $state(data.dream);
-	let nextDreamId = $state(data.nextDreamId);
-	let prevDreamId = $state(data.prevDreamId);
+	// Derived from load data, not mirrored into $state with a syncing $effect.
+	let dream = $derived(data.dream);
+	let nextDreamId = $derived(data.nextDreamId);
+	let prevDreamId = $derived(data.prevDreamId);
 
 	type DreamStatus = typeof dream.status;
 
-	// These states are for real-time streaming updates, not direct dream properties
+	// Streaming state genuinely IS local: it changes faster than the server knows,
+	// and must not be clobbered by an invalidation mid-stream.
 	let streamedInterpretation = $state(dream.interpretation || '');
 	let streamedTags = $state<string[]>((dream.tags as string[]) || []);
+
+	// Local override so the badge reacts the instant a stream starts or fails,
+	// ahead of the DB write. Null means "trust the server".
+	let streamStatus = $state<DreamStatus | null>(null);
+	let displayStatus = $derived(streamStatus ?? dream.status);
 
 	let isLoadingStream = $state(false);
 	let streamError = $state<string | null>(null);
@@ -37,29 +43,31 @@
 	// ClientChatService is instantiated within DreamChatSection, so no need for a top-level state here.
 	// let clientChatService: ClientChatService | null = $state(null);
 
-	// Initialize selectedPromptType from dream data
-	let selectedPromptType: DreamPromptType = $state(
+	// Re-derives when the dream changes, and stays assignable so the select works.
+	let selectedPromptType: DreamPromptType = $derived(
 		(dream.promptType as DreamPromptType) || 'jungian'
 	);
 
-	// Effect to update local state when data from load function changes
-	$effect(() => {
-		if (data.dream) {
-			// Only update if the dream object itself has changed (e.g., ID or updatedAt)
-			// or if it's the initial load.
-			if (!dream || dream.id !== data.dream.id || dream.updatedAt !== data.dream.updatedAt) {
-				dream = data.dream;
-				nextDreamId = data.nextDreamId;
-				prevDreamId = data.prevDreamId;
+	// Bookkeeping, deliberately NOT $state: it must not itself trigger this effect.
+	let lastSyncedDream = '';
 
-				// Reset streamed interpretation/tags if not actively streaming
-				// or if the dream ID has changed (navigating to a new dream)
-				if (!isLoadingStream || dream.id !== data.dream.id) {
-					streamedInterpretation = dream.interpretation || '';
-					streamedTags = (dream.tags as string[]) || [];
-				}
-				selectedPromptType = (dream.promptType as DreamPromptType) || 'jungian';
-			}
+	// The only state that cannot be derived. It must adopt the server's values when
+	// the dream actually changes, and must NOT be clobbered while a stream is
+	// running - the stream is ahead of the database, which is only written at the
+	// end. Keyed on id+updatedAt so a re-run with unchanged data is a no-op;
+	// syncing on every run would wipe the streamed text the moment the stream
+	// finished, before invalidate() had refreshed it.
+	$effect(() => {
+		const key = `${dream.id}:${dream.updatedAt}`;
+		if (key === lastSyncedDream) return;
+
+		const navigatedToAnotherDream = !lastSyncedDream.startsWith(`${dream.id}:`);
+		lastSyncedDream = key;
+
+		if (!isLoadingStream || navigatedToAnotherDream) {
+			streamedInterpretation = dream.interpretation || '';
+			streamedTags = (dream.tags as string[]) || [];
+			streamStatus = null;
 		}
 	});
 
@@ -84,7 +92,7 @@
 	});
 
 	onMount(async () => {
-		if (dream.status === 'PENDING_ANALYSIS') {
+		if (displayStatus === 'PENDING_ANALYSIS') {
 			console.log('Dream is pending analysis on mount, attempting to start stream...');
 			// Use the dream's promptType to start the stream
 			startStream(selectedPromptType);
@@ -104,7 +112,7 @@
 		streamedInterpretation = ''; // Clear previous interpretation
 		streamedTags = []; // Clear previous tags
 		// Optimistically set status, but the final status will come from the stream or DB
-		dream.status = 'PENDING_ANALYSIS';
+		streamStatus = 'PENDING_ANALYSIS';
 
 		analysisService = new DreamAnalysisService(dream.id, {
 			onMessage: (data) => {
@@ -115,13 +123,13 @@
 					streamedTags = data.tags;
 				}
 				if (data.status) {
-					dream.status = data.status as DreamStatus;
+					streamStatus = data.status as DreamStatus;
 				}
 			},
 			onEnd: async (data) => {
 				isLoadingStream = false;
 				if (data.status) {
-					dream.status = data.status as DreamStatus;
+					streamStatus = data.status as DreamStatus;
 				}
 				// Only a failure message is an error. This previously assigned any
 				// message, so a successful run published "Processing completed." and
@@ -132,7 +140,7 @@
 			onError: (errorMsg) => {
 				console.error('Stream error:', errorMsg);
 				isLoadingStream = false;
-				dream.status = 'ANALYSIS_FAILED'; // Update local status for immediate feedback
+				streamStatus = 'ANALYSIS_FAILED';
 				streamError = errorMsg;
 				invalidate('dream'); // Invalidate to persist the failed status
 			},
@@ -169,7 +177,7 @@
 	{#if data.dream}
 		<div class="mb-4 flex items-center justify-between">
 			<DreamHeader
-				dreamStatus={dream.status}
+				dreamStatus={displayStatus}
 				onDeleteClick={openDeleteModal}
 				dreamTitle={dream.title}
 			/>
@@ -179,7 +187,7 @@
 			<div class="card-body p-0">
 				<DreamNavigation dreamDate={dream.dreamDate} {prevDreamId} {nextDreamId}>
 					{#snippet statusBadge()}
-						<DreamStatusBadge status={dream.status} />
+						<DreamStatusBadge status={displayStatus} />
 					{/snippet}
 				</DreamNavigation>
 
@@ -190,7 +198,7 @@
 				<DreamInterpretationSection
 					interpretation={streamedInterpretation}
 					tags={streamedTags}
-					status={dream.status}
+					status={displayStatus}
 					promptType={selectedPromptType}
 					bind:isLoadingStream
 					{streamError}

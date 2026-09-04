@@ -39,13 +39,12 @@ function asyncIterableToReadableStream(
 export class StreamProcessor {
 	private streamId: string;
 	private platform: App.Platform | undefined;
-	// Assigned in init(), not the constructor, and every method that uses them runs
-	// after init(). Asserted rather than made optional to avoid a null check at each
-	// use site.
-	// ponytail: the real fix is passing prisma in instead of holding it as state;
-	// that lands with the service-class removal.
+	private prisma: ReturnType<typeof getPrismaClient>;
+	// Still assigned in init() rather than the constructor, because
+	// getStreamStateStore() is genuinely async (it establishes the Redis publisher).
+	// Asserted rather than optional to avoid a null check at every use site; every
+	// method that touches it runs after init().
 	private streamStateStore!: Awaited<ReturnType<typeof getStreamStateStore>>;
-	private prisma!: Awaited<ReturnType<typeof getPrismaClient>>;
 	abortController: AbortController; // Internal AbortController for server-side cancellation
 
 	private accumulatedInterpretation: string = '';
@@ -56,7 +55,8 @@ export class StreamProcessor {
 	constructor(streamId: string, platform: App.Platform | undefined) {
 		this.streamId = streamId;
 		this.platform = platform;
-		this.abortController = new AbortController(); // Initialize internal AbortController
+		this.prisma = getPrismaClient();
+		this.abortController = new AbortController();
 	}
 
 	/**
@@ -65,7 +65,6 @@ export class StreamProcessor {
 	 */
 	public async init() {
 		this.streamStateStore = await getStreamStateStore();
-		this.prisma = await getPrismaClient();
 	}
 
 	/**
