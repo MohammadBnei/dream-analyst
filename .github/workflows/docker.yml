@@ -6,6 +6,13 @@ on:
     tags:
       - '*'
 
+# upload-sarif writes to the Security tab, which the default read-only token
+# cannot do - the scan step would pass and the job would still fail on the
+# upload.
+permissions:
+  contents: read
+  security-events: write
+
 env:
   IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/dream-analyst
   # PLATFORMS: ${{ github.event_name == 'push' && 'linux/amd64, linux/arm64' || 'linux/amd64' }}
@@ -145,6 +152,12 @@ jobs:
         with:
           platforms: ${{ env.PLATFORMS }}
           push: ${{ github.event_name == 'push' }}
+          # On a pull request nothing is pushed, so without this the image never
+          # exists anywhere and Trivy silently pulls the LAST PUBLISHED tag from
+          # the registry and scans that instead - a green scan of code nobody
+          # proposed. Loading it into the local daemon is what makes the scan
+          # about this build. Only possible because PLATFORMS is single-arch.
+          load: true
           context: front
           tags: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}, ${{ env.IMAGE_NAME }}:latest
           cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
@@ -155,7 +168,7 @@ jobs:
       # Now it fails the job on a fixable CRITICAL/HIGH, and the report is
       # uploaded to the Security tab either way.
       - name: Scan Docker image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}
           format: 'sarif'
