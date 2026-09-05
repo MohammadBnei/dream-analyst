@@ -1,5 +1,15 @@
 # Changelog
 
+# [0.33.0](https://github.com/MohammadBnei/dream-analyst/compare/0.32.2...0.33.0) (2026-09-05)
+
+### Bug Fixes
+
+* **dreams:** close the review findings on the symbols pipeline ([9ed38a9](https://github.com/MohammadBnei/dream-analyst/commit/9ed38a9bc2f9ab728286df226d1bbd8508907336))
+
+### Features
+
+* **dreams:** decompose dreams into typed, canonicalised symbols ([d618759](https://github.com/MohammadBnei/dream-analyst/commit/d6187595252a74c66426f552e45ce61c655cf663))
+
 ## [0.32.2](https://github.com/MohammadBnei/dream-analyst/compare/0.32.1...0.32.2) (2026-09-04)
 
 ### Bug Fixes
