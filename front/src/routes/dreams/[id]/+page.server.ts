@@ -7,6 +7,7 @@ import { DreamStatus } from '@prisma/client'; // Import the Prisma DreamStatus e
 import { claimAnalysis, costOf, getCreditsBalance } from '$lib/server/credits';
 import { generateDreamTitle } from '$lib/server/analysis';
 import { findAndSetRelatedDreams } from '$lib/server/relatedDreams';
+import { extractDreamElements, ensureDreamElements } from '$lib/server/elements';
 import { buildTsQueryFromRaw, dreamSearchFilter } from '$lib/server/search/tsquery';
 import { dreamAction } from '$lib/server/guards';
 
@@ -92,12 +93,20 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				title: true,
 				interpretation: true,
 				status: true,
-				tags: true,
 				dreamDate: true,
 				createdAt: true,
 				updatedAt: true,
 				analysisPaidAt: true,
 				promptType: true, // Select promptType
+				elementsExtractedAt: true,
+				elements: {
+					select: {
+						rawLabel: true,
+						valence: true,
+						note: true,
+						entry: { select: { id: true, kind: true, label: true } }
+					}
+				},
 				relatedTo: {
 					select: {
 						id: true,
@@ -113,11 +122,23 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 			throw error(404, 'Dream not found.');
 		}
 
-		// Ensure tags are parsed correctly if stored as JSON string
-		const dreamWithParsedTags = {
-			...dream,
-			tags: dream.tags ? (dream.tags as string[]) : null
-		};
+		// How many of this dreamer's dreams use each entry, so a badge can read
+		// "eau x12" rather than implying tonight was the only time.
+		// ponytail: one groupBy per detail load, and it filters on a non-PK join
+		// (dream_element -> vocabulary_entry.user_id). Fine at a few thousand rows
+		// per user; past ~50k, denormalise user_id onto dream_element.
+		const entryIds = dream.elements.map((e) => e.entry.id);
+		const elementCounts = Object.fromEntries(
+			entryIds.length
+				? (
+						await prisma.dreamElement.groupBy({
+							by: ['entryId'],
+							where: { entryId: { in: entryIds } },
+							_count: { entryId: true }
+						})
+					).map((g) => [g.entryId, g._count.entryId])
+				: []
+		);
 
 		// Fetch next and previous dreams for navigation
 		const nextDream = await prisma.dream.findFirst({
@@ -156,7 +177,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		const unpaid = dream.status === 'PENDING_ANALYSIS' && dream.analysisPaidAt === null;
 
 		return {
-			dream: dreamWithParsedTags,
+			dream,
+			elementCounts,
 			nextDreamId: nextDream?.id || null,
 			prevDreamId: prevDream?.id || null,
 			unpaid,
@@ -271,6 +293,15 @@ export const actions: Actions = {
 	}),
 
 	regenerateRelatedDreams: dreamAction('regenerate related dreams', async ({ dream }) => {
+		// The free, user-reachable repair for a dream that has no elements - the
+		// only such path, since reextract runs from a workstation and
+		// ?/resetAnalysis charges a credit.
+		//
+		// FILL-ONLY on purpose. This action is free and unrate-limited (CLAUDE.md
+		// names it), so unconditional extraction would make it the costliest
+		// endpoint in the app; and because extraction is delete-then-insert it
+		// would also destroy post-pass notes the user paid for.
+		await ensureDreamElements(dream);
 		return { success: true, dream: await findAndSetRelatedDreams(dream) };
 	}),
 
@@ -326,11 +357,21 @@ export const actions: Actions = {
 			}
 		});
 
-		updated = await prisma.dream.update({
-			where: { id: updated.id },
-			data: { title: await generateDreamTitle(updated.rawText) }
-		});
-		updated = await findAndSetRelatedDreams(updated);
+		// These three are best-effort. Unlike the create path this action had no
+		// try, so any throw here became `fail(500)` via dreamAction - AFTER the
+		// user was charged and `interpretation` was nulled. Adding two LLM calls
+		// to the path made that worth fixing rather than inheriting.
+		try {
+			updated = await prisma.dream.update({
+				where: { id: updated.id },
+				data: { title: await generateDreamTitle(updated.rawText) }
+			});
+			// Before relations: overlap retrieval reads what extraction writes.
+			await extractDreamElements(updated);
+			updated = await findAndSetRelatedDreams(updated);
+		} catch (e) {
+			console.error(`Dream ${updated.id}: title/elements/relations failed on reset:`, e);
+		}
 
 		return { success: true, dream: updated };
 	})

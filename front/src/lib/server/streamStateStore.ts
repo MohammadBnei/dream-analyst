@@ -17,7 +17,6 @@ export enum StreamStatus {
 
 interface StreamState {
 	interpretation: string;
-	tags: string[];
 	status: StreamStatus;
 	lastUpdate: number;
 	finalMessage?: string;
@@ -96,7 +95,6 @@ class StreamStateStore {
 		if (!currentState) {
 			currentState = {
 				interpretation: '',
-				tags: [],
 				status: StreamStatus.PENDING,
 				lastUpdate: Date.now()
 			};
@@ -104,9 +102,6 @@ class StreamStateStore {
 
 		if (chunk.content) {
 			currentState.interpretation += chunk.content;
-		}
-		if (chunk.tags && chunk.tags.length > 0) {
-			currentState.tags = chunk.tags;
 		}
 
 		if (chunk.status) {
@@ -182,7 +177,6 @@ class StreamStateStore {
 		const key = this.getKey(streamId);
 		const initialState: StreamState = {
 			interpretation: '',
-			tags: [],
 			status: StreamStatus.PENDING,
 			lastUpdate: Date.now(),
 			promptType: promptType // Store the prompt type

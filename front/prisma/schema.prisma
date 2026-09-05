@@ -37,6 +37,7 @@ model User {
   chatMessages       DreamChat[]
   creditTransactions CreditTransaction[] // Link to credit transactions
   adminGrants        CreditTransaction[] @relation(name: "adminGrants")
+  vocabulary         VocabularyEntry[]
 
   @@map("user")
 }
@@ -46,6 +47,9 @@ model Dream {
   userId            String              @map("user_id")
   user              User?               @relation(fields: [userId], references: [id])
   rawText           String              @map("raw_text")
+  /// DEAD. Never written, never read. NOT dropped: Prisma enumerates every
+  /// scalar when a query omits `select`, so a DROP COLUMN 500s the old pod for
+  /// the whole rolling-deploy overlap. Removing it needs three releases.
   analysisText      String?             @map("analysis_text")
   interpretation    String?
   title             String?             // New field for AI-generated title
@@ -55,10 +59,17 @@ model Dream {
   /// funds exactly one run. Also the exactly-once guard — the charge is
   /// conditional on `updateMany where analysisPaidAt: null` returning count 1.
   analysisPaidAt    DateTime?           @map("analysis_paid_at")
+  /// DEAD, superseded by DreamElement. Same reason as analysisText: not dropped.
   tags              Json?
   dreamDate         DateTime            @default(now()) @map("dream_date") // New field for the actual dream date
   promptType        String?             @default("jungian") // Added promptType field
   chatMessages      DreamChat[] // Link to new chat messages
+  elements          DreamElement[]
+  /// When extraction last RAN, regardless of whether it produced anything.
+  /// Distinct from "has elements": a dream can legitimately extract to zero, and
+  /// keying "already tried" on a zero row count makes every free repair click
+  /// re-run two model calls on it forever.
+  elementsExtractedAt DateTime? @map("elements_extracted_at")
   createdAt         DateTime            @default(now()) @map("created_at")
   updatedAt         DateTime            @default(now()) @updatedAt @map("updated_at")
   CreditTransaction CreditTransaction[]
@@ -113,6 +124,86 @@ model CreditTransaction {
   @@index([userId, createdAt])
   @@index([relatedDreamId])
   @@map("credit_transaction")
+}
+
+/// One row per (user, kind, canonical label). The thing that recurs.
+///
+/// Vocabulary is per-user and in the dreamer's own language. There is
+/// deliberately no shared archetype layer: it was cut on review because nothing
+/// branched on it and its only visible output would have been an English gloss
+/// in a French product.
+model VocabularyEntry {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// symbol | character | setting | action | emotion. A plain string, not an
+  /// enum: the taxonomy is expected to move during the test phase, and adding a
+  /// kind must be a prompt edit rather than an ALTER TYPE.
+  kind String
+
+  /// Normalised before write: trim, lowercase, collapse whitespace, 80 chars.
+  /// The cap is load-bearing - this is half a btree key and an LLM writes it.
+  label String
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  occurrences DreamElement[]
+
+  /// Written via createMany(skipDuplicates) + a findMany read-back, NEVER
+  /// upsert: Prisma 7's upsert compiles to a read-modify-write query graph
+  /// (its compiler has ON CONFLICT DO NOTHING but no DO UPDATE), so it still
+  /// races - which CLAUDE.md locks out for exactly this reason.
+  @@unique([userId, kind, label])
+  @@map("vocabulary_entry")
+}
+
+/// One occurrence: this dream used this vocabulary entry.
+model DreamElement {
+  id      String @id @default(uuid())
+  dreamId String @map("dream_id")
+  dream   Dream  @relation(fields: [dreamId], references: [id], onDelete: Cascade)
+  entryId String @map("entry_id")
+
+  entry VocabularyEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  /// What the extractor said before canonicalisation. Its reader is the operator
+  /// during the test phase: matcher quality cannot be diagnosed without seeing
+  /// the raw label beside what it resolved to.
+  rawLabel String @map("raw_label")
+
+  /// Affect, on ANY kind - not emotions only. "peur is negative" is tautological;
+  /// the signal worth having is `eau` turning negative over a year.
+  /// Coarse and hallucination-tolerant; never compared for equality.
+  valence   Float?
+  intensity Float?
+
+  /// Written by the post-pass after the terminal COMPLETED write. Never on the
+  /// credit path.
+  note String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  /// Guards a double-emit within one extraction. NOTE: the matcher collapsing
+  /// two labels onto one entry inside a single dream is its SUCCESS case, so the
+  /// writer must dedupe by entryId before insert or this constraint turns that
+  /// success into a P2002 that rolls back the whole replace.
+  @@unique([dreamId, entryId])
+  /// Load-bearing: symbol-overlap retrieval walks entry -> other dreams, and
+  /// Postgres does not index foreign keys automatically.
+  @@index([entryId])
+  @@map("dream_element")
+}
+
+/// Runtime-tunable configuration, so a model can be changed without a deploy.
+/// Absent key = fall back to the environment variable. Read through a cache in
+/// src/lib/server/settings.ts; nothing here is validated by env.ts.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@map("app_setting")
 }
 
 enum DreamStatus {

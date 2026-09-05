@@ -24,7 +24,6 @@ declare global {
 		type ChatMessage = DreamChat;
 		interface AnalysisStreamChunk {
 			content?: string;
-			tags?: string[];
 			status?: Dream['status']; // This refers to the DreamStatus enum from Prisma
 			message?: string;
 			finalStatus?: 'COMPLETED' | 'ANALYSIS_FAILED';

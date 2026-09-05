@@ -8,7 +8,6 @@
 
 	let {
 		interpretation,
-		tags,
 		status,
 		promptType, // This prop now represents the current promptType from the dream
 		isLoadingStream = $bindable(),
@@ -235,14 +234,13 @@
 		<button onclick={() => onRegenerateAnalysis(selectedPromptType)} class="btn mt-4 btn-primary"
 			>{m.retry_analysis_button()}</button
 		>
-	{:else if !interpretation && !tags.length && !isLoadingStream && !streamError}
+	{:else if !interpretation && !isLoadingStream && !streamError}
 		<p>{m.no_interpretation_available_message()}</p>
 	{/if}
 
-	{#if interpretation || tags.length > 0 || isLoadingStream || streamError}
+	{#if interpretation || isLoadingStream || streamError}
 		<StreamedAnalysisDisplay
 			{interpretation}
-			{tags}
 			isLoading={isLoadingStream}
 			errorMessage={streamError}
 			{status}
