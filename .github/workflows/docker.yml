@@ -265,6 +265,10 @@ jobs:
   # tests, e2e, the Trivy gate — stays on ubuntu-latest.
   build-push:
     needs: release
+    # always() + a result check, not the implicit success()-on-needs: `release` is push-only,
+    # so a workflow_dispatch skips it, and an implicit condition would skip this job too —
+    # taking the seeding run with it. 'skipped' passes here, 'failure' does not.
+    if: always() && needs.release.result != 'failure'
     # NOT the bare `ukubi` label: that runner holds a ServiceAccount token with `create
     # jobs` in vos/vos-dev. This box has no cluster access at all, which is why builds
     # belong on it.
@@ -279,8 +283,9 @@ jobs:
         uses: actions/checkout@v5
         with:
           # The tag release-it just made, not the commit that started the run: the version in
-          # front/package.json at that SHA is the one being built.
-          ref: ${{ needs.release.outputs.version }}
+          # front/package.json at that SHA is the one being built. On a dispatch there is no
+          # release, so fall back to whatever ref was dispatched.
+          ref: ${{ needs.release.outputs.version || github.ref }}
           fetch-depth: 0
 
       # Not baked into the runner image. `sudo apt-get` only works for this — the sudoers
@@ -321,9 +326,21 @@ jobs:
             --username "$REGISTRY_USER" \
             --password-stdin "$REGISTRY"
 
+      # On a release run this is the release job's output. On a dispatch there is no release,
+      # so read it from the checked-out tree — which is what makes a dispatch able to seed the
+      # registry with the current version before helm/values.yaml is flipped to it.
+      - name: Resolve the version
+        id: v
+        run: |
+          set -euo pipefail
+          v="${{ needs.release.outputs.version }}"
+          [ -n "$v" ] || v=$(jq -er .version front/package.json)
+          [ -n "$v" ] || { echo "could not determine a version"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
         env:
-          VERSION: ${{ needs.release.outputs.version }}
+          VERSION: ${{ steps.v.outputs.version }}
         run: |
           set -euo pipefail
           # Context is front/, same as the buildx build above; the Dockerfile lives there.
@@ -342,7 +359,7 @@ jobs:
       - name: Clean up this build's images
         if: always()
         env:
-          VERSION: ${{ needs.release.outputs.version }}
+          VERSION: ${{ steps.v.outputs.version }}
         run: |
           for tag in "$VERSION" latest; do
             sudo buildah rmi "$REGISTRY/$IMAGE_NAME:$tag" 2>/dev/null || true
