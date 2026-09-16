@@ -3,7 +3,11 @@
 # repo onboarded, after editable-blog validated the pipeline.
 
 image:
-  repository: mohammaddocker/dream-analyst
+  # The cluster's own registry, not Docker Hub. Flipped only after the dispatch run had
+  # pushed 0.33.0 and latest here — doing it first would have given ImagePullBackOff on a
+  # tag this registry had never seen, which is the order agent-fleet recorded from its own
+  # migration. Anonymous in-cluster reads are open, so this needs no pull secret.
+  repository: registry.bnei.lan:5000/dream-analyst
   tag: "0.33.0"
 
 annotations:
