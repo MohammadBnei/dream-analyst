@@ -1,9 +1,29 @@
+# One run, one release: push to main -> quality + e2e + image scan -> release
+# (version + changelog) -> image build and push to the local registry -> helm tag bump.
+#
+# This used to be two workflows chained by a tag push, which is the only reason it needed a
+# PAT: release-it's tag had to TRIGGER the image build, and a tag pushed with the built-in
+# GITHUB_TOKEN deliberately does not trigger workflows. Sequential jobs need no trigger, so
+# nothing here holds a PAT.
+#
+# Only ONE job runs on the self-hosted box, and only because the registry is LAN-only:
+# `buildah bud` + push. Everything expensive or Docker-dependent — the tests, the e2e suite,
+# the Trivy gate — stays on ubuntu-latest, where the actions actually work and where it does
+# not occupy a runner that takes one job at a time.
 name: Build, Test and Deploy
 
 on:
+  workflow_dispatch:
   pull_request:
   push:
-    tags:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '**.yml'
+      - 'front/package.json'
+      - 'helm/**'
+    tags-ignore:
       - '*'
 
 # upload-sarif writes to the Security tab, which the default read-only token
@@ -13,10 +33,29 @@ permissions:
   contents: read
   security-events: write
 
+# Concurrent releases: keep the newest, cancel the rest, so two pushes cannot compute the
+# same version from the same latest tag and lose one of them.
+concurrency:
+  group: release
+  cancel-in-progress: true
+
 env:
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/dream-analyst
-  # PLATFORMS: ${{ github.event_name == 'push' && 'linux/amd64, linux/arm64' || 'linux/amd64' }}
+  REGISTRY: registry.bnei.lan:5000
+  IMAGE_NAME: dream-analyst
+  # Plaintext on purpose. A username is not a secret, and holding it as one cost agent-fleet
+  # a release: the secret was never set there, so buildah got `--username ""`.
+  REGISTRY_USER: ci
+  # The registry password comes from the shared platform-commons project over OIDC rather
+  # than a repo secret (infra-bootstrap ADR-0049).
+  INFISICAL_DOMAIN: https://infisical.bnei.dev
+  INFISICAL_PROJECT_SLUG: platform-commons-76pb
+  INFISICAL_ENV: dev
+  INFISICAL_IDENTITY_ID: 19807471-d73a-48d4-9e58-1dc34255ef77
+  # Single-arch: the only consumer is an amd64 cluster. Kept as a variable because the scan
+  # build below needs `load: true`, which is only possible single-arch.
   PLATFORMS: linux/amd64
+  # Local-only tag for the scan build. Never pushed anywhere, so it needs no registry host.
+  SCAN_IMAGE: dream-analyst:scan
 
 jobs:
   # Nothing verified that this project compiled before an image was built and
@@ -116,57 +155,40 @@ jobs:
           path: front/playwright/report
           retention-days: 7
 
-  build-push:
+  # Renamed from build-push: it no longer pushes anything. Its whole job is to be the
+  # security gate, and it stays on ubuntu-latest because aquasecurity/trivy-action is a
+  # Docker-based action and the self-hosted build box has buildah and no docker daemon.
+  # Installing trivy on that box was the alternative; keeping the scan here is smaller and
+  # keeps the gate identical to what it was.
+  scan:
     runs-on: ubuntu-latest
-    needs: [quality, e2e]
-    defaults:
-      run:
-        working-directory: front
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Docker Login
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: package.json info
-        id: info
-        uses: jaywcjlove/github-action-package@v2.0.0
-        with:
-          path: front/package.json
-
-
-      - name: Build and push
+      # Builds but never pushes. `load: true` is the load-bearing part and predates this
+      # change: without it the image exists nowhere on a pull request and Trivy silently
+      # pulls the LAST PUBLISHED tag and scans that instead — a green scan of code nobody
+      # proposed. Only possible because PLATFORMS is single-arch.
+      #
+      # Cache moved from a registry tag on Docker Hub to the GitHub Actions cache, since
+      # Docker Hub is no longer in the picture and the LAN registry is unreachable from here.
+      - name: Build the image for scanning
         uses: docker/build-push-action@v6
         with:
           platforms: ${{ env.PLATFORMS }}
-          push: ${{ github.event_name == 'push' }}
-          # On a pull request nothing is pushed, so without this the image never
-          # exists anywhere and Trivy silently pulls the LAST PUBLISHED tag from
-          # the registry and scans that instead - a green scan of code nobody
-          # proposed. Loading it into the local daemon is what makes the scan
-          # about this build. Only possible because PLATFORMS is single-arch.
+          push: false
           load: true
           context: front
-          tags: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}, ${{ env.IMAGE_NAME }}:latest
-          cache-from: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE_NAME }}:buildcache,mode=max
+          tags: ${{ env.SCAN_IMAGE }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      # Previously this ran AFTER the push, wrote a SARIF file that nothing
-      # uploaded, and never failed the build - so it could not block anything.
-      # Now it fails the job on a fixable CRITICAL/HIGH, and the report is
-      # uploaded to the Security tab either way.
       - name: Scan Docker image
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -177,7 +199,7 @@ jobs:
           # receives only what the gate blocks on; the alternative is a gate
           # that cannot be satisfied.
           limit-severities-for-sarif: true
-          image-ref: ${{ env.IMAGE_NAME }}:${{ steps.info.outputs.version }}
+          image-ref: ${{ env.SCAN_IMAGE }}
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
@@ -192,35 +214,178 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build-push
+  # Cuts the version and CHANGELOG in the same run as the build, which is what removes the
+  # PAT: release-it's tag no longer has to trigger anything. It only pushes a commit and a
+  # tag (github.release is false in front/package.json), which contents: write covers.
+  #
+  # Gated on all three checks above. Previously the release lived in its own workflow on its
+  # own trigger, so a red e2e could not stop a version being cut.
+  release:
+    needs: [quality, e2e, scan]
     if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: front
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          ref: 'main'
-          token: ${{ secrets.PAT }}
 
-      - name: package.json info
-        id: info
-        uses: jaywcjlove/github-action-package@v2.0.0
-        with:
-          path: front/package.json
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
 
-      - name: Update Helm image tag
-        run: |
-          sed -i "s/^  tag: \".*\"\$/  tag: \"${{ steps.info.outputs.version }}\"/" helm/values.yaml
+      - name: Install dependencies
+        run: bun install
 
       - name: git config
         run: |
           git config user.name "${GITHUB_ACTOR}"
           git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
 
-      - name: git push
+      - name: Run release-it
+        run: git update-index --refresh && git diff-index --quiet HEAD || git reset --hard && bun run release
+
+      - name: Read the released version
+        id: version
         run: |
+          set -euo pipefail
+          v=$(jq -er .version package.json)
+          [ -n "$v" ] || { echo "no version in front/package.json"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
+  # The ONLY job on the self-hosted box, and only because the registry is LAN-only: a
+  # GitHub-hosted runner cannot reach it, and pushing layers up a residential uplink is the
+  # slow direction this whole arrangement exists to avoid (ADR-0034). Everything else —
+  # tests, e2e, the Trivy gate — stays on ubuntu-latest.
+  build-push:
+    needs: release
+    # NOT the bare `ukubi` label: that runner holds a ServiceAccount token with `create
+    # jobs` in vos/vos-dev. This box has no cluster access at all, which is why builds
+    # belong on it.
+    runs-on: [self-hosted, ukubi-build]
+    # id-token mints the OIDC token Infisical authenticates. Declaring any permissions block
+    # zeroes the rest, so contents: read is restated for checkout.
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout the released tag
+        uses: actions/checkout@v5
+        with:
+          # The tag release-it just made, not the commit that started the run: the version in
+          # front/package.json at that SHA is the one being built.
+          ref: ${{ needs.release.outputs.version }}
+          fetch-depth: 0
+
+      # Not baked into the runner image. `sudo apt-get` only works for this — the sudoers
+      # entry on that box grants /usr/bin/buildah and nothing else, so anything else a job
+      # tries to install hangs on a password prompt.
+      - name: Ensure buildah
+        run: command -v buildah || (sudo apt-get update -qq && sudo apt-get install -y -qq buildah)
+
+      # Only REGISTRY_PASSWORD, not the whole environment.
+      - name: Read the registry password from Infisical
+        uses: Infisical/secrets-action@v1.0.12
+        with:
+          method: oidc
+          identity-id: ${{ env.INFISICAL_IDENTITY_ID }}
+          oidc-audience: infisical.bnei.dev
+          domain: ${{ env.INFISICAL_DOMAIN }}
+          project-slug: ${{ env.INFISICAL_PROJECT_SLUG }}
+          env-slug: ${{ env.INFISICAL_ENV }}
+          secret-path: /
+          secret-name: REGISTRY_PASSWORD
+          export-type: env
+
+      # GitHub only auto-masks `secrets.*`, and this action's README does not document
+      # masking. An unmasked Infisical value leaked a token in cleartext in this estate once.
+      - name: Mask the fetched password
+        run: echo "::add-mask::$REGISTRY_PASSWORD"
+
+      # --tls-verify=false: the registry is plain HTTP, because Let's Encrypt cannot issue
+      # for `.lan`. Anonymous reads are open, which is how the nodes pull without
+      # credentials; pushing needs this. Every buildah call goes through sudo and they must
+      # all agree — a rootless login writes an auth file a rootful push cannot see.
+      - name: Registry login
+        run: |
+          set -euo pipefail
+          [ -n "${REGISTRY_PASSWORD:-}" ] || { echo "Infisical returned no REGISTRY_PASSWORD"; exit 1; }
+          printf '%s' "$REGISTRY_PASSWORD" | sudo buildah login \
+            --tls-verify=false \
+            --username "$REGISTRY_USER" \
+            --password-stdin "$REGISTRY"
+
+      - name: Build and push
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          # Context is front/, same as the buildx build above; the Dockerfile lives there.
+          sudo buildah bud \
+            --isolation chroot \
+            --format docker \
+            -t "$REGISTRY/$IMAGE_NAME:$VERSION" \
+            -t "$REGISTRY/$IMAGE_NAME:latest" \
+            front
+          for tag in "$VERSION" latest; do
+            sudo buildah push --tls-verify=false "$REGISTRY/$IMAGE_NAME:$tag"
+          done
+
+      # Only this build's tags. NEVER `buildah rmi --all` — the box is shared with the other
+      # build repos and the base-image cache is the whole reason they live together.
+      - name: Clean up this build's images
+        if: always()
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          for tag in "$VERSION" latest; do
+            sudo buildah rmi "$REGISTRY/$IMAGE_NAME:$tag" 2>/dev/null || true
+          done
+
+  deploy:
+    needs: [release, build-push]
+    # always() + explicit result checks rather than the implicit success()-on-needs, which
+    # agent-fleet was bitten by: green builds with a skipped job upstream still skipped the
+    # deploy. This commit is what ArgoCD reads — the image existing in the registry is not a
+    # deployment.
+    if: >-
+      always() && github.event_name == 'push' &&
+      needs.release.result == 'success' &&
+      needs.build-push.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      VERSION: ${{ needs.release.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: 'main'
+
+      # The version comes from the release job rather than being re-read here with
+      # jaywcjlove/github-action-package. One source means build and deploy cannot disagree
+      # and pin a tag no image carries — the failure agent-fleet's workflow documented.
+      - name: Update Helm image tag
+        run: |
+          sed -i "s/^  tag: \".*\"$/  tag: \"${VERSION}\"/" helm/values.yaml
+
+      - name: Commit and push
+        run: |
+          set -euo pipefail
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
           git add helm/values.yaml
-          git commit -m "Chore: update image version to ${{ steps.info.outputs.version }} (helm)"
+          git diff --cached --quiet && { echo "tag unchanged"; exit 0; }
+          git commit -m "chore: update image version to ${VERSION} (helm)"
+          # Another commit can land while the image builds; rebase rather than fail the
+          # release after the image is already in the registry.
+          git pull --rebase --autostash origin main
           git push
