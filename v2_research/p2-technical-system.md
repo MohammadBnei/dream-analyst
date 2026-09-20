@@ -37,3 +37,15 @@ Topics identified as belonging to this plane, with nothing settled about them:
 - What does « nothing is lost » (rule 8) cost in storage and in model complexity?
 - What is the write path during narration — one that must never make the dreamer wait?
 - Is the historique a projection of an event log, or a separate structure?
+- **Is a *finding* stored or computed?** A finding is the agent's claim about the corpus in the
+  exploration regime (D11). If it is computed on each ask — which P3's direction implies — it has
+  no row, and the durable object is the dreamer's **refusal** and reaction instead. If it is
+  stored, it needs stable identity across re-derivations over a growing corpus, and a matcher to
+  supply it. Both sides are worked in `intersections.md` (P1×P2, P3×P1). **Hypothesis, one
+  exchange old, nothing decided.**
+- **Does polymorphic attachment go one-to-many?** If it does, a *fil* and a *finding* are one shape
+  differing only in anchor count, and no new object is needed. If it does not, a finding is a fifth
+  attachment type. This decides an open P1 vocabulary question as a side effect — see
+  `intersections.md` § P1×P2.
+- **What does the exploration regime cost?** D11 says real wait is acceptable there. That is a
+  budget, not a number, and nothing on this plane has been sized against it.
