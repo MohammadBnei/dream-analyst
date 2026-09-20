@@ -4,7 +4,7 @@ SvelteKit dream journal: users record dreams, an LLM streams back an interpretat
 dream has its own chat. `front/` is the application, `helm/` deploys it, and `compose.yml` is at
 the **repo root**, not in `front/`.
 
-- `front/README.md` — setup, stack, health endpoints. Not repeated here.
+- `README.md` (repo root) — setup, stack, health endpoints. Not repeated here.
 - `front/document/FEATURE_CATALOG.md` — a product wish-list, not a spec. Most of it is unbuilt.
 - ADRs referenced in comments (ADR-0001, ADR-0044, ADR-0046) live in the **`infra-bootstrap`**
   repo under `docs/adr/`, not here.
@@ -34,15 +34,18 @@ Always `bun test src/`. Server modules are importable under `bun test` only beca
 `tests/setup/bun-preload.ts` (wired in `bunfig.toml`) — read it if an `$env` import fails to
 resolve.
 
-CI is two jobs. `quality` runs check + lint + `bun test src/` with no database. `e2e` brings up
-Postgres and Redis, applies migrations, then runs `test:integration` and Playwright. `build-push`
-needs both, and Trivy fails the build on a fixable CRITICAL/HIGH.
+CI is one workflow, `.github/workflows/docker.yml`. `quality` runs check + lint + `bun test src/`
+with no database. `e2e` brings up Postgres and Redis, applies migrations, then runs
+`test:integration` and Playwright. `scan` runs Trivy, which fails the build on a fixable
+CRITICAL/HIGH. Those three gate `release` (version + changelog), then `build-push` and `deploy`.
+`build-push` is the only job on the self-hosted runner, and only because the image registry is
+LAN-only.
 
 ## Where things live
 
-`src/lib/server/` — `credits.ts`, `chat.ts`, `analysis.ts`, `relatedDreams.ts`, `guards.ts`,
-`env.ts`, `auth.ts`, `db/`, `llmService.ts`, `streamProcessor.ts`, `streamStateStore.ts`,
-`rateLimit.ts`, `logger.ts`, `search/tsquery.ts`, `prompts/`,
+`src/lib/server/` — `credits.ts`, `chat.ts`, `analysis.ts`, `elements.ts`, `relatedDreams.ts`,
+`guards.ts`, `env.ts`, `settings.ts`, `auth.ts`, `db/`, `llmService.ts`, `streamProcessor.ts`,
+`streamStateStore.ts`, `rateLimit.ts`, `logger.ts`, `search/tsquery.ts`, `prompts/`,
 `infrastructure/transcription/sttService.ts`.
 
 **`creditService.ts`, `chatService.ts` and `dreamAnalysisService.ts` no longer exist** — they were
@@ -75,8 +78,8 @@ otherwise turn a 404 into a 500. Where a wrapper must catch broadly, re-throw th
 `src/lib/server/guards.ts:75`.
 
 **Domain modules take an optional trailing `prisma` param** defaulting to `getPrismaClient()`
-(`credits.ts`, `chat.ts`, `analysis.ts`, `relatedDreams.ts`). Call sites pass nothing; tests pass
-their own client. That is the only reason `tests/integration/` can exist.
+(`credits.ts`, `chat.ts`, `analysis.ts`, `elements.ts`, `relatedDreams.ts`). Call sites pass
+nothing; tests pass their own client. That is the only reason `tests/integration/` can exist.
 
 **`getPrismaClient()` is synchronous.** Older call sites still `await` it harmlessly. Don't add the
 `await` in new code.
@@ -146,8 +149,11 @@ No single file holds this; it spans seven plus Redis pub/sub, and the producer a
 appear in each other's call graph.
 
 1. `routes/dreams/new/+page.server.ts` creates the dream `PENDING_ANALYSIS`, calls `claimAnalysis`
-   to charge for it, generates a title and related dreams, and redirects. **No analysis starts
-   here.** The row is created _before_ the charge, so a user who cannot pay still keeps their text.
+   to charge for it, generates a title, extracts elements, links related dreams, and redirects.
+   **No analysis starts here.** The row is created _before_ the charge, so a user who cannot pay
+   still keeps their text. The title is generated either way; extraction and relations are skipped
+   on `insufficient`, and run **sequentially in that order** — symbol-overlap retrieval reads the
+   rows extraction writes.
 2. The client (`lib/client/services/dreamAnalysisService.ts`) opens
    `GET /api/dreams/[id]/stream-analysis`.
 3. That endpoint either returns one final frame (already COMPLETED/FAILED), refuses with 402 if
@@ -156,6 +162,9 @@ appear in each other's call graph.
 4. `lib/server/streamProcessor.ts` consumes the LLM iterable, accumulates, writes Redis state and
    publishes each delta.
 5. `lib/client/ndjson.ts` reads the frames back on the client.
+6. After the terminal COMPLETED write, `streamProcessor` fire-and-forgets `annotateDream` — a free
+   post-pass that writes a per-occurrence note. It runs after the `activeStreamProcessors` cleanup
+   and never touches the credit path.
 
 Three invariants:
 
@@ -165,6 +174,35 @@ Three invariants:
   the TTL and stall constants at the top of `streamStateStore.ts`.
 - **The producer is deliberately not tied to `request.signal`**, so an analysis survives a page
   reload. It looks like a leak; it isn't.
+
+## Elements and vocabulary
+
+A dream is decomposed into typed element rows (`symbol | character | setting | action | emotion`)
+canonicalised against a per-user `VocabularyEntry`. It spans `elements.ts`, the schema, the create
+path, `streamProcessor` and `scripts/reextract.ts`, so:
+
+- **Extraction is free and must stay free.** It never reads or writes `interpretation` or
+  `analysisPaidAt`, and is converging-idempotent, because the taxonomy is expected to move and
+  `bun run reextract` has to be re-runnable over the whole corpus on a whim. A charge here would
+  make the taxonomy unrevisable, which is the quality attribute the design is bent around.
+- **Two agents on two models, each with its own timeout.** An extractor names what is in the dream,
+  a matcher decides whether that name is something the dreamer has used before. The matcher is
+  deliberately not the weak model — a wrong merge is permanent and shows someone a symbol they
+  never dreamt. Sharing one deadline makes the matcher the sacrificial call; see `AGENT_TIMEOUT_MS`.
+- **Validate per item, never all-or-nothing.** One hallucinated kind must not discard the nine good
+  elements beside it, and a hallucinated scalar must not discard its element.
+- **Write with `createMany({ skipDuplicates })` + a read-back, never `upsert`.** Prisma 7 compiles
+  upsert to a read-modify-write graph, so it races. Dedupe by `entryId` before insert: the matcher
+  collapsing two labels onto one entry within one dream is its _success_ case, but
+  `@@unique([dreamId, entryId])` turns that into a P2002 that rolls back the whole replace.
+- **Related dreams are two signals, kept apart all the way into the prompt.** `findRecentPastDreams`
+  is the series (chronological, oldest first); `findDreamsSharingElements` is the echoes (ordered by
+  overlap, deliberately not by date). `analysis.ts` queries both itself — it does **not** read the
+  `relatedTo` relation, which exists for the UI and grows on every regeneration.
+
+**Models are runtime-tunable.** `settings.ts` reads `app_setting` rows through a 30s in-process
+cache and falls back to the env value; a missing row is not an error. Reads fail open to the
+environment, and nothing here goes through `env.ts`.
 
 ## Gotchas
 
@@ -189,11 +227,13 @@ when you hit it — take that path rather than inventing one. Don't add a marker
 
 ## Known gaps
 
-- **`regenerateTitle` and `regenerateRelatedDreams` are free, unlimited and unrate-limited.** They
-  are cheap-model calls, and charging them would be incoherent while the same calls are free on the
-  create path. If logs show abuse, the fix is a rate-limit bucket, not a charge.
-- **A user cannot see their credit balance** anywhere except the banner that appears when they
-  cannot afford an analysis. There is no wallet page.
+- **`regenerateTitle`, `regenerateRelatedDreams` and element extraction are free, unlimited and
+  unrate-limited.** They are cheap-model calls, and charging them would be incoherent while the same
+  calls are free on the create path — and re-extraction has to stay free to be re-runnable at all.
+  If logs show abuse, the fix is a rate-limit bucket, not a charge.
+- **The credit balance lives on `/profile` only** (with today's usage and the daily cap), plus the
+  banner that appears when a user cannot afford an analysis. There is no transaction history view,
+  though the ledger rows exist.
 - **`activeStreamProcessors` is an in-process `Map`, so a second replica would run its own
   analyses.** Redis holds the stream _state_, but not the lock on who is producing it. Deploy stays
   single-replica until that moves into Redis.

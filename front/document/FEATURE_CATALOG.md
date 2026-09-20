@@ -6,7 +6,7 @@
 > notification preferences, model versioning, tag taxonomy editor, analytics)
 > describe intent, not behaviour.
 >
-> For what the application actually does, see `../README.md`. This file is kept
+> For what the application actually does, see `../../README.md`. This file is kept
 > because the product thinking is worth having; it is explicitly marked so nobody
 > reads it as a specification again.
 
