@@ -180,3 +180,32 @@ objects, or merely the absence of one regime and the presence of another.
 
 **Closes.** Whether there is one mode of use or several. Supersedes nothing;
 scopes D4's first premise and bounds D5's eight rules.
+
+---
+
+## 2026-09-20 · D12 — An open item is retired only by a log entry
+
+**Decided.** An item in a plane document's *Open* section may not disappear in a
+rewrite. It is removed only when a dated log entry names it and says it was
+retired, accepted, or deferred to the build — the same three dispositions the
+phase-end check in D10 requires.
+
+**Why.** The plane documents are rewritten whole and invalidated content is
+deleted outright (D7). That is correct for *settled* content, which survives in
+the log. It is wrong for open questions, which were never written to the log at
+all: a question dropped in a rewrite leaves no trace anywhere, and D10 ends the
+phase on every open risk being retired, accepted or deferred. A question that
+evaporated is none of the three, and nothing would detect it.
+
+**Rejected.** A fourth document holding open questions. The plane documents and
+`intersections.md` already carry them, and `intersections.md` exists precisely to
+stop edges being duplicated across three files or dropped between them. A second
+surface reintroduces the duplication it was built to prevent, and gives two
+places to forget to update.
+
+**Cost accepted.** Retiring a question now costs a log entry, so it is no longer
+free to tidy one away. That friction is the point, and it will occasionally be
+paid on a question that genuinely deserved deleting.
+
+**Closes.** How open questions survive whole-document rewrites. Supersedes
+nothing; qualifies D7's delete-outright rule for *Open* sections only.
