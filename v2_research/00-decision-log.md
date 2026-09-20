@@ -132,3 +132,51 @@ asks for; section 6 exists to counteract that, and if it fails to, the opening
 half of each session moves elsewhere.
 
 **Closes.** When the research phase is done, and what it hands over.
+
+---
+
+## 2026-09-20 · D11 — Use is three regimes, not one
+
+**Decided.** Dreamer's use is segregated into three regimes: **narration**,
+**interpretation**, **exploration**. Each has its own intent, its own budget and
+its own rules. They cut across all three planes rather than sitting on P1 alone.
+
+- *narration* — 4am, half asleep, a tired hand. Intent: get it down. Zero wait,
+  zero choice. The agent edits while the dreamer speaks.
+- *interpretation* — later, one dream. Intent: make sense of it. Some wait, some
+  choice. The agent proposes a reading.
+- *exploration* — thirty dreams deep. Intent: find what recurs. Real wait is
+  acceptable and choice is the point. The agent proposes findings and is refused.
+
+**Decided.** The 4am premise (D4, premise 1) governs **narration**.
+Interpretation and exploration each need their own first test. **Neither is
+written.** Until one is, a decision taken inside those regimes has no test at
+all, and the honest answer is to say so.
+
+**Decided.** The eight rules (D5) were derived inside narration only. They are
+not a general model of the product. Before applying a rule, name the regime.
+
+**Why.** The regimes were being collapsed into one, and the collapse was
+invisible because every worked example sat in narration. A moment in exploration
+— the dreamer awake, thirty dreams in, actively interrogating his own corpus —
+does not obey the narration budget at all: there the dreamer *wants* to choose,
+and waiting is not a defect. Applying the 4am test there would have killed the
+regime's whole point, and applying narration's rules there silently mis-shapes
+what gets built.
+
+**Cost accepted.** The scope on premise 1 creates an escape hatch: any slow or
+heavy feature can be relabelled "exploration" to get out from under the only
+fixed test the project has. The cost is real and is accepted because the
+alternative — one budget for three different bodies at three different hours —
+was already producing wrong answers. Mitigation is to write the other two tests,
+which is now owed work and is not yet scheduled.
+
+**Cost accepted.** The three-way split is decided as a *distinction*; every
+detail of each regime is undecided. Stating the distinction in the plane
+documents before the details exist risks the sketch being read as settled.
+
+**Open.** Whether the transitions between regimes are themselves designed
+objects, or merely the absence of one regime and the presence of another.
+
+**Closes.** Whether there is one mode of use or several. Supersedes nothing;
+scopes D4's first premise and bounds D5's eight rules.
