@@ -104,3 +104,31 @@ toward implementation. The dreamer-research skill exists to counteract the
 second.
 
 **Closes.** Where the research happens.
+
+---
+
+## 2026-09-20 · D10 — The session ritual and the phase's end
+
+**Decided.** Appetite: ten sessions of one hour, fixed time and variable scope.
+Each session opens on one concrete moment of the built world, walked twice —
+pre-parade, then pre-mortem on the same moment, with a failure nobody designed
+for. Each session closes with a fixed sequence: dispositions, claim promotions,
+log entries with consequences, plane rewrites, next moment, commits. The phase
+ends on four checks and hands over one vision document in the register of the
+narration mockups, its final section specifying the walking skeleton.
+
+**Why.** A research phase has no natural end and otherwise stops at boredom.
+Projection into a finished world is a known method — Amazon's working-backwards
+press release, Klein's pre-mortem — and it is the register Enki will sustain for
+ten hours, which a risk register is not.
+
+**Term proposed.** *Pre-parade* — Enki, 2026-09-20. Project-local, paired with
+Klein's pre-mortem. Not an established method; not to be presented as one.
+
+**Cost accepted.** Ten hours buys the most valuable incomplete model, not a
+complete one. The vision document sits outside the appetite and is not counted
+in it. Claude Code's register is terser than the imaginative mode this phase
+asks for; section 6 exists to counteract that, and if it fails to, the opening
+half of each session moves elsewhere.
+
+**Closes.** When the research phase is done, and what it hands over.
