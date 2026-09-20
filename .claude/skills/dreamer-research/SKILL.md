@@ -129,6 +129,11 @@ a route around section 0.
   moves. **Never append to one.**
 - Invalidated content is **deleted outright** — never struck through, never kept as history. It
   survives in the log and nowhere else.
+- **Exception: an open item may not vanish in a rewrite (D12).** Settled content survives deletion
+  because the log holds it; an open question was never written to the log, so deleting it leaves no
+  trace anywhere — and §8 ends the phase on every open risk being retired, accepted or deferred. An
+  item leaves an *Open* section only with a dated log entry naming it and its disposition. There is
+  no separate open-questions file; the plane documents and `intersections.md` are the ledger.
 - Update the **"Last rewrite"** date on every rewrite.
 
 ### Commits
