@@ -21,6 +21,7 @@ on:
     paths-ignore:
       - '**.md'
       - '**.yml'
+      - 'v2_research/**'
       - 'front/package.json'
       - 'helm/**'
     tags-ignore:
