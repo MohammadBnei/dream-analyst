@@ -8,7 +8,7 @@ image:
   # tag this registry had never seen, which is the order agent-fleet recorded from its own
   # migration. Anonymous in-cluster reads are open, so this needs no pull secret.
   repository: registry.bnei.lan:5000/dream-analyst
-  tag: "0.33.0"
+  tag: "0.33.1"
 
 annotations:
   secrets.infisical.com/auto-reload: "true"
