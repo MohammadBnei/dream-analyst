@@ -265,3 +265,21 @@ saying so is the accurate answer.
 
 **Closes.** What the first test of a decision is. **Supersedes D4's first premise as framed.** D4's
 second premise — the corpus is the ground — is untouched and still stands.
+
+---
+
+## 2026-09-22 · D15 — The appetite is an estimate, not a cap
+
+**Decided.** Ten sessions of roughly an hour is a projection of how long this phase takes, not a
+fixed budget that ends it. The phase ends on §8's four checks, not on a count.
+
+**Why.** Enki's own statement. D10 recorded the appetite in Shape Up's hard sense — "fixed time,
+variable scope" — which was never the intent.
+
+**Cost accepted.** The cap was doing real work: a research phase has no natural end and otherwise
+stops at boredom. Removing it removes that brake, and §8's four checks now carry the whole load of
+ending the phase. If they turn out not to bite, the phase can run indefinitely, and nothing else
+will notice.
+
+**Closes.** Whether the ten sessions bound the phase. **Supersedes D10's "fixed time and variable
+scope" clause**; the rest of D10 stands.
