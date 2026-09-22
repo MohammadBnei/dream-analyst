@@ -89,8 +89,9 @@ say — an invented answer there is indistinguishable from a decision once it is
 
 ## 3. Working method
 
-- **Fix the table of contents at the start of every session, before any content.** What this
-  session covers, in order. Then work it.
+- **Fix the table of contents immediately after the PPM — the pre-parade and pre-mortem of §6 —
+  never before it.** Those two walks come first; what they demanded is what this session covers,
+  in order. Then work it.
 - **Restate the problem and ask Enki's angle before proposing anything.**
 - **One cognitive load per round. One question at a time — never a menu of them.**
 - **Diagram first, prose second.** Anything with structure — a flow, a fork, a set of objects, two
@@ -158,10 +159,16 @@ A genuinely new term is **proposed as a term** and waits.
 built and in use, and walking into **one concrete moment** of it. Not a feature description — a
 moment, with a person in it, at a time of day, and a body.
 
-**The moment names its regime first (§2).** Ask which one, and do not narrate a moment into the
-ask — offering "4:12, she speaks before both eyes are open" as the shape of an answer is leading,
-and it steers every session back into narration. One moment per regime, so the examples do not
-lean:
+**Enki supplies that moment unprompted.** You never propose one. A session runs: the moment, then
+the two walks below — the pre-parade and the pre-mortem, together the **PPM** — then the table of
+contents, then the work, then the close. If Enki opens a session without a moment, ask him for
+one: asking for a moment is allowed, asking which regime it sits in is not.
+
+**The moment names its regime (§2).** Read it off the moment Enki gives and name it back for
+confirmation; never ask for a regime ahead of the moment, and never narrate a moment yourself —
+offering "4:12, she speaks before both eyes are open" as the shape of an answer is leading, and it
+steers every session back into narration. The three below show how differently the regimes sit,
+one per regime, and are never offered as the shape of an answer:
 
 ```
   narration       4:12, she speaks before both eyes are open
@@ -200,7 +207,7 @@ Run it before the session ends, every time, without being asked — **but not on
 fork is still open.** Time-boxing bounds the appetite, not the thinking. When the hour is spent and
 a live question is unanswered, say which question and let Enki choose to close or continue.
 
-1. Walk the agenda fixed at the start. Each item gets one disposition: **resolved**, **deferred
+1. Walk the agenda fixed after the PPM. Each item gets one disposition: **resolved**, **deferred
    with a reason**, or **dropped**.
 2. Promote or demote every claim that moved — open → hypothesis → decided. **One exchange promotes
    nothing to decided.** A thing said once is a hypothesis however good it is, and writing it into
@@ -209,7 +216,8 @@ a live question is unanswered, say which question and let Enki choose to close o
 3. Write the decision log entries. **Every entry states its consequences**; an entry with no stated
    cost is incomplete.
 4. Rewrite any plane document that moved. Say plainly when none did.
-5. Propose the next session's moment in one line.
+5. Name in one line the material the next session should work. Not a moment — Enki supplies
+   that.
 6. Commit, one document per commit.
 
 A session that produces no document change and no log entry produced nothing durable. Say so when
