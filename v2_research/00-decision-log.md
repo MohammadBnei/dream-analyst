@@ -241,3 +241,27 @@ covers the no-code list, not this rule.
 **Closes.** The order of the ritual. **Supersedes D10's close-sequence step 5** — "propose the
 next session's moment in one line" — replacing it with a narrower step that names material and
 leaves the moment to Enki. Qualifies D10 elsewhere; supersedes nothing else.
+
+---
+
+## 2026-09-22 · D14 — The first test is the feel, not the cost at 4am
+
+**Decided.** Narration is judged first by whether it feels **immersive and fun** — not like a
+school dissertation. 4am is an example of the hour where that feel is hardest to hold, and it
+stays an example. It is not the test, and the test is not "on all three planes".
+
+**Why.** 4am was an illustration that hardened into the premise by repetition — exactly what §3
+warns about — and every document downstream inherited it: P1 called it « the test (decided, fixed
+premise) », P2 said it applied there too, intersections.md argued from « the dreamer must never
+wait », and §8 ended the phase on it having a measurable scenario. A cost test optimises for
+cheapness. Cheap and dull is the failure V1 shipped: fifteen minutes of typing was not expensive,
+it was a school exercise where an experience belonged.
+
+**Cost accepted.** A cost test is mechanical — anyone can apply it and get the same answer. A feel
+test is not, and without something pointable every decision becomes taste, which is a worse failure
+mode than the one being fixed. §8 therefore keeps demanding at least one concrete scenario that can
+actually be judged. Until one exists, the feel premise is a direction, not an instrument, and
+saying so is the accurate answer.
+
+**Closes.** What the first test of a decision is. **Supersedes D4's first premise as framed.** D4's
+second premise — the corpus is the ground — is untouched and still stands.
