@@ -1,6 +1,6 @@
 # P3 · Agentic system
 
-Rewritten whole when this plane moves. Last rewrite: 2026-09-20.
+Rewritten whole when this plane moves. Last rewrite: 2026-09-22.
 
 ---
 
@@ -22,4 +22,11 @@ How the agent is part of the system rather than a service the system calls.
 - What exactly is the variable: one dream, the corpus, the corpus plus what is known about the dreamer?
 - How the agent *writes* — the narration model has it producing diffs, classifying dimension and operation, opening fils, marking things *déduit*. None of that write path is designed.
 - Sandbox, execution environment, cost, failure modes.
-- Whether the agent that edits the dream during narration and the agent that reasons over the corpus are the same thing. See the intersections document — this is where P3 collides with P1's latency budget.
+- Whether the agent that edits the dream during narration and the agent that reasons over the corpus are the same thing. See the intersections document — this is where P3 collides with P1's narration budget.
+  **A third candidate now sits inside this question (D16):** the agent that proposes readings in
+  order to be refused. It is neither the fast editor nor the corpus reasoner — it leads the turn,
+  asks closed questions, and expects a veto. Whether these are one animal, two, or three is open;
+  nothing here settles a role.
+- The corpus is also addressed in natural language from the *trajectoire* surface — « Montre-moi
+  tous les rêves où il y a de l'eau » (deck, 14c). The surface exists; what answers it, and how,
+  is undesigned.
