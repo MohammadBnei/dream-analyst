@@ -209,3 +209,35 @@ paid on a question that genuinely deserved deleting.
 
 **Closes.** How open questions survive whole-document rewrites. Supersedes
 nothing; qualifies D7's delete-outright rule for *Open* sections only.
+
+---
+
+## 2026-09-22 · D13 — The session opens on the moment and its PPM
+
+**Decided.** A session opens on the moment and its PPM (pre-parade, then pre-mortem on the same
+moment). The table of contents is written from what the two walks demanded, never before them.
+Enki supplies the moment unprompted; Claude proposes none, and never asks which regime a moment
+sits in — it reads the regime off the moment and names it back for confirmation. If a session
+opens without a moment, Claude asks for the moment, not for the regime.
+
+**Why.** Opening on regime-and-agenda selection made every session start as administration — the
+register §6 already names that as failure. The two walks are what the session is for; the agenda
+is their output.
+
+**Rejected.** TOC first — the complaint itself. An explicit backcast step emitting build steps —
+roadmap-shaped, §0 bans it. Claude proposing the moment — steers every session into narration.
+Killing the TOC — nothing left for §7 step 1 to close against.
+
+**Cost accepted.** Scope is unknown until the two walks are done, so the hour is less predictable
+and a PPM can open more than an hour holds; the TOC is then also the cut. And **Claude now decides
+which regime's budget applies**, by reading it off the moment rather than being told. That is the
+escape hatch D11 named — a heavy feature landing under a looser regime — now reachable by
+misreading instead of by argument. Naming the regime back is what keeps the correction cheap.
+
+**Also recorded.** This change edits `.claude/skills/dreamer-research/SKILL.md`, which is not one
+of §4's five documents. It is written on Enki's explicit instruction; §0's existing exception
+covers the no-code list, not this rule.
+
+**Closes.** The order of the ritual. **Supersedes D10's close-sequence step 5** — "propose the
+next session's moment in one line" — replacing it with a narrower step that names material and
+leaves the moment to Enki. Qualifies D10 elsewhere; supersedes nothing else.
