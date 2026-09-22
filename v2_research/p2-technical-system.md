@@ -1,6 +1,6 @@
 # P2 · Technical system
 
-Rewritten whole when this plane moves. Last rewrite: 2026-09-20.
+Rewritten whole when this plane moves. Last rewrite: 2026-09-22.
 
 ---
 
@@ -16,7 +16,10 @@ Design pattern, data modelling, infrastructure. The code and infra part.
 
 **The corpus must be swallowed (decided, fixed premise).** 100+ dream texts, their interpretations, and clarification chats where the dreamer added details in back-and-forth. Whatever the model becomes, it has to absorb what already exists, mess included. The corpus belongs to Enki, so there is no legal constraint on its use.
 
-**The 4am test applies here too (decided, fixed premise).** Latency and failure modes are UX decisions wearing technical clothes.
+**The feel test reaches this plane too (decided — D14).** Narration must feel immersive and fun, not
+like a school dissertation. Latency and failure modes are *felt*, so they are experience decisions
+wearing technical clothes. 4am is the example of the hour where the feel is hardest to hold, not the
+test itself.
 
 ## Hypotheses
 
@@ -49,3 +52,22 @@ Topics identified as belonging to this plane, with nothing settled about them:
   `intersections.md` § P1×P2.
 - **What does the exploration regime cost?** D11 says real wait is acceptable there. That is a
   budget, not a number, and nothing on this plane has been sized against it.
+
+**Added by D16 — the obligations the lecture model creates. Named, not answered.**
+
+- **What does a synthèse written live cost on the write path?** The lecture model (D16) has the
+  document thicken as the dreamer accepts, and lets him take it back « à la voix ». Nothing here is
+  sized against that.
+- **What identity does a *lexique* need?** It thickens dream after dream, which is a matcher problem
+  with the same trap as the element matcher: a wrong merge is permanent.
+- **What does an inter-dream symbol count cost to keep current?** The lecture model has an accepted
+  reading write a count across the whole history, not just this dream.
+- **Is the *trajectoire* stored or computed?** A corpus-wide surface built only from accepted
+  lectures, with unread dreams excluded. It meets the finding-stored-or-computed question above from
+  the other side.
+- **What does a refusal history have to hold?** The lecture model allows exactly one reformulated
+  re-proposal and then never returns — while `intersections.md` records that refusal must be
+  non-final or the first tired « non » closes that space permanently. Both stand; nothing reconciles
+  them.
+- **What does the interpretation regime cost?** Same shape as the exploration question above, and
+  equally unsized.
