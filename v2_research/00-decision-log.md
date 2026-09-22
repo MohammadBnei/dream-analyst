@@ -283,3 +283,40 @@ will notice.
 
 **Closes.** Whether the ten sessions bound the phase. **Supersedes D10's "fixed time and variable
 scope" clause**; the rest of D10 stands.
+
+---
+
+## 2026-09-22 · D16 — The interpretation regime has a baseline
+
+**Decided.** The lecture model — mockup deck iterations 13, 14 and 15, committed at `b891655` —
+is P1's baseline for the **interpretation** regime. Standing: decided as baseline, reopenable,
+**derived inside interpretation only**. Promoted by Enki, directly asked, 2026-09-22 (§7 step 2).
+
+D5 is deliberately **not** cited for it. D5 names narration's PDF, iteration 12 and eight rules;
+citing it here would widen an append-only entry from outside the file, which §4 forbids.
+
+**Why.** The regime had an intent and nothing else. The deck now carries a worked model: six rules,
+an inverted three-station loop, the noyau and its two déploiements, the synthèse written live, the
+trajectoire, and a question finale that reopens the document.
+
+**Retires.** P1's open item « The interpretation regime is undesigned. Intent only: make sense of
+one dream. No model, no rules, no first test. » — **retired in full**. The model and the rules
+arrive; the third clause is not lost, because P1's separate item « The two missing first tests »
+holds it independently, names interpretation and exploration both, and is **not touched** by this
+pass.
+
+**Does not retire.** Anything else. In particular, interpretation still has **no first test of its
+own**: refusability without regret is visible in the deck as a candidate, not as a test, and per §1
+a decision taken inside that regime is untested rather than loosely tested.
+
+**Cost accepted.** P1 now carries two rule sets across two regimes; each needs its own
+derived-inside-X guard or the leak D11 cost a session to close reopens. The model arrives with new
+French vocabulary D6 does not cover — *noyau, déploiement, réception, lecture, synthèse, hypothèse,
+empan, lexique, résonance, trajectoire, lentille, gouttière, veto, greffier, continuité, fil
+narratif, question finale*, and the reception verbs *ça me touche, ça m'intéresse, passer, ça me
+parle*. **Term proposed, all of them** — the deck's words, awaiting ratification, recorded here so
+a whole-document rewrite cannot delete them. And P2 gains five obligations nothing has sized while
+P3 gains a third candidate role inside an existing question; both are recorded as open questions in
+those documents and decided in neither.
+
+**Closes.** Whether the interpretation regime has a baseline. Supersedes nothing.
