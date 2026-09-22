@@ -21,15 +21,22 @@ build. That is why it leads. The only files you write are the ones in **section 
 
 Argued **from**, never **about**. A discussion that reopens either one has drifted; say so.
 
-**a. The cost of capture at 4am is the first test of any decision, on all three planes.**
-V1 failed here: a dream was typed as one block, ~15 minutes, tedious, so most dreams went
-unrecorded. Anything that makes the dreamer compose, choose, or wait, loses. It is a test on P2
-and P3 too — latency and failure modes are UX decisions wearing technical clothes.
+**a. Narration must feel immersive and fun — not like a school dissertation (D14).**
+That is the first test. V1 failed it: a dream typed as one block, ~15 minutes, so most dreams went
+unrecorded — not because it was expensive, because it was *dull*, a school exercise where an
+experience belonged. Anything that makes the dreamer compose, choose, or wait works against it. It
+reaches P2 and P3 too — latency and failure modes are felt, so they are experience decisions
+wearing technical clothes.
+
+**4am is the example, not the test.** It is the hour where the feel is hardest to hold, which is
+why it recurs; a decision is not judged by its cost at 4am but by whether the thing it produces is
+worth waking into. Do not let the example harden back into the premise.
 
 **This premise governs the narration regime (§2).** Interpretation and exploration have their own
 first test and **neither is written yet**. Until they are, a decision on those regimes has no test
-at all — say that, rather than borrowing 4am's or waving it away. Watch for the escape hatch: a
-slow or heavy feature relabelled "exploration" to get out from under this premise.
+at all — say that, rather than borrowing narration's or waving it away. Two escape hatches to watch:
+a slow or heavy feature relabelled "exploration" to get out from under this premise, and "it feels
+right to me" offered as if it were the feel test. A feel test that cannot be pointed at is taste.
 
 **b. The corpus is the ground.** 100+ dream texts, their interpretations, and the clarification
 chats. Claims about what recurs, or about what an interpretation needs, are testable against it —
@@ -227,12 +234,15 @@ close beats a log entry manufactured to fill it.
 
 ## 8. When this phase is done
 
-**Appetite: ten sessions of one hour.** Fixed time, variable scope.
+**Appetite: about ten sessions of an hour — an estimate, not a cap (D15).** It says how long this
+is expected to take. It does not end the phase; the four checks below do, and they now carry that
+load alone.
 
 The phase ends when four things hold:
 
 - the open risks are named, and each is retired, accepted, or deferred to the build;
-- the 4am premise has at least one measurable scenario **with a number in it**;
+- the feel premise has at least one **concrete scenario that can actually be judged** — a specific
+  dreamer, a specific night, a specific screen — with whatever is measurable in it named;
 - each of the three intersections has at least one named tradeoff with both sides stated and a
   resolution or an explicit deferral;
 - four or five concrete scenarios trace end to end across all three planes without stalling.
@@ -242,5 +252,5 @@ mockups** — visual, spacious, rich — covering all three planes and carrying 
 mockups lack: what was rejected and why, what stays risky, what is explicitly not being built, and
 a final section specifying the walking skeleton.
 
-That document is written **after** the appetite is spent, not inside it. Writing it is the last
+That document is written **after** the four checks hold, not inside the research. Writing it is the last
 check: the sections that resist being written are the places the thinking was never done.
