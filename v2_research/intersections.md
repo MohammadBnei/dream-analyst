@@ -1,6 +1,6 @@
 # Intersections
 
-Rewritten whole when any edge moves. Last rewrite: 2026-09-20.
+Rewritten whole when any edge moves. Last rewrite: 2026-09-22.
 
 ---
 
@@ -52,9 +52,20 @@ This is the most promising and least examined edge. Nothing here is decided.
 
 ## P3 × P1 — every autonomous decision must be refusable
 
-**Partly decided on P1, uncosted on P3.** The agent classifies dimension and operation on its own, proposes modifications, opens fils, infers symboles and marks them *déduit*. The narration model already answers the UX half: nothing destructive applies without consent, and everything inferred is refusable.
+**Partly decided on P1, uncosted on P3.**
 
-**The open tension — latency.** P3's ambitions and P1's narration budget pull in opposite directions. An RLM exploring 100+ dreams is slow and expensive; the narration loop must feel instant, and D4's first premise says the dreamer must never wait. This suggests — does not establish — that the agent editing the dream while you speak and the agent that knows your whole history are different animals meeting at defined points. **Open. Enki's call.** Note that D11 relaxes this only for exploration: in that regime real wait is acceptable, so the tension is a narration tension, not a general one.
+**The shape the lecture model gives it (D16).** In the interpretation regime the agent leads: it
+asks a closed question, proposes a reading, and the dreamer sorts it — *ça me parle / non / plus
+tard*. A refusal is not discarded: the noyau stays « visible, barré, dans l'historique de la
+lecture », and the agent may re-propose it once, reformulated, after which it never returns.
+
+This is a **shape**, not an answer. It does not settle « is the durable row the finding, or the
+refusal? » below, which stays exactly as open as it was. And it sits against the requirement
+recorded there that refusal be non-final — the deck's rule is final after two refusals. Both stand;
+the tension is named, not resolved.
+ The agent classifies dimension and operation on its own, proposes modifications, opens fils, infers symboles and marks them *déduit*. The narration model already answers the UX half: nothing destructive applies without consent, and everything inferred is refusable.
+
+**The open tension — latency.** P3's ambitions and P1's narration budget pull in opposite directions. An RLM exploring 100+ dreams is slow and expensive; the narration loop must feel instant, and an instant loop is part of the feel the first premise now names (D14) — a wait breaks immersion, which is the thing being protected. This suggests — does not establish — that the agent editing the dream while you speak and the agent that knows your whole history are different animals meeting at defined points. **Open. Enki's call.** Note that D11 relaxes this only for exploration: in that regime real wait is acceptable, so the tension is a narration tension, not a general one.
 
 ### Open — the opposite failure: the agent that is fast and confident
 
