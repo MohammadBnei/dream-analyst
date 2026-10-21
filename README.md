@@ -96,3 +96,6 @@ transient Redis blip restart the pod and destroy every in-flight analysis.
 
 Deployed to Kubernetes via `helm/values.yaml`. Single replica: the map of in-flight analyses is
 process-local, so a second replica would run its own.
+
+<!-- gh feature test: harmless README touch. -->
+
