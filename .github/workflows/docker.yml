@@ -6,10 +6,11 @@
 # GITHUB_TOKEN deliberately does not trigger workflows. Sequential jobs need no trigger, so
 # nothing here holds a PAT.
 #
-# Only ONE job runs on the self-hosted box, and only because the registry is LAN-only:
-# `buildah bud` + push. Everything expensive or Docker-dependent — the tests, the e2e suite,
-# the Trivy gate — stays on ubuntu-latest, where the actions actually work and where it does
-# not occupy a runner that takes one job at a time.
+# Every job runs on the self-hosted build box ([self-hosted, ukubi-build]): the account's hosted
+# minutes are billing-locked. The box has git, curl, jq, tar, gcc and podman/buildah only (no
+# node, unzip, docker, Chromium, apt), so: Node from setup-node, bun from npm, Postgres/Redis and
+# the Playwright suite through `sudo buildah run`, and Trivy as a pinned binary scanning an
+# archive of the buildah-built image.
 name: Build, Test and Deploy
 
 on:
@@ -64,7 +65,7 @@ jobs:
   # typescript-eslint, and generated Prisma/Paraglide output that no step
   # produced), so 149 type errors and 90 lint errors accumulated unnoticed.
   quality:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ukubi-build]
     defaults:
       run:
         working-directory: front
@@ -72,8 +73,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # oven-sh/setup-bun unzips its release and the host has no unzip; the npm package ships the
+      # same binary.
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/bun" bun@1.4.2
+          echo "$RUNNER_TEMP/bun/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -93,32 +103,11 @@ jobs:
   # needs real Postgres and Redis, so it is a separate job rather than part of
   # `quality`, and build-push waits on both.
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ukubi-build]
     defaults:
       run:
         working-directory: front
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: user
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: dreamer
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U user -d dreamer"
-          --health-interval 5s --health-timeout 5s --health-retries 10
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgres://user:password@localhost:5432/dreamer?sslmode=disable
-      REDIS_URL: redis://localhost:6379
       JWT_SECRET: ci-only-not-a-real-secret-0000000000000000
       # No LLM call happens in these tests; the value only has to be present.
       OPENROUTER_API_KEY: ci-placeholder
@@ -128,11 +117,43 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # oven-sh/setup-bun unzips its release and the host has no unzip; the npm package ships the
+      # same binary.
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/bun" bun@1.4.2
+          echo "$RUNNER_TEMP/bun/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      # No docker `services:` on this runner: the same postgres:16-alpine and redis:7-alpine images
+      # (from the ECR mirror, Docker Hub rate-limits the LAN's one address) run through sudo buildah
+      # on the host network, on loopback ports picked per run, and are stopped at the end.
+      - name: postgres and redis (buildah)
+        run: |
+          pgport=$((20000 + GITHUB_RUN_ID % 20000))
+          rport=$((pgport + 20000))
+          pg=$(sudo buildah from public.ecr.aws/docker/library/postgres:16-alpine)
+          rd=$(sudo buildah from public.ecr.aws/docker/library/redis:7-alpine)
+          echo "PG_CTR=$pg" >> "$GITHUB_ENV"
+          echo "RD_CTR=$rd" >> "$GITHUB_ENV"
+          nohup sudo buildah run --network host --env POSTGRES_USER=user --env POSTGRES_PASSWORD=password --env POSTGRES_DB=dreamer "$pg" -- \
+            docker-entrypoint.sh postgres -c listen_addresses=127.0.0.1 -p "$pgport" >"$RUNNER_TEMP/pg.log" 2>&1 &
+          echo "PG_PID=$!" >> "$GITHUB_ENV"
+          nohup sudo buildah run --network host "$rd" -- redis-server --bind 127.0.0.1 --port "$rport" >"$RUNNER_TEMP/redis.log" 2>&1 &
+          echo "RD_PID=$!" >> "$GITHUB_ENV"
+          for p in $pgport $rport; do
+            for i in $(seq 60); do (exec 3<>"/dev/tcp/127.0.0.1/$p") 2>/dev/null && break; sleep 2; done
+            (exec 3<>"/dev/tcp/127.0.0.1/$p") || { cat "$RUNNER_TEMP/pg.log" "$RUNNER_TEMP/redis.log"; exit 1; }
+          done
+          echo "DATABASE_URL=postgres://user:password@127.0.0.1:$pgport/dreamer?sslmode=disable" >> "$GITHUB_ENV"
+          echo "REDIS_URL=redis://127.0.0.1:$rport" >> "$GITHUB_ENV"
 
       - name: Apply migrations
         run: bunx prisma migrate deploy
@@ -142,11 +163,21 @@ jobs:
       - name: Integration tests
         run: bun run test:integration
 
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-
-      - name: Run e2e
-        run: bun run e2e
+      # The host has none of Chromium's system libraries and the runner user cannot apt-get, so the
+      # suite runs as root in Playwright's own image (1.62.0 = the lockfile's @playwright/test), on the
+      # host network so it reaches Postgres and Redis. The workspace and the runner temp dir (bun) are
+      # mounted at the same paths; sudo strips the environment, so the app's variables go in by value.
+      - name: Run e2e (in the Playwright image)
+        run: |
+          set -euo pipefail
+          ctr=$(sudo buildah from mcr.microsoft.com/playwright:v1.62.0-noble)
+          trap 'sudo buildah rm "$ctr" >/dev/null' EXIT
+          sudo buildah run --network host -v "$PWD:$PWD" -v "$RUNNER_TEMP:$RUNNER_TEMP" --workingdir "$PWD" \
+            --env PATH="$RUNNER_TEMP/bun/node_modules/.bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
+            --env CI=true --env DATABASE_URL="$DATABASE_URL" --env REDIS_URL="$REDIS_URL" --env JWT_SECRET="$JWT_SECRET" \
+            --env OPENROUTER_API_KEY="$OPENROUTER_API_KEY" --env ORIGIN="$ORIGIN" --env PUBLIC_ORIGIN="$PUBLIC_ORIGIN" \
+            --env OWNER="$(id -u):$(id -g)" \
+            "$ctr" -- bash -c 'rc=0; bun run e2e || rc=$?; chown -R "$OWNER" "$PWD"; exit $rc'
 
       - name: Upload report on failure
         if: failure()
@@ -156,58 +187,59 @@ jobs:
           path: front/playwright/report
           retention-days: 7
 
-  # Renamed from build-push: it no longer pushes anything. Its whole job is to be the
-  # security gate, and it stays on ubuntu-latest because aquasecurity/trivy-action is a
-  # Docker-based action and the self-hosted build box has buildah and no docker daemon.
-  # Installing trivy on that box was the alternative; keeping the scan here is smaller and
-  # keeps the gate identical to what it was.
+      - name: Stop postgres and redis
+        if: always()
+        run: |
+          kill "$PG_PID" "$RD_PID" 2>/dev/null || true # sudo relays the signal to buildah run, which stops the container
+          sleep 3
+          sudo buildah rm "$PG_CTR" "$RD_CTR" || true
+
+  # Renamed from build-push: it no longer pushes anything. Its whole job is to be the security
+  # gate. aquasecurity/trivy-action is Docker-based and the build box has buildah and no docker
+  # daemon, so the scan is the pinned trivy release binary (sha256-checked) run over a tar archive
+  # of the image buildah just built: the same flags the action was given.
   scan:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ukubi-build]
+    env:
+      TRIVY_VERSION: 0.76.2
+      TRIVY_SHA256: bc0fc726e017b8927a62b2d3531d7a84ee01769daf5c99ed866dced54089fdbf # trivy_0.76.2_Linux-64bit.tar.gz
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      # Builds but never pushes. `load: true` is the load-bearing part and predates this
-      # change: without it the image exists nowhere on a pull request and Trivy silently
-      # pulls the LAST PUBLISHED tag and scans that instead — a green scan of code nobody
-      # proposed. Only possible because PLATFORMS is single-arch.
-      #
-      # Cache moved from a registry tag on Docker Hub to the GitHub Actions cache, since
-      # Docker Hub is no longer in the picture and the LAN registry is unreachable from here.
+      # Builds but never pushes, and scans THIS build's archive. Scanning by name would let Trivy
+      # silently pull the LAST PUBLISHED tag and scan that instead — a green scan of code nobody
+      # proposed. Layers cache in the box's buildah store between runs. Single-arch, see PLATFORMS.
       - name: Build the image for scanning
-        uses: docker/build-push-action@v6
-        with:
-          platforms: ${{ env.PLATFORMS }}
-          push: false
-          load: true
-          context: front
-          tags: ${{ env.SCAN_IMAGE }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        run: |
+          set -euo pipefail
+          sudo buildah bud --isolation chroot --format docker --platform "$PLATFORMS" \
+            -t "localhost/$SCAN_IMAGE" front
+          rm -f "$RUNNER_TEMP/scan.tar"
+          # Written by root, world-readable; the runner user reads it and may delete it (it owns the dir).
+          sudo buildah push "localhost/$SCAN_IMAGE" "docker-archive:$RUNNER_TEMP/scan.tar:$SCAN_IMAGE"
+          sudo buildah rmi "localhost/$SCAN_IMAGE" || true
 
+      - name: Install Trivy
+        run: |
+          set -euo pipefail
+          curl -fsSL -o "$RUNNER_TEMP/trivy.tgz" "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          echo "$TRIVY_SHA256  $RUNNER_TEMP/trivy.tgz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/trivy-bin"
+          tar -xzf "$RUNNER_TEMP/trivy.tgz" -C "$RUNNER_TEMP/trivy-bin" trivy
+          echo "$RUNNER_TEMP/trivy-bin" >> "$GITHUB_PATH"
+
+      # Severity applies to the SARIF too, so the Security tab receives only what the gate blocks on
+      # and `exit-code 1` cannot fire on a LOW (the old action needed limit-severities-for-sarif for
+      # the same thing).
       - name: Scan Docker image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          # Without this the action logs "Building SARIF report with all
-          # severities" and overrides `severity` for the single run it makes -
-          # so `exit-code: 1` fires on any finding at all, and the job failed on
-          # one LOW in a transitive `cookie`. The cost is that the Security tab
-          # receives only what the gate blocks on; the alternative is a gate
-          # that cannot be satisfied.
-          limit-severities-for-sarif: true
-          image-ref: ${{ env.SCAN_IMAGE }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          vuln-type: 'os,library'
-          ignore-unfixed: true
-          exit-code: '1'
-          cache-dir: ${{ github.workspace }}/.cache/trivy
+        run: |
+          trivy image --input "$RUNNER_TEMP/scan.tar" \
+            --format sarif --output trivy-results.sarif \
+            --severity CRITICAL,HIGH --pkg-types os,library --ignore-unfixed \
+            --exit-code 1 --cache-dir "$RUNNER_TEMP/trivy-cache"
 
       - name: Upload Trivy results
         if: always()
@@ -224,7 +256,7 @@ jobs:
   release:
     needs: [quality, e2e, scan]
     if: github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ukubi-build]
     permissions:
       contents: write
     defaults:
@@ -238,8 +270,17 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      # oven-sh/setup-bun unzips its release and the host has no unzip; the npm package ships the
+      # same binary.
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        run: |
+          npm install --no-save --no-package-lock --prefix "$RUNNER_TEMP/bun" bun@1.4.2
+          echo "$RUNNER_TEMP/bun/node_modules/.bin" >> "$GITHUB_PATH"
 
       - name: Install dependencies
         run: bun install
@@ -260,16 +301,16 @@ jobs:
           [ -n "$v" ] || { echo "no version in front/package.json"; exit 1; }
           echo "version=$v" >> "$GITHUB_OUTPUT"
 
-  # The ONLY job on the self-hosted box, and only because the registry is LAN-only: a
-  # GitHub-hosted runner cannot reach it, and pushing layers up a residential uplink is the
-  # slow direction this whole arrangement exists to avoid (ADR-0034). Everything else —
-  # tests, e2e, the Trivy gate — stays on ubuntu-latest.
+  # On the self-hosted box because the registry is LAN-only: a GitHub-hosted runner cannot
+  # reach it, and pushing layers up a residential uplink is the slow direction this whole
+  # arrangement exists to avoid (ADR-0034).
   build-push:
     needs: release
     # always() + a result check, not the implicit success()-on-needs: `release` is push-only,
     # so a workflow_dispatch skips it, and an implicit condition would skip this job too —
     # taking the seeding run with it. 'skipped' passes here, 'failure' does not.
-    if: always() && needs.release.result != 'failure'
+    # Never on a pull_request: it would push the PR's image as :latest.
+    if: always() && github.event_name != 'pull_request' && needs.release.result != 'failure'
     # NOT the bare `ukubi` label: that runner holds a ServiceAccount token with `create
     # jobs` in vos/vos-dev. This box has no cluster access at all, which is why builds
     # belong on it.
@@ -376,7 +417,7 @@ jobs:
       always() && github.event_name == 'push' &&
       needs.release.result == 'success' &&
       needs.build-push.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, ukubi-build]
     permissions:
       contents: write
     env:
