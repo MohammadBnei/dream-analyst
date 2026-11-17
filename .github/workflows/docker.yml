@@ -309,7 +309,8 @@ jobs:
     # always() + a result check, not the implicit success()-on-needs: `release` is push-only,
     # so a workflow_dispatch skips it, and an implicit condition would skip this job too —
     # taking the seeding run with it. 'skipped' passes here, 'failure' does not.
-    if: always() && needs.release.result != 'failure'
+    # Never on a pull_request: it would push the PR's image as :latest.
+    if: always() && github.event_name != 'pull_request' && needs.release.result != 'failure'
     # NOT the bare `ukubi` label: that runner holds a ServiceAccount token with `create
     # jobs` in vos/vos-dev. This box has no cluster access at all, which is why builds
     # belong on it.
