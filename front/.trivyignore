@@ -1,0 +1,4 @@
+# SvelteKit DoS when parsing form data in remote functions' `form`. Fixed only in Kit 3
+# (3.1.1); this app uses no remote functions (no $app/server import, no
+# kit.experimental.remoteFunctions). Drop this line when moving to Kit 3.
+CVE-2026-128120 exp:2027-02-21

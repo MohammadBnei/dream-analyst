@@ -34,12 +34,17 @@ Always `bun test src/`. Server modules are importable under `bun test` only beca
 `tests/setup/bun-preload.ts` (wired in `bunfig.toml`) — read it if an `$env` import fails to
 resolve.
 
-CI is one workflow, `.github/workflows/docker.yml`. `quality` runs check + lint + `bun test src/`
-with no database. `e2e` brings up Postgres and Redis, applies migrations, then runs
-`test:integration` and Playwright. `scan` runs Trivy, which fails the build on a fixable
-CRITICAL/HIGH. Those three gate `release` (version + changelog), then `build-push` and `deploy`.
-`build-push` is the only job on the self-hosted runner, and only because the image registry is
-LAN-only.
+CI is one workflow, `.github/workflows/docker.yml`, on Forgejo Actions (ukubi-ci v0.11.1).
+`quality` runs check + lint + `bun test src/` with no database. `e2e` brings up Postgres and
+Redis (reached as `postgres`/`redis`, not localhost), applies migrations, then runs
+`test:integration` and Playwright. `scan` runs Trivy over the dependency tree, which fails the
+build on a fixable CRITICAL/HIGH. It no longer scans the built image's OS packages (no runner
+can load the image): the Dockerfile's libcrypto3/libssl3 patching is not enforced by CI.
+`front/.trivyignore` holds the owner-accepted CVE-2026-128120 (Kit 3 only; Dreamer v2
+replaces this app). Those three gate `release` (ukubi-ci release.yml: an annotated
+tag on the commit, nothing committed), then `image` (ukubi-ci image.yml: buildah on the
+`ukubi-build` runner, push to the LAN registry, pin committed to `helm/image.yaml` on the
+`deploy` branch, never main). On a PR the chain is build-only.
 
 ## Where things live
 

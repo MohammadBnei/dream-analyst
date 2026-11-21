@@ -1,15 +1,16 @@
-# One run, one release: push to main -> quality + e2e + image scan -> release
-# (version + changelog) -> image build and push to the local registry -> helm tag bump.
+# One run, one release: push to main -> quality + e2e + scan -> release (an annotated
+# tag on the triggering commit, ukubi-ci release.yml) -> image build and push to the LAN
+# registry with the pin committed to helm/image.yaml on the `deploy` branch (ukubi-ci
+# image.yml). main is never written by CI. ArgoCD layers the pin file over helm/values.yaml
+# once infra-bootstrap's entry sets deployPath; until then the cluster keeps values.yaml's tag.
 #
-# This used to be two workflows chained by a tag push, which is the only reason it needed a
-# PAT: release-it's tag had to TRIGGER the image build, and a tag pushed with the built-in
-# GITHUB_TOKEN deliberately does not trigger workflows. Sequential jobs need no trigger, so
-# nothing here holds a PAT.
+# On a pull request the same chain is a dry run: release.yml only reports the version it
+# would cut, and image.yml builds the image (on the ukubi-build runner, buildah) without
+# logging in, pushing or bumping. That build is the PR's image check.
 #
-# Only ONE job runs on the self-hosted box, and only because the registry is LAN-only:
-# `buildah bud` + push. Everything expensive or Docker-dependent — the tests, the e2e suite,
-# the Trivy gate — stays on ubuntu-latest, where the actions actually work and where it does
-# not occupy a runner that takes one job at a time.
+# Runs on Forgejo Actions. No runner has a docker daemon, so the image is built by buildah
+# inside image.yml, and the Trivy gate scans the dependency tree (scan-type fs) rather than
+# a loaded image.
 name: Build, Test and Deploy
 
 on:
@@ -27,42 +28,19 @@ on:
     tags-ignore:
       - '*'
 
-# upload-sarif writes to the Security tab, which the default read-only token
-# cannot do - the scan step would pass and the job would still fail on the
-# upload.
 permissions:
   contents: read
-  security-events: write
 
-# Concurrent releases: keep the newest, cancel the rest, so two pushes cannot compute the
-# same version from the same latest tag and lose one of them.
+# Forgejo honours only workflow-level concurrency. main queues: a run whose release tag is
+# already pushed must never be cancelled, or the tag is left with no image. PR updates
+# cancel the older run.
 concurrency:
-  group: release
-  cancel-in-progress: true
-
-env:
-  REGISTRY: registry.bnei.lan:5000
-  IMAGE_NAME: dream-analyst
-  # Plaintext on purpose. A username is not a secret, and holding it as one cost agent-fleet
-  # a release: the secret was never set there, so buildah got `--username ""`.
-  REGISTRY_USER: ci
-  # The registry password comes from the shared platform-commons project over OIDC rather
-  # than a repo secret (infra-bootstrap ADR-0049).
-  INFISICAL_DOMAIN: https://infisical.bnei.dev
-  INFISICAL_PROJECT_SLUG: platform-commons-76pb
-  INFISICAL_ENV: dev
-  INFISICAL_IDENTITY_ID: 19807471-d73a-48d4-9e58-1dc34255ef77
-  # Single-arch: the only consumer is an amd64 cluster. Kept as a variable because the scan
-  # build below needs `load: true`, which is only possible single-arch.
-  PLATFORMS: linux/amd64
-  # Local-only tag for the scan build. Never pushed anywhere, so it needs no registry host.
-  SCAN_IMAGE: dream-analyst:scan
+  group: app-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  # Nothing verified that this project compiled before an image was built and
-  # pushed. `bun run lint` and `bun run check` could not even execute (undeclared
-  # typescript-eslint, and generated Prisma/Paraglide output that no step
-  # produced), so 149 type errors and 90 lint errors accumulated unnoticed.
+  # `bun run check` runs the generators first (prisma generate + paraglide compile);
+  # neither needs a reachable database.
   quality:
     runs-on: ubuntu-latest
     defaults:
@@ -74,12 +52,14 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        # An exact version: without one the action asks GitHub's API for the latest tag,
+        # unauthenticated from Forgejo, and hits the rate limit.
+        with:
+          bun-version: 1.4.4
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # `check` runs the generators first (prisma generate + paraglide compile);
-      # neither needs a reachable database.
       - name: Typecheck
         run: bun run check
 
@@ -89,9 +69,8 @@ jobs:
       - name: Unit tests
         run: bun test src/
 
-  # The e2e suite had never executed - see the note in playwright.config.ts. It
-  # needs real Postgres and Redis, so it is a separate job rather than part of
-  # `quality`, and build-push waits on both.
+  # Needs real Postgres and Redis. On Forgejo's container runner services are reached by
+  # their service name, not localhost.
   e2e:
     runs-on: ubuntu-latest
     defaults:
@@ -104,21 +83,17 @@ jobs:
           POSTGRES_USER: user
           POSTGRES_PASSWORD: password
           POSTGRES_DB: dreamer
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U user -d dreamer"
           --health-interval 5s --health-timeout 5s --health-retries 10
       redis:
         image: redis:7-alpine
-        ports:
-          - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 5s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgres://user:password@localhost:5432/dreamer?sslmode=disable
-      REDIS_URL: redis://localhost:6379
+      DATABASE_URL: postgres://user:password@postgres:5432/dreamer?sslmode=disable
+      REDIS_URL: redis://redis:6379
       JWT_SECRET: ci-only-not-a-real-secret-0000000000000000
       # No LLM call happens in these tests; the value only has to be present.
       OPENROUTER_API_KEY: ci-placeholder
@@ -130,6 +105,10 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
+        # An exact version: without one the action asks GitHub's API for the latest tag,
+        # unauthenticated from Forgejo, and hits the rate limit.
+        with:
+          bun-version: 1.4.4
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -137,8 +116,6 @@ jobs:
       - name: Apply migrations
         run: bunx prisma migrate deploy
 
-      # Integration tests exercise the real credit functions against this
-      # job's Postgres. They cannot run in `quality`, which has no database.
       - name: Integration tests
         run: bun run test:integration
 
@@ -148,262 +125,64 @@ jobs:
       - name: Run e2e
         run: bun run e2e
 
-      - name: Upload report on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: front/playwright/report
-          retention-days: 7
-
-  # Renamed from build-push: it no longer pushes anything. Its whole job is to be the
-  # security gate, and it stays on ubuntu-latest because aquasecurity/trivy-action is a
-  # Docker-based action and the self-hosted build box has buildah and no docker daemon.
-  # Installing trivy on that box was the alternative; keeping the scan here is smaller and
-  # keeps the gate identical to what it was.
+  # Security gate: fails on a fixable CRITICAL/HIGH in the dependency tree (bun.lock).
+  # ponytail: no docker daemon to load the built image, so the base image's OS packages
+  # are not scanned here; scan the pushed image from the registry if that gap matters.
   scan:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      # Not aquasecurity/trivy-action: its setup step clones aquasecurity/trivy from
+      # github.com with the job token, which is Forgejo's and is refused there.
+      - name: Install Trivy
+        env:
+          V: 0.70.0
+          SHA256: 8b4376d5d6befe5c24d503f10ff136d9e0c49f9127a4279fd110b727929a5aa9
+        run: |
+          set -euo pipefail
+          f="trivy_${V}_Linux-64bit.tar.gz"
+          curl -sSfLo "$RUNNER_TEMP/$f" "https://github.com/aquasecurity/trivy/releases/download/v$V/$f"
+          echo "$SHA256  $RUNNER_TEMP/$f" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$f" -C "$RUNNER_TEMP" trivy
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
 
-      # Builds but never pushes. `load: true` is the load-bearing part and predates this
-      # change: without it the image exists nowhere on a pull request and Trivy silently
-      # pulls the LAST PUBLISHED tag and scans that instead — a green scan of code nobody
-      # proposed. Only possible because PLATFORMS is single-arch.
-      #
-      # Cache moved from a registry tag on Docker Hub to the GitHub Actions cache, since
-      # Docker Hub is no longer in the picture and the LAN registry is unreachable from here.
-      - name: Build the image for scanning
-        uses: docker/build-push-action@v6
-        with:
-          platforms: ${{ env.PLATFORMS }}
-          push: false
-          load: true
-          context: front
-          tags: ${{ env.SCAN_IMAGE }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Scan dependencies
+        run: >-
+          trivy fs --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed
+          --exit-code 1 --cache-dir "$GITHUB_WORKSPACE/.cache/trivy"
+          --ignorefile front/.trivyignore front
 
-      - name: Scan Docker image
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          # Without this the action logs "Building SARIF report with all
-          # severities" and overrides `severity` for the single run it makes -
-          # so `exit-code: 1` fires on any finding at all, and the job failed on
-          # one LOW in a transitive `cookie`. The cost is that the Security tab
-          # receives only what the gate blocks on; the alternative is a gate
-          # that cannot be satisfied.
-          limit-severities-for-sarif: true
-          image-ref: ${{ env.SCAN_IMAGE }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          vuln-type: 'os,library'
-          ignore-unfixed: true
-          exit-code: '1'
-          cache-dir: ${{ github.workspace }}/.cache/trivy
-
-      - name: Upload Trivy results
-        if: always()
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: 'trivy-results.sarif'
-
-  # Cuts the version and CHANGELOG in the same run as the build, which is what removes the
-  # PAT: release-it's tag no longer has to trigger anything. It only pushes a commit and a
-  # tag (github.release is false in front/package.json), which contents: write covers.
-  #
-  # Gated on all three checks above. Previously the release lived in its own workflow on its
-  # own trigger, so a red e2e could not stop a version being cut.
+  # Pushes an annotated tag on the triggering commit (push/dispatch on main only); a dry
+  # run everywhere else. Gated on the three checks above.
   release:
     needs: [quality, e2e, scan]
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
     permissions:
-      contents: write
-    defaults:
-      run:
-        working-directory: front
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
+      contents: write # release.yml pushes the release tag
+    uses: MohammadBnei/ukubi-ci/.github/workflows/release.yml@9af316b5d779b2d5ef3f55b9f11e20b8bf3f6ce8 # v0.11.1
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: git config
-        run: |
-          git config user.name "${GITHUB_ACTOR}"
-          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-
-      - name: Run release-it
-        run: git update-index --refresh && git diff-index --quiet HEAD || git reset --hard && bun run release
-
-      - name: Read the released version
-        id: version
-        run: |
-          set -euo pipefail
-          v=$(jq -er .version package.json)
-          [ -n "$v" ] || { echo "no version in front/package.json"; exit 1; }
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-
-  # The ONLY job on the self-hosted box, and only because the registry is LAN-only: a
-  # GitHub-hosted runner cannot reach it, and pushing layers up a residential uplink is the
-  # slow direction this whole arrangement exists to avoid (ADR-0034). Everything else —
-  # tests, e2e, the Trivy gate — stays on ubuntu-latest.
-  build-push:
+  # Builds front/ with buildah on the ukubi-build runner. On main it pushes <sha12> and
+  # latest to registry.bnei.lan:5000/dream-analyst and commits the pin to helm/image.yaml
+  # on the `deploy` branch; on a PR it only builds. Logs in to Infisical itself (Forgejo
+  # OIDC) for REGISTRY_PASSWORD.
+  image:
     needs: release
-    # always() + a result check, not the implicit success()-on-needs: `release` is push-only,
-    # so a workflow_dispatch skips it, and an implicit condition would skip this job too —
-    # taking the seeding run with it. 'skipped' passes here, 'failure' does not.
-    if: always() && needs.release.result != 'failure'
-    # NOT the bare `ukubi` label: that runner holds a ServiceAccount token with `create
-    # jobs` in vos/vos-dev. This box has no cluster access at all, which is why builds
-    # belong on it.
-    runs-on: [self-hosted, ukubi-build]
-    # id-token mints the OIDC token Infisical authenticates. Declaring any permissions block
-    # zeroes the rest, so contents: read is restated for checkout.
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - name: Checkout the released tag
-        uses: actions/checkout@v5
-        with:
-          # The tag release-it just made, not the commit that started the run: the version in
-          # front/package.json at that SHA is the one being built. On a dispatch there is no
-          # release, so fall back to whatever ref was dispatched.
-          ref: ${{ needs.release.outputs.version || github.ref }}
-          fetch-depth: 0
-
-      # Not baked into the runner image. `sudo apt-get` only works for this — the sudoers
-      # entry on that box grants /usr/bin/buildah and nothing else, so anything else a job
-      # tries to install hangs on a password prompt.
-      - name: Ensure buildah
-        run: command -v buildah || (sudo apt-get update -qq && sudo apt-get install -y -qq buildah)
-
-      # Only REGISTRY_PASSWORD, not the whole environment.
-      - name: Read the registry password from Infisical
-        uses: Infisical/secrets-action@v1.0.12
-        with:
-          method: oidc
-          identity-id: ${{ env.INFISICAL_IDENTITY_ID }}
-          oidc-audience: infisical.bnei.dev
-          domain: ${{ env.INFISICAL_DOMAIN }}
-          project-slug: ${{ env.INFISICAL_PROJECT_SLUG }}
-          env-slug: ${{ env.INFISICAL_ENV }}
-          secret-path: /
-          secret-name: REGISTRY_PASSWORD
-          export-type: env
-
-      # GitHub only auto-masks `secrets.*`, and this action's README does not document
-      # masking. An unmasked Infisical value leaked a token in cleartext in this estate once.
-      - name: Mask the fetched password
-        run: echo "::add-mask::$REGISTRY_PASSWORD"
-
-      # --tls-verify=false: the registry is plain HTTP, because Let's Encrypt cannot issue
-      # for `.lan`. Anonymous reads are open, which is how the nodes pull without
-      # credentials; pushing needs this. Every buildah call goes through sudo and they must
-      # all agree — a rootless login writes an auth file a rootful push cannot see.
-      - name: Registry login
-        run: |
-          set -euo pipefail
-          [ -n "${REGISTRY_PASSWORD:-}" ] || { echo "Infisical returned no REGISTRY_PASSWORD"; exit 1; }
-          printf '%s' "$REGISTRY_PASSWORD" | sudo buildah login \
-            --tls-verify=false \
-            --username "$REGISTRY_USER" \
-            --password-stdin "$REGISTRY"
-
-      # On a release run this is the release job's output. On a dispatch there is no release,
-      # so read it from the checked-out tree — which is what makes a dispatch able to seed the
-      # registry with the current version before helm/values.yaml is flipped to it.
-      - name: Resolve the version
-        id: v
-        run: |
-          set -euo pipefail
-          v="${{ needs.release.outputs.version }}"
-          [ -n "$v" ] || v=$(jq -er .version front/package.json)
-          [ -n "$v" ] || { echo "could not determine a version"; exit 1; }
-          echo "version=$v" >> "$GITHUB_OUTPUT"
-
-      - name: Build and push
-        env:
-          VERSION: ${{ steps.v.outputs.version }}
-        run: |
-          set -euo pipefail
-          # Context is front/, same as the buildx build above; the Dockerfile lives there.
-          sudo buildah bud \
-            --isolation chroot \
-            --format docker \
-            -t "$REGISTRY/$IMAGE_NAME:$VERSION" \
-            -t "$REGISTRY/$IMAGE_NAME:latest" \
-            front
-          for tag in "$VERSION" latest; do
-            sudo buildah push --tls-verify=false "$REGISTRY/$IMAGE_NAME:$tag"
-          done
-
-      # Only this build's tags. NEVER `buildah rmi --all` — the box is shared with the other
-      # build repos and the base-image cache is the whole reason they live together.
-      - name: Clean up this build's images
-        if: always()
-        env:
-          VERSION: ${{ steps.v.outputs.version }}
-        run: |
-          for tag in "$VERSION" latest; do
-            sudo buildah rmi "$REGISTRY/$IMAGE_NAME:$tag" 2>/dev/null || true
-          done
-
-  deploy:
-    needs: [release, build-push]
-    # always() + explicit result checks rather than the implicit success()-on-needs, which
-    # agent-fleet was bitten by: green builds with a skipped job upstream still skipped the
-    # deploy. This commit is what ArgoCD reads — the image existing in the registry is not a
-    # deployment.
-    if: >-
-      always() && github.event_name == 'push' &&
-      needs.release.result == 'success' &&
-      needs.build-push.result == 'success'
-    runs-on: ubuntu-latest
+    uses: MohammadBnei/ukubi-ci/.github/workflows/image.yml@9af316b5d779b2d5ef3f55b9f11e20b8bf3f6ce8 # v0.11.1
+    with:
+      runs-on: '["ukubi-build"]'
+      image: dream-analyst
+      ref: ${{ needs.release.outputs.tag }}
+      context: front
+      dockerfile: front/Dockerfile
+      # The pin file on the deploy branch (created by the first run), not main's values.
+      values-file: helm/image.yaml
+      extra-tags: latest
+      # VERSION build arg -> APP_VERSION (front/vite.config.ts); package.json is no longer bumped.
+      version-arg: true
+      version: ${{ needs.release.outputs.version }}
+      # Never cancel a running build: its release tag is already pushed.
+      cancel-in-progress: false
     permissions:
       contents: write
-    env:
-      VERSION: ${{ needs.release.outputs.version }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-          ref: 'main'
-
-      # The version comes from the release job rather than being re-read here with
-      # jaywcjlove/github-action-package. One source means build and deploy cannot disagree
-      # and pin a tag no image carries — the failure agent-fleet's workflow documented.
-      - name: Update Helm image tag
-        run: |
-          sed -i "s/^  tag: \".*\"$/  tag: \"${VERSION}\"/" helm/values.yaml
-
-      - name: Commit and push
-        run: |
-          set -euo pipefail
-          git config user.name "${GITHUB_ACTOR}"
-          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
-          git add helm/values.yaml
-          git diff --cached --quiet && { echo "tag unchanged"; exit 0; }
-          git commit -m "chore: update image version to ${VERSION} (helm)"
-          # Another commit can land while the image builds; rebase rather than fail the
-          # release after the image is already in the registry.
-          git pull --rebase --autostash origin main
-          git push
+      id-token: write

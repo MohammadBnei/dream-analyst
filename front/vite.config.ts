@@ -18,7 +18,7 @@ export default defineConfig({
 		})
 	],
 	define: {
-		'process.env.APP_VERSION': JSON.stringify(packageJson.version)
+		'process.env.APP_VERSION': JSON.stringify(process.env.VERSION || packageJson.version)
 	},
 	server: {
 		allowedHosts: ['.e2e.bnei.dev']

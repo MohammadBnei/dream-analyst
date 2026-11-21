@@ -11,6 +11,9 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 COPY . .
+# The release version (X.Y.Z), from ukubi-ci image.yml's version-arg; vite.config.ts
+# bakes it into APP_VERSION. Unset on a local build, which falls back to package.json.
+ARG VERSION
 # prisma generate never connects; prisma.config.ts falls back to a placeholder
 # URL, so no DATABASE_URL needs to be threaded through the build.
 RUN bun run generate

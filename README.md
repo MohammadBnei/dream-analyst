@@ -76,11 +76,15 @@ without a database.
 
 ## CI
 
-One workflow, `.github/workflows/docker.yml`: `quality` (check + lint + unit tests, no database),
-`e2e` (Postgres and Redis, migrations, integration tests and Playwright) and `scan` (Trivy, which
-fails the build on a fixable CRITICAL/HIGH) gate `release`, which bumps the version and changelog.
-`build-push` then builds the image onto the LAN registry — the only job on the self-hosted runner,
-and only because that registry is not reachable from anywhere else — and `deploy` rolls it out.
+One workflow on Forgejo Actions, `.github/workflows/docker.yml`: `quality` (check + lint + unit
+tests, no database), `e2e` (Postgres and Redis, migrations, integration tests and Playwright) and
+`scan` (Trivy over the dependencies, which fails the build on a fixable CRITICAL/HIGH) gate
+`release`, which pushes an annotated version tag (ukubi-ci release.yml; no commit). `image`
+(ukubi-ci image.yml) then builds the image with buildah on the `ukubi-build` runner, pushes it to
+the LAN registry and pins it in `helm/image.yaml` on the `deploy` branch, which ArgoCD layers over
+`helm/values.yaml` once infra-bootstrap points at it (until then the cluster keeps the tag in
+`helm/values.yaml`). The image's `APP_VERSION` is the release version, passed as the `VERSION`
+build arg. On a pull request the same chain only builds.
 
 ## Deployment
 
