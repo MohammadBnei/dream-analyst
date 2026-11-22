@@ -36,6 +36,7 @@ jobs:
         # An exact version: without one the action asks GitHub's API for the latest tag,
         # unauthenticated from Forgejo, and hits the rate limit.
         with:
+          no-cache: true # the shared cache is writable from PRs; main must not restore it
           bun-version: 1.4.4
 
       # Cache model (owner decision 2026-11-22): a PR restores and saves; push, dispatch and a
@@ -113,6 +114,7 @@ jobs:
         # An exact version: without one the action asks GitHub's API for the latest tag,
         # unauthenticated from Forgejo, and hits the rate limit.
         with:
+          no-cache: true # the shared cache is writable from PRs; main must not restore it
           bun-version: 1.4.4
 
       # Cache model (owner decision 2026-11-22): a PR restores and saves; push, dispatch and a
