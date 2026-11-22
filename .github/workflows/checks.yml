@@ -1,0 +1,158 @@
+# The checks of one change: typecheck, lint and unit tests (quality), integration and e2e tests
+# against a dev database and Redis (e2e), a dependency scan (scan) and a Dockerfile lint. All on
+# the Talos runner (k8s-ubuntu-latest). On a pull request, and called from docker.yml
+# (workflow_call), whose release needs them: main re-runs the full gate before it cuts a release.
+# No image build and no release dry run on a PR (owner decision, CI/CD split): images are CD's,
+# built from reviewed main on the build runner by docker.yml.
+name: checks
+
+on:
+  workflow_call:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A newer PR push cancels the older run; docker.yml's call never cancels. The PR payload, not
+# event_name, which Forgejo reports as workflow_call in a call.
+concurrency:
+  group: checks-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event.pull_request && true || false }}
+
+jobs:
+  # `bun run check` runs the generators first (prisma generate + paraglide compile);
+  # neither needs a reachable database.
+  quality:
+    runs-on: k8s-ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        # An exact version: without one the action asks GitHub's API for the latest tag,
+        # unauthenticated from Forgejo, and hits the rate limit.
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Unit tests
+        run: bun test src/
+
+  # Needs real Postgres and Redis. The Talos runner has no service containers, so Postgres is a
+  # disposable database from the dev IntegreSQL (ADR-0088, ukubi-ci's dev-db action; the template is
+  # the migrated schema) and Redis is built from its pinned source tarball and run on 127.0.0.1.
+  e2e:
+    runs-on: k8s-ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+    env:
+      REDIS_URL: redis://127.0.0.1:6379
+      JWT_SECRET: ci-only-not-a-real-secret-0000000000000000
+      # No LLM call happens in these tests; the value only has to be present.
+      OPENROUTER_API_KEY: ci-placeholder
+      ORIGIN: http://localhost:4173
+      PUBLIC_ORIGIN: http://localhost:4173
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        # An exact version: without one the action asks GitHub's API for the latest tag,
+        # unauthenticated from Forgejo, and hits the rate limit.
+        with:
+          bun-version: 1.4.4
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      # DATABASE_URL points at this job's own database, cloned from the migrated template. The
+      # template is rebuilt (seed-command) only when the migrations or the schema change.
+      - name: Dev database
+        uses: MohammadBnei/ukubi-ci/actions/dev-db@d683f2091575188024f7e1200e619977d9db19ae # ukubi-ci PR 28 head; re-pin to the release
+        with:
+          integresql-url: http://integresql.dev-services.svc.cluster.local:5000
+          postgres-host: dev-postgres.dev-services.svc.cluster.local
+          hash-paths: front/prisma/migrations front/prisma/schema.prisma
+          seed-command: cd "$GITHUB_WORKSPACE/front" && bunx prisma migrate deploy
+          timeout-seconds: '600'
+
+      # No redis on the runner and no apt: build the pinned release. A binary already in
+      # ~/.cache/redis-bin is reused.
+      - name: Redis
+        env:
+          V: 7.4.6
+          SHA256: 73b94484e00fb4c2440b490dc4021142fb0b6efc8b64c6329c10d24f0b531c99
+        run: |
+          set -euo pipefail
+          bin="$HOME/.cache/redis-bin"
+          if [ ! -x "$bin/redis-server" ]; then
+            f="$RUNNER_TEMP/redis.tgz"
+            curl -sSfLo "$f" "https://download.redis.io/releases/redis-$V.tar.gz"
+            echo "$SHA256  $f" | sha256sum -c -
+            tar -xzf "$f" -C "$RUNNER_TEMP"
+            make -C "$RUNNER_TEMP/redis-$V" -j2 BUILD_TLS=no MALLOC=libc >/dev/null
+            mkdir -p "$bin"
+            cp "$RUNNER_TEMP/redis-$V/src/redis-server" "$RUNNER_TEMP/redis-$V/src/redis-cli" "$bin/"
+          fi
+          "$bin/redis-server" --daemonize yes --save "" --appendonly no --bind 127.0.0.1 --port 6379 >/dev/null
+          for _ in $(seq 30); do "$bin/redis-cli" ping 2>/dev/null | grep -q PONG && exit 0; sleep 1; done
+          echo "::error::redis did not start"; exit 1
+
+      - name: Integration tests
+        run: bun run test:integration
+
+      # No --with-deps: that needs apt, and the runner image already has the system libraries.
+      # Browsers land in PLAYWRIGHT_BROWSERS_PATH, which the job user owns; a revision the image
+      # already has is not downloaded again.
+      - name: Install Playwright browsers
+        run: bunx playwright install chromium
+
+      - name: Run e2e
+        run: bun run e2e
+
+      - name: Give the dev database back
+        if: always()
+        uses: MohammadBnei/ukubi-ci/actions/dev-db-release@d683f2091575188024f7e1200e619977d9db19ae # ukubi-ci PR 28 head; re-pin to the release
+
+  # Security gate: fails on a fixable CRITICAL/HIGH in the dependency tree (bun.lock).
+  # ponytail: no docker daemon to load the built image, so the base image's OS packages
+  # are not scanned here; scan the pushed image from the registry if that gap matters.
+  scan:
+    runs-on: k8s-ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # Not aquasecurity/trivy-action: its setup step clones aquasecurity/trivy from
+      # github.com with the job token, which is Forgejo's and is refused there.
+      - name: Install Trivy
+        env:
+          V: 0.70.0
+          SHA256: 8b4376d5d6befe5c24d503f10ff136d9e0c49f9127a4279fd110b727929a5aa9
+        run: |
+          set -euo pipefail
+          f="trivy_${V}_Linux-64bit.tar.gz"
+          curl -sSfLo "$RUNNER_TEMP/$f" "https://github.com/aquasecurity/trivy/releases/download/v$V/$f"
+          echo "$SHA256  $RUNNER_TEMP/$f" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$f" -C "$RUNNER_TEMP" trivy
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      - name: Scan dependencies
+        run: >-
+          trivy fs --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed
+          --exit-code 1 --cache-dir "$GITHUB_WORKSPACE/.cache/trivy"
+          --ignorefile front/.trivyignore front
