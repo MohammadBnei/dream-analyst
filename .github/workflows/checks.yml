@@ -156,3 +156,11 @@ jobs:
           trivy fs --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed
           --exit-code 1 --cache-dir "$GITHUB_WORKSPACE/.cache/trivy"
           --ignorefile front/.trivyignore front
+
+  # hadolint on the Dockerfile; no image build on a PR (owner decision, CI/CD split).
+  dockerfile:
+    uses: MohammadBnei/ukubi-ci/.github/workflows/dockerfile-lint.yml@d683f2091575188024f7e1200e619977d9db19ae # ukubi-ci PR 28 head; re-pin to the release
+    with:
+      dockerfiles: front/Dockerfile
+      # DL3018 apk pin warning: only errors fail until they are fixed
+      failure-threshold: error
