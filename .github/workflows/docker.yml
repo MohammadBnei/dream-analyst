@@ -160,7 +160,7 @@ jobs:
     needs: [quality, e2e, scan]
     permissions:
       contents: write # release.yml pushes the release tag
-    uses: MohammadBnei/ukubi-ci/.github/workflows/release.yml@9af316b5d779b2d5ef3f55b9f11e20b8bf3f6ce8 # v0.11.1
+    uses: MohammadBnei/ukubi-ci/.github/workflows/release.yml@d683f2091575188024f7e1200e619977d9db19ae # ukubi-ci PR 28 head; re-pin to the release
 
   # Builds front/ with buildah on the ukubi-build runner. On main it pushes <sha12> and
   # latest to registry.bnei.lan:5000/dream-analyst and commits the pin to helm/image.yaml
@@ -168,7 +168,7 @@ jobs:
   # OIDC) for REGISTRY_PASSWORD.
   image:
     needs: release
-    uses: MohammadBnei/ukubi-ci/.github/workflows/image.yml@9af316b5d779b2d5ef3f55b9f11e20b8bf3f6ce8 # v0.11.1
+    uses: MohammadBnei/ukubi-ci/.github/workflows/image.yml@d683f2091575188024f7e1200e619977d9db19ae # ukubi-ci PR 28 head; re-pin to the release
     with:
       runs-on: '["ukubi-build"]'
       image: dream-analyst
