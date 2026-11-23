@@ -159,35 +159,35 @@
 
 ## [0.29.1](https://github.com/MohammadBnei/dream-analyst/compare/0.29.0...0.29.1) (2026-07-29)
 
-# [0.29.0](/compare/0.28.1...0.29.0) (2026-07-29)
+# [0.29.0](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.28.1...0.29.0) (2026-07-29)
 
 
 ### Features
 
 * emit JSON logs for prisma migrate deploy output too b430175
 
-## [0.28.1](/compare/0.28.0...0.28.1) (2026-07-29)
+## [0.28.1](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.28.0...0.28.1) (2026-07-29)
 
 
 ### Bug Fixes
 
 * sync Helm image tag with releases, unblocking JSON logging deploy d0ae185, closes #1
 
-# [0.28.0](/compare/0.27.0...0.28.0) (2026-07-29)
+# [0.28.0](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.27.0...0.28.0) (2026-07-29)
 
 
 ### Features
 
 * emit JSON-formatted logs on deployed instances 5e6d699
 
-# [0.27.0](/compare/0.26.32...0.27.0) (2026-07-28)
+# [0.27.0](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.32...0.27.0) (2026-07-28)
 
 
 ### Features
 
 * add Helm values for ukubi-cluster common-app-chart deployment 579651b
 
-## [0.26.32](/compare/0.26.31...0.26.32) (2026-02-25)
+## [0.26.32](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.31...0.26.32) (2026-02-25)
 
 
 ### Bug Fixes
@@ -195,67 +195,67 @@
 * persist search results and filter selected dreams in related list 94f7b71
 * prevent linking a dream to itself in search results 7a9a942
 
-## [0.26.31](/compare/0.26.30...0.26.31) (2026-02-25)
+## [0.26.31](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.30...0.26.31) (2026-02-25)
 
-## [0.26.30](/compare/0.26.29...0.26.30) (2026-02-03)
+## [0.26.30](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.29...0.26.30) (2026-02-03)
 
-## [0.26.29](/compare/0.26.28...0.26.29) (2026-02-03)
+## [0.26.29](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.28...0.26.29) (2026-02-03)
 
-## [0.26.28](/compare/0.26.27...0.26.28) (2026-02-03)
+## [0.26.28](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.27...0.26.28) (2026-02-03)
 
-## [0.26.27](/compare/0.26.26...0.26.27) (2026-02-03)
+## [0.26.27](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.26...0.26.27) (2026-02-03)
 
-## [0.26.26](/compare/0.26.25...0.26.26) (2026-02-03)
+## [0.26.26](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.25...0.26.26) (2026-02-03)
 
-## [0.26.25](/compare/0.26.24...0.26.25) (2026-02-03)
+## [0.26.25](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.24...0.26.25) (2026-02-03)
 
-## [0.26.24](/compare/0.26.23...0.26.24) (2026-02-03)
+## [0.26.24](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.23...0.26.24) (2026-02-03)
 
-## [0.26.23](/compare/0.26.22...0.26.23) (2026-02-03)
+## [0.26.23](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.22...0.26.23) (2026-02-03)
 
-## [0.26.22](/compare/0.26.21...0.26.22) (2026-02-03)
+## [0.26.22](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.21...0.26.22) (2026-02-03)
 
-## [0.26.21](/compare/0.26.20...0.26.21) (2026-02-03)
+## [0.26.21](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.20...0.26.21) (2026-02-03)
 
-## [0.26.20](/compare/0.26.19...0.26.20) (2026-02-03)
+## [0.26.20](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.19...0.26.20) (2026-02-03)
 
-## [0.26.19](/compare/0.26.18...0.26.19) (2026-02-03)
+## [0.26.19](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.18...0.26.19) (2026-02-03)
 
-## [0.26.18](/compare/0.26.17...0.26.18) (2026-02-03)
+## [0.26.18](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.17...0.26.18) (2026-02-03)
 
-## [0.26.17](/compare/0.26.16...0.26.17) (2026-02-03)
+## [0.26.17](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.16...0.26.17) (2026-02-03)
 
-## [0.26.16](/compare/0.26.15...0.26.16) (2026-02-03)
+## [0.26.16](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.15...0.26.16) (2026-02-03)
 
-## [0.26.15](/compare/0.26.14...0.26.15) (2026-02-03)
+## [0.26.15](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.14...0.26.15) (2026-02-03)
 
-## [0.26.14](/compare/0.26.13...0.26.14) (2026-02-03)
+## [0.26.14](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.13...0.26.14) (2026-02-03)
 
-## [0.26.13](/compare/0.26.12...0.26.13) (2026-02-03)
+## [0.26.13](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.12...0.26.13) (2026-02-03)
 
-## [0.26.12](/compare/0.26.11...0.26.12) (2026-02-03)
+## [0.26.12](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.11...0.26.12) (2026-02-03)
 
-## [0.26.11](/compare/0.26.10...0.26.11) (2026-02-03)
+## [0.26.11](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.10...0.26.11) (2026-02-03)
 
-## [0.26.10](/compare/0.26.9...0.26.10) (2026-02-03)
+## [0.26.10](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.9...0.26.10) (2026-02-03)
 
-## [0.26.9](/compare/0.26.8...0.26.9) (2026-02-03)
+## [0.26.9](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.8...0.26.9) (2026-02-03)
 
-## [0.26.8](/compare/0.26.7...0.26.8) (2025-12-03)
+## [0.26.8](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.7...0.26.8) (2025-12-03)
 
-## [0.26.7](/compare/0.26.6...0.26.7) (2025-12-03)
+## [0.26.7](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.6...0.26.7) (2025-12-03)
 
-## [0.26.6](/compare/0.26.5...0.26.6) (2025-12-03)
+## [0.26.6](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.5...0.26.6) (2025-12-03)
 
-## [0.26.5](/compare/0.26.4...0.26.5) (2025-11-30)
+## [0.26.5](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.4...0.26.5) (2025-11-30)
 
-## [0.26.4](/compare/0.26.3...0.26.4) (2025-11-30)
+## [0.26.4](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.3...0.26.4) (2025-11-30)
 
-## [0.26.3](/compare/0.26.2...0.26.3) (2025-11-30)
+## [0.26.3](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.2...0.26.3) (2025-11-30)
 
-## [0.26.2](/compare/0.26.1...0.26.2) (2025-11-30)
+## [0.26.2](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.1...0.26.2) (2025-11-30)
 
-## [0.26.1](/compare/0.26.0...0.26.1) (2025-11-30)
+## [0.26.1](https://git.bnei.dev/MohammadBnei/dream-analyst/compare/0.26.0...0.26.1) (2025-11-30)
 
 # [0.26.0](https://github.com/MohammadBnei/dream-analyst/compare/0.25.1...0.26.0) (2025-11-30)
 
